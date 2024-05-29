@@ -1,9 +1,25 @@
 <!DOCTYPE html>
-<script>
-  function onClick() {
-    alert("Clicked!");
-  }
-</script>
 <body>
-  <button onclick="() => onClick()">click</button>
+  <button id="authenticate">authenticate with resideo</button>
+  <script>
+    document.getElementById("authenticate").addEventListener("click", onClick);
+
+    const apikey = window.location.search.split("apikey=")[1];
+    const redirect_uri = window.location.href;
+    const code = window.location.search.split("code=")[1];
+
+    if (code) {
+      document.body.appendChild(document.createTextNode(code));
+    }
+
+    function onClick() {
+      fetch(
+        `https://api.honeywellhome.com/oauth2/authorize?response_type=code&client_id={apikey}&redirect_uri={redirectUri}`
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          console.log(data);
+        });
+    }
+  </script>
 </body>
