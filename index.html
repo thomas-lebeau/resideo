@@ -8,18 +8,20 @@
     const redirectUri = window.location.origin + window.location.pathname;
     const code = window.location.search.split("code=")[1];
 
+    if (apikey) {
+      document.body.appendChild(
+        document.createTextNode(`✅ apikey: ${apikey}`)
+      );
+    } else {
+      document.body.appendChild(document.createTextNode(`❌ missing apikey`));
+    }
+
     if (code) {
-      document.body.appendChild(document.createTextNode(code));
+      document.body.appendChild(document.createTextNode(`✅ code: ${code}`));
     }
 
     function onClick() {
-      fetch(
-        `https://api.honeywellhome.com/oauth2/authorize?response_type=code&client_id=${apikey}&redirect_uri=${redirectUri}`
-      )
-        .then((response) => response.json())
-        .then((data) => {
-          console.log(data);
-        });
+      window.location.href = `https://api.honeywellhome.com/oauth2/authorize?response_type=code&client_id=${apikey}&redirect_uri=${redirectUri}`;
     }
   </script>
 </body>
