@@ -5,7 +5,7 @@
     document.getElementById("authenticate").addEventListener("click", onClick);
 
     const apikey = window.location.search.split("apikey=")[1];
-    const redirectUri = window.location.href;
+    const redirectUri = window.location.origin + window.location.pathname;
     const code = window.location.search.split("code=")[1];
 
     if (code) {
