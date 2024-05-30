@@ -1,27 +1,76 @@
 <!DOCTYPE html>
+<style>
+  input:invalid {
+    border: 1px solid red;
+  }
+</style>
+
 <body>
-  <button id="authenticate">authenticate with resideo</button>
+  <form id="form">
+    <label>
+      apikey:
+      <input id="apikey" onblur="setUrlParam(this)" required>
+    </label>
+    <label>
+      secret:
+      <input id="secret" onblur="setUrlParam(this)" required>
+    </label>
+    <label>
+      token:
+      <input id="token" readonly>
+    </label>
+    <label>
+      code:
+      <input id="code" readonly>
+    </label>
+
+    <button type="button" id="btnLogin" onclick="login()" disabled>login with resideo</button>
+  </form>
   <script>
-    document.getElementById("authenticate").addEventListener("click", onClick);
+    const getUrlParam = (name) => new URL(window.location.href).searchParams.get(name)
+    const setUrlParam = (input) => {
+      const url = new URL(window.location.href)
+      url.searchParams.set(input.id, input.value)
 
-    const apikey = window.location.search.split("apikey=")[1];
-    const redirectUri = window.location.origin + window.location.pathname;
-    const code = window.location.search.split("code=")[1];
+      window.location.href = url
+    }
+    const login = () => {
+      const url = new URL('https://api.honeywellhome.com/oauth2/authorize')
+      url.searchParams.set('response_type', 'code')
+      url.searchParams.set('client_id', apikey.value)
+      url.searchParams.set('redirect_uri', window.location.origin + window.location.pathname)
+      url.searchParams.set('state', JSON.stringify({
+        apikey: apikey.value,
+        secret: secret.value
+      }))
 
-    if (apikey) {
-      document.body.appendChild(
-        document.createTextNode(`✅ apikey: ${apikey}`)
-      );
-    } else {
-      document.body.appendChild(document.createTextNode(`❌ missing apikey`));
+      window.location.href = url
     }
 
-    if (code) {
-      document.body.appendChild(document.createTextNode(`✅ code: ${code}`));
+    // handle response from login
+    if (getUrlParam('state')) {
+      const { apikey, secret } = JSON.parse(getUrlParam('state'))
+
+      const url = new URL(window.location.href)
+      url.searchParams.set('apikey', apikey)
+      url.searchParams.set('secret', secret)
+      url.searchParams.delete('state')
+
+      window.location.href = url
     }
 
-    function onClick() {
-      window.location.href = `https://api.honeywellhome.com/oauth2/authorize?response_type=code&client_id=${apikey}&redirect_uri=${redirectUri}`;
+    apikey.value = getUrlParam('apikey')
+    secret.value = getUrlParam('secret')
+    code.value = getUrlParam('code')
+
+    if (apikey.value && secret.value) {
+      token.value = btoa(`${apikey.value}:${secret.value}`)
     }
+
+    // hide button if we're logged in
+    if (apikey.value && secret.value && !code.value) {
+      btnLogin.disabled = false
+    }
+
   </script>
 </body>
