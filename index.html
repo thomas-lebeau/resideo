@@ -34,6 +34,7 @@
 
       window.location.href = url
     }
+
     const login = () => {
       const url = new URL('https://api.honeywellhome.com/oauth2/authorize')
       url.searchParams.set('response_type', 'code')
@@ -51,6 +52,8 @@
     if (getUrlParam('state')) {
       const { apikey, secret } = JSON.parse(getUrlParam('state'))
 
+      console.log(new URL(window.location.href))
+
       const url = new URL(window.location.href)
       url.searchParams.set('apikey', apikey)
       url.searchParams.set('secret', secret)
@@ -63,14 +66,16 @@
     secret.value = getUrlParam('secret')
     code.value = getUrlParam('code')
 
+    // calculate token
     if (apikey.value && secret.value) {
       token.value = btoa(`${apikey.value}:${secret.value}`)
     }
 
-    // hide button if we're logged in
+    // enable button if we're not logged in
     if (apikey.value && secret.value && !code.value) {
       btnLogin.disabled = false
     }
+
 
   </script>
 </body>
