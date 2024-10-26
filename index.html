@@ -63,11 +63,12 @@
     secret.value = getUrlParam('secret')
     code.value = getUrlParam('code')
 
+    // calculate token
     if (apikey.value && secret.value) {
       token.value = btoa(`${apikey.value}:${secret.value}`)
     }
 
-    // hide button if we're logged in
+    // enable button if we're not logged in
     if (apikey.value && secret.value && !code.value) {
       btnLogin.disabled = false
     }
