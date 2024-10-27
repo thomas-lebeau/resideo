@@ -26,6 +26,12 @@
 
     <button type="button" id="btnLogin" onclick="login()" disabled>login with resideo</button>
   </form>
+
+  <iframe
+    src="https://app.datadoghq.eu/graph/embed?token=6124d24b925e565aadcf1d82684d966b01e2de5578c924c3b40980ef2a210d06&height=500&width=1000&legend=true"
+    width="1000" height="500" frameborder="0">
+  </iframe>
+
   <script>
     const getUrlParam = (name) => new URL(window.location.href).searchParams.get(name)
     const setUrlParam = (input) => {
