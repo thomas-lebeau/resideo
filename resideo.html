@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<style>
+  input:invalid {
+    border: 1px solid red;
+  }
+</style>
+
+<body>
+  <form id="form">
+    <label>
+      apikey:
+      <input id="apikey" onblur="setUrlParam(this)" required>
+    </label>
+    <label>
+      secret:
+      <input id="secret" onblur="setUrlParam(this)" required>
+    </label>
+    <label>
+      token:
+      <input id="token" readonly>
+    </label>
+    <label>
+      code:
+      <input id="code" readonly>
+    </label>
+
+    <button type="button" id="btnLogin" onclick="login()" disabled>login with resideo</button>
+  </form>
+
+  <script>
+    const getUrlParam = (name) => new URL(window.location.href).searchParams.get(name)
+    const setUrlParam = (input) => {
+      const url = new URL(window.location.href)
+      url.searchParams.set(input.id, input.value)
+
+      window.location.href = url
+    }
+    const login = () => {
+      const url = new URL('https://api.honeywellhome.com/oauth2/authorize')
+      url.searchParams.set('response_type', 'code')
+      url.searchParams.set('client_id', apikey.value)
+      url.searchParams.set('redirect_uri', window.location.origin + window.location.pathname)
+      url.searchParams.set('state', JSON.stringify({
+        apikey: apikey.value,
+        secret: secret.value
+      }))
+
+      window.location.href = url
+    }
+
+    // handle response from login
+    if (getUrlParam('state')) {
+      const { apikey, secret } = JSON.parse(getUrlParam('state'))
+
+      const url = new URL(window.location.href)
+      url.searchParams.set('apikey', apikey)
+      url.searchParams.set('secret', secret)
+      url.searchParams.delete('state')
+
+      window.location.href = url
+    }
+
+    apikey.value = getUrlParam('apikey')
+    secret.value = getUrlParam('secret')
+    code.value = getUrlParam('code')
+
+    // calculate token
+    if (apikey.value && secret.value) {
+      token.value = btoa(`${apikey.value}:${secret.value}`)
+    }
+
+    // enable button if we're not logged in
+    if (apikey.value && secret.value && !code.value) {
+      btnLogin.disabled = false
+    }
+
+  </script>
+</body>
