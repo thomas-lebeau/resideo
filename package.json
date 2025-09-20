@@ -1,0 +1,37 @@
+{
+  "name": "resideo-home-monitor",
+  "version": "1.0.0",
+  "description": "Home automation monitoring system for Resideo thermostats and Philips Hue lights with Datadog integration",
+  "type": "module",
+  "main": "src/index.mts",
+  "scripts": {
+    "start": "node --experimental-strip-types src/index.mts",
+    "dev": "node --experimental-strip-types src/index.mts",
+    "resideo": "node --experimental-strip-types src/resideo.mts",
+    "hue": "node --experimental-strip-types src/hue.mts"
+  },
+  "keywords": [
+    "home-automation",
+    "resideo",
+    "honeywell",
+    "philips-hue",
+    "datadog",
+    "monitoring"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "undici": "^7.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=24.8.0"
+  },
+  "volta": {
+    "node": "24.8.0"
+  }
+}
