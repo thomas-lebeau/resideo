@@ -1,5 +1,5 @@
-import { config } from './config.js';
-import { DatadogLogPayload } from './types.js';
+import { config } from './config.ts';
+import { DatadogLogPayload } from './types.ts';
 
 /**
  * Sends data to Datadog logs API

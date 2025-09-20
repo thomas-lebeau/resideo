@@ -11,13 +11,8 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Compiled output
-dist/
+# Compiled output (if any build tools are used)
 build/
-*.js
-*.js.map
-*.d.ts
-!src/**/*.ts
 
 # IDE
 .vscode/

@@ -40,7 +40,7 @@ A TypeScript-based home automation monitoring system that collects data from Res
    # Edit .env with your actual API credentials
    ```
 
-The TypeScript code compiles automatically when you run the scripts.
+The TypeScript code runs directly with Node.js native TypeScript support - no compilation needed!
 
 ## Configuration
 
@@ -137,13 +137,12 @@ src/
 ```
 
 ### Scripts
-- `npm run build` - Compile TypeScript to JavaScript
-- `npm run dev` - Build and run (development)
-- `npm start` - Build and run (production)
+- `npm run dev` - Run in development mode
+- `npm start` - Run in production mode
 - `npm run resideo` - Run only thermostat monitoring
 - `npm run hue` - Run only Hue light monitoring
 
-All scripts automatically compile TypeScript before running.
+All scripts run TypeScript directly using tsx - no compilation step needed.
 
 ## Utilities
 

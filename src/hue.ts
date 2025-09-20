@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import https from 'node:https';
-import { config } from './config.js';
-import { sendToDatadog } from './datadog.js';
-import { HueResponse, LightStatus } from './types.js';
+import { config } from './config.ts';
+import { sendToDatadog } from './datadog.ts';
+import { HueResponse, LightStatus } from './types.ts';
 
 /**
  * Creates an HTTPS agent that ignores SSL certificate errors

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { config } from './config.js';
-import { sendToDatadog } from './datadog.js';
+import { config } from './config.ts';
+import { sendToDatadog } from './datadog.ts';
 import { 
   ResideoTokenResponse, 
   ResideoDeviceResponse, 
   ThermostatData 
-} from './types.js';
+} from './types.ts';
 
 /**
  * Gets OAuth access token from Resideo API
