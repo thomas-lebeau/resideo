@@ -1,0 +1,37 @@
+{
+  "name": "resideo-home-monitor",
+  "version": "1.0.0",
+  "description": "Home automation monitoring system for Resideo thermostats and Philips Hue lights with Datadog integration",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "resideo": "ts-node src/resideo.ts",
+    "hue": "ts-node src/hue.ts",
+    "clean": "rm -rf dist",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "home-automation",
+    "resideo",
+    "honeywell",
+    "philips-hue",
+    "datadog",
+    "monitoring"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

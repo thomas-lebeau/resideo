@@ -1,0 +1,43 @@
+import * as dotenv from 'dotenv';
+import { Config } from './types';
+
+// Load environment variables from .env file
+dotenv.config();
+
+/**
+ * Validates that all required environment variables are present
+ */
+function validateConfig(): Config {
+  const requiredVars = [
+    'API_KEY',
+    'API_SECRET', 
+    'DEVICE_ID',
+    'LOCATION_ID',
+    'USER_REF_ID',
+    'HUE_HOST',
+    'HUE_USERNAME',
+    'DD_API_KEY'
+  ] as const;
+
+  const missing = requiredVars.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+
+  return {
+    API_KEY: process.env.API_KEY!,
+    API_SECRET: process.env.API_SECRET!,
+    DEVICE_ID: process.env.DEVICE_ID!,
+    LOCATION_ID: process.env.LOCATION_ID!,
+    USER_REF_ID: process.env.USER_REF_ID!,
+    HUE_HOST: process.env.HUE_HOST!,
+    HUE_USERNAME: process.env.HUE_USERNAME!,
+    DD_API_KEY: process.env.DD_API_KEY!,
+  };
+}
+
+/**
+ * Configuration object with all environment variables
+ */
+export const config: Config = validateConfig();
