@@ -1,6 +1,5 @@
 #!/usr/bin/env ts-node
 
-import axios from 'axios';
 import { config } from './config.js';
 import { sendToDatadog } from './datadog.js';
 import { 
@@ -16,18 +15,21 @@ async function getAccessToken(): Promise<string> {
   try {
     const basicAuth = Buffer.from(`${config.API_KEY}:${config.API_SECRET}`).toString('base64');
     
-    const response = await axios.post<ResideoTokenResponse>(
-      'https://api.honeywell.com/oauth2/accesstoken',
-      'grant_type=client_credentials',
-      {
-        headers: {
-          'Authorization': `Basic ${basicAuth}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      }
-    );
+    const response = await fetch('https://api.honeywell.com/oauth2/accesstoken', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${basicAuth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials',
+    });
 
-    return response.data.access_token;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data: ResideoTokenResponse = await response.json();
+    return data.access_token;
   } catch (error) {
     console.error('❌ Failed to get access token:', error);
     throw error;
@@ -39,21 +41,26 @@ async function getAccessToken(): Promise<string> {
  */
 async function getThermostatData(accessToken: string): Promise<ResideoDeviceResponse> {
   try {
-    const url = `https://api.honeywell.com/v2/devices/thermostats/${config.DEVICE_ID}`;
-    const params = {
+    const params = new URLSearchParams({
       apikey: config.API_KEY,
       locationId: config.LOCATION_ID,
-    };
+    });
+    
+    const url = `https://api.honeywell.com/v2/devices/thermostats/${config.DEVICE_ID}?${params}`;
 
-    const response = await axios.get<ResideoDeviceResponse>(url, {
-      params,
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'UserRefID': config.USER_REF_ID,
       },
     });
 
-    return response.data;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data: ResideoDeviceResponse = await response.json();
+    return data;
   } catch (error) {
     console.error('❌ Failed to fetch thermostat data:', error);
     throw error;

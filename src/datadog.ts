@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { config } from './config.js';
 import { DatadogLogPayload } from './types.js';
 
@@ -23,13 +22,19 @@ export async function sendToDatadog(
       ...data
     };
 
-    await axios.post(url, payload, {
+    const response = await fetch(url, {
+      method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         'DD-API-KEY': config.DD_API_KEY,
       },
+      body: JSON.stringify(payload),
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
     console.log(`✅ Successfully sent ${source} data to Datadog`);
   } catch (error) {

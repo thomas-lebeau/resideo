@@ -1,6 +1,5 @@
 #!/usr/bin/env ts-node
 
-import axios from 'axios';
 import https from 'https';
 import { config } from './config.js';
 import { sendToDatadog } from './datadog.js';
@@ -21,14 +20,20 @@ async function getHueLightData(): Promise<HueResponse> {
   try {
     const url = `https://${config.HUE_HOST}/clip/v2/resource/light`;
     
-    const response = await axios.get<HueResponse>(url, {
+    const response = await fetch(url, {
       headers: {
         'Hue-Application-Key': config.HUE_USERNAME,
       },
-      httpsAgent,
+      // @ts-ignore - Node.js fetch supports agent but types may not be updated
+      agent: httpsAgent,
     });
 
-    return response.data;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data: HueResponse = await response.json();
+    return data;
   } catch (error) {
     console.error('❌ Failed to fetch Hue light data:', error);
     throw error;

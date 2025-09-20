@@ -10,6 +10,7 @@ A TypeScript-based home automation monitoring system that collects data from Res
 - 🔒 **Secure**: Uses environment variables for all API keys and sensitive data
 - 🚀 **TypeScript**: Full type safety with comprehensive error handling
 - ⚡ **Concurrent**: Runs data collection from multiple sources in parallel
+- 🌐 **Native Fetch**: Uses Node.js native fetch API (no external HTTP dependencies)
 
 ## Prerequisites
 
