@@ -47,11 +47,11 @@ The TypeScript code compiles automatically when you run the scripts.
 Create a `.env` file with the following variables:
 
 ### Resideo/Honeywell API
-- `API_KEY`: Your Resideo API key
-- `API_SECRET`: Your Resideo API secret
-- `DEVICE_ID`: Your thermostat device ID
-- `LOCATION_ID`: Your location ID
-- `USER_REF_ID`: Your user reference ID
+- `HW_API_KEY`: Your Resideo API key
+- `HW_API_SECRET`: Your Resideo API secret
+- `HW_DEVICE_ID`: Your thermostat device ID
+- `HW_LOCATION_ID`: Your location ID
+- `HW_USER_REF_ID`: Your user reference ID
 
 ### Philips Hue Bridge
 - `HUE_HOST`: IP address of your Hue bridge (e.g., `192.168.1.100`)

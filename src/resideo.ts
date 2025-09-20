@@ -13,7 +13,7 @@ import {
  */
 async function getAccessToken(): Promise<string> {
   try {
-    const basicAuth = Buffer.from(`${config.API_KEY}:${config.API_SECRET}`).toString('base64');
+    const basicAuth = Buffer.from(`${config.HW_API_KEY}:${config.HW_API_SECRET}`).toString('base64');
     
     const response = await fetch('https://api.honeywell.com/oauth2/accesstoken', {
       method: 'POST',
@@ -42,16 +42,16 @@ async function getAccessToken(): Promise<string> {
 async function getThermostatData(accessToken: string): Promise<ResideoDeviceResponse> {
   try {
     const params = new URLSearchParams({
-      apikey: config.API_KEY,
-      locationId: config.LOCATION_ID,
+      apikey: config.HW_API_KEY,
+      locationId: config.HW_LOCATION_ID,
     });
     
-    const url = `https://api.honeywell.com/v2/devices/thermostats/${config.DEVICE_ID}?${params}`;
+    const url = `https://api.honeywell.com/v2/devices/thermostats/${config.HW_DEVICE_ID}?${params}`;
 
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'UserRefID': config.USER_REF_ID,
+        'UserRefID': config.HW_USER_REF_ID,
       },
     });
 
@@ -102,7 +102,7 @@ export async function collectThermostatData(): Promise<void> {
     // Send to Datadog
     await sendToDatadog(thermostatData, 'resideo-gh-action', { 
       device: 'thermostat',
-      location: config.LOCATION_ID 
+      location: config.HW_LOCATION_ID 
     });
 
   } catch (error) {

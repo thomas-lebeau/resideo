@@ -9,11 +9,11 @@ dotenv.config();
  */
 function validateConfig(): Config {
   const requiredVars = [
-    'API_KEY',
-    'API_SECRET', 
-    'DEVICE_ID',
-    'LOCATION_ID',
-    'USER_REF_ID',
+    'HW_API_KEY',
+    'HW_API_SECRET', 
+    'HW_DEVICE_ID',
+    'HW_LOCATION_ID',
+    'HW_USER_REF_ID',
     'HUE_HOST',
     'HUE_USERNAME',
     'DD_API_KEY'
@@ -26,11 +26,11 @@ function validateConfig(): Config {
   }
 
   return {
-    API_KEY: process.env.API_KEY!,
-    API_SECRET: process.env.API_SECRET!,
-    DEVICE_ID: process.env.DEVICE_ID!,
-    LOCATION_ID: process.env.LOCATION_ID!,
-    USER_REF_ID: process.env.USER_REF_ID!,
+    HW_API_KEY: process.env.HW_API_KEY!,
+    HW_API_SECRET: process.env.HW_API_SECRET!,
+    HW_DEVICE_ID: process.env.HW_DEVICE_ID!,
+    HW_LOCATION_ID: process.env.HW_LOCATION_ID!,
+    HW_USER_REF_ID: process.env.HW_USER_REF_ID!,
     HUE_HOST: process.env.HUE_HOST!,
     HUE_USERNAME: process.env.HUE_USERNAME!,
     DD_API_KEY: process.env.DD_API_KEY!,

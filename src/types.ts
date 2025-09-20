@@ -3,11 +3,11 @@
  */
 export interface Config {
   // Resideo/Honeywell API
-  API_KEY: string;
-  API_SECRET: string;
-  DEVICE_ID: string;
-  LOCATION_ID: string;
-  USER_REF_ID: string;
+  HW_API_KEY: string;
+  HW_API_SECRET: string;
+  HW_DEVICE_ID: string;
+  HW_LOCATION_ID: string;
+  HW_USER_REF_ID: string;
   
   // Philips Hue API
   HUE_HOST: string;
