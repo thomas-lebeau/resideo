@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 
 import { config } from './config.js';
 import { sendToDatadog } from './datadog.js';
@@ -28,7 +28,7 @@ async function getAccessToken(): Promise<string> {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data: ResideoTokenResponse = await response.json();
+    const data = await response.json() as ResideoTokenResponse;
     return data.access_token;
   } catch (error) {
     console.error('❌ Failed to get access token:', error);
@@ -59,7 +59,7 @@ async function getThermostatData(accessToken: string): Promise<ResideoDeviceResp
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data: ResideoDeviceResponse = await response.json();
+    const data = await response.json() as ResideoDeviceResponse;
     return data;
   } catch (error) {
     console.error('❌ Failed to fetch thermostat data:', error);

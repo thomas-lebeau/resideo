@@ -1,5 +1,6 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 
+import { parseArgs } from 'node:util';
 import { collectThermostatData } from './resideo.js';
 import { collectHueLightData } from './hue.js';
 
@@ -7,7 +8,7 @@ import { collectHueLightData } from './hue.js';
  * Main monitoring function that collects data from all sources
  */
 async function runMonitoring(): Promise<void> {
-  const startTime = Date.now();
+  const startTime = performance.now();
   console.log('🏠 Starting home automation monitoring...');
   console.log(`📅 Timestamp: ${new Date().toISOString()}`);
   
@@ -31,8 +32,8 @@ async function runMonitoring(): Promise<void> {
 
     await Promise.all(promises);
 
-    const duration = Date.now() - startTime;
-    console.log(`✅ Monitoring completed successfully in ${duration}ms`);
+    const duration = performance.now() - startTime;
+    console.log(`✅ Monitoring completed successfully in ${duration.toFixed(2)}ms`);
 
   } catch (error) {
     console.error('❌ Monitoring failed:', error);
@@ -41,13 +42,52 @@ async function runMonitoring(): Promise<void> {
 }
 
 /**
- * CLI interface - supports running specific scripts or all
+ * Displays help information
+ */
+function showHelp(): void {
+  console.log(`
+Usage: npm run dev [options] [command]
+
+Commands:
+  all      Run both thermostat and Hue monitoring (default)
+  resideo  Run only thermostat monitoring  
+  hue      Run only Hue light monitoring
+
+Options:
+  --help, -h    Show this help message
+
+Examples:
+  npm run dev           # Run all monitoring
+  npm run dev all       # Run all monitoring  
+  npm run dev resideo   # Run only thermostat
+  npm run dev hue       # Run only Hue lights
+  npm run dev --help    # Show this help
+  `);
+}
+
+/**
+ * CLI interface using Node.js parseArgs API
  */
 async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const command = args[0];
-
   try {
+    const { values, positionals } = parseArgs({
+      args: process.argv.slice(2),
+      options: {
+        help: {
+          type: 'boolean',
+          short: 'h',
+        },
+      },
+      allowPositionals: true,
+    });
+
+    if (values.help) {
+      showHelp();
+      return;
+    }
+
+    const command = positionals[0] || 'all';
+
     switch (command) {
       case 'resideo':
         await collectThermostatData();
@@ -57,26 +97,13 @@ async function main(): Promise<void> {
         await collectHueLightData();
         break;
       
-      case undefined:
       case 'all':
         await runMonitoring();
         break;
       
       default:
-        console.log(`
-Usage: npm run dev [command]
-
-Commands:
-  all      Run both thermostat and Hue monitoring (default)
-  resideo  Run only thermostat monitoring  
-  hue      Run only Hue light monitoring
-
-Examples:
-  npm run dev           # Run all monitoring
-  npm run dev all       # Run all monitoring  
-  npm run dev resideo   # Run only thermostat
-  npm run dev hue       # Run only Hue lights
-        `);
+        console.error(`❌ Unknown command: ${command}`);
+        showHelp();
         process.exit(1);
     }
   } catch (error) {

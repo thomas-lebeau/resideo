@@ -4,14 +4,15 @@
     "module": "ESNext",
     "lib": ["ES2022"],
     "rootDir": "./src",
+    "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
+    "declaration": true,
+    "sourceMap": false,
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
@@ -24,6 +25,7 @@
   ],
   "exclude": [
     "node_modules",
+    "dist",
     "**/*.test.ts"
   ]
 }

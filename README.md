@@ -11,10 +11,11 @@ A TypeScript-based home automation monitoring system that collects data from Res
 - 🚀 **TypeScript**: Full type safety with comprehensive error handling
 - ⚡ **Concurrent**: Runs data collection from multiple sources in parallel
 - 🌐 **Native Fetch**: Uses Node.js native fetch API (no external HTTP dependencies)
+- 🔧 **Modern Node.js**: Uses native APIs like parseArgs, performance.now(), and node: imports
 
 ## Prerequisites
 
-- Node.js 18.19+ (with native TypeScript support)
+- Node.js 22.6+ (for modern APIs and TypeScript compilation)
 - npm or yarn
 - Resideo/Honeywell developer account and API credentials
 - Philips Hue bridge with API access
@@ -39,7 +40,7 @@ A TypeScript-based home automation monitoring system that collects data from Res
    # Edit .env with your actual API credentials
    ```
 
-That's it! No compilation step needed - Node.js runs TypeScript natively.
+The TypeScript code compiles automatically when you run the scripts.
 
 ## Configuration
 
@@ -136,10 +137,13 @@ src/
 ```
 
 ### Scripts
-- `npm run dev` - Run with TypeScript (development)
-- `npm start` - Run TypeScript (production)
+- `npm run build` - Compile TypeScript to JavaScript
+- `npm run dev` - Build and run (development)
+- `npm start` - Build and run (production)
 - `npm run resideo` - Run only thermostat monitoring
 - `npm run hue` - Run only Hue light monitoring
+
+All scripts automatically compile TypeScript before running.
 
 ## Utilities
 

@@ -1,6 +1,6 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 
-import https from 'https';
+import https from 'node:https';
 import { config } from './config.js';
 import { sendToDatadog } from './datadog.js';
 import { HueResponse, LightStatus } from './types.js';
@@ -32,7 +32,7 @@ async function getHueLightData(): Promise<HueResponse> {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data: HueResponse = await response.json();
+    const data = await response.json() as HueResponse;
     return data;
   } catch (error) {
     console.error('❌ Failed to fetch Hue light data:', error);
