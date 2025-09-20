@@ -19,11 +19,9 @@
     "noUnusedParameters": true,
     "exactOptionalPropertyTypes": true
   },
-  "include": [
-    "src/**/*.mts"
-  ],
-  "exclude": [
-    "node_modules",
-    "**/*.test.mts"
-  ]
+  "environment": {
+    "node": true
+  },
+  "include": ["src/**/*.mts"],
+  "exclude": ["node_modules", "**/*.test.mts"]
 }

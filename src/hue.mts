@@ -1,8 +1,6 @@
-#!/usr/bin/env node
-
-import https from 'node:https';
-import { config } from './config.mts';
-import { sendToDatadog } from './datadog.mts';
+import { Agent } from "undici";
+import { config } from "./config.mts";
+import { sendToDatadog } from "./datadog.mts";
 
 /**
  * Philips Hue light data from API
@@ -37,12 +35,10 @@ type LightStatus = {
   };
 };
 
-/**
- * Creates an HTTPS agent that ignores SSL certificate errors
- * (needed for local Hue bridge communication)
- */
-const httpsAgent = new https.Agent({
-  rejectUnauthorized: false
+const agent = new Agent({
+  connect: {
+    rejectUnauthorized: false,
+  },
 });
 
 /**
@@ -51,23 +47,23 @@ const httpsAgent = new https.Agent({
 async function getHueLightData(): Promise<HueResponse> {
   try {
     const url = `https://${config.HUE_HOST}/clip/v2/resource/light`;
-    
+
     const response = await fetch(url, {
       headers: {
-        'Hue-Application-Key': config.HUE_USERNAME,
+        "Hue-Application-Key": config.HUE_USERNAME,
       },
-      // @ts-ignore - Node.js fetch supports agent but types may not be updated
-      agent: httpsAgent,
+      // @ts-ignore
+      dispatcher: agent,
     });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json() as HueResponse;
+    const data = (await response.json()) as HueResponse;
     return data;
   } catch (error) {
-    console.error('❌ Failed to fetch Hue light data:', error);
+    console.error("❌ Failed to fetch Hue light data:", error);
     throw error;
   }
 }
@@ -77,14 +73,14 @@ async function getHueLightData(): Promise<HueResponse> {
  */
 function processLightData(hueData: HueResponse): LightStatus {
   const lightStatus: LightStatus = {};
-  
+
   for (const light of hueData.data) {
     lightStatus[light.metadata.name] = {
       status: light.on.on,
       brightness: light.dimming.brightness,
     };
   }
-  
+
   return lightStatus;
 }
 
@@ -93,29 +89,23 @@ function processLightData(hueData: HueResponse): LightStatus {
  */
 export async function collectHueLightData(): Promise<void> {
   try {
-    console.log('💡 Collecting Hue light data...');
-    
+    console.log("💡 Collecting Hue light data...");
+
     // Fetch light data
     const rawData = await getHueLightData();
-    console.log('✅ Fetched Hue light data');
+    console.log("✅ Fetched Hue light data");
 
     // Process data
     const lightStatus = processLightData(rawData);
-    console.log('📊 Processed light data:', lightStatus);
+    console.log("📊 Processed light data:", lightStatus);
 
     // Send to Datadog
-    await sendToDatadog(lightStatus, 'raspberry-pi', { 
-      device: 'hue-lights',
-      total_lights: Object.keys(lightStatus).length.toString()
+    await sendToDatadog(lightStatus, "raspberry-pi", {
+      device: "hue-lights",
+      total_lights: Object.keys(lightStatus).length.toString(),
     });
-
   } catch (error) {
-    console.error('❌ Failed to collect Hue light data:', error);
+    console.error("❌ Failed to collect Hue light data:", error);
     process.exit(1);
   }
-}
-
-// Allow running this file directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  collectHueLightData();
 }
