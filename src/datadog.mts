@@ -1,5 +1,13 @@
-import { config } from './config.js';
-import { DatadogLogPayload } from './types.js';
+import { config } from './config.mts';
+
+/**
+ * Datadog log payload
+ */
+type DatadogLogPayload = {
+  message: string;
+  timestamp?: string;
+  [key: string]: any;
+};
 
 /**
  * Sends data to Datadog logs API

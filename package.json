@@ -3,13 +3,12 @@
   "version": "1.0.0",
   "description": "Home automation monitoring system for Resideo thermostats and Philips Hue lights with Datadog integration",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "src/index.mts",
   "scripts": {
-    "build": "tsc",
-    "start": "npm run build && node dist/index.js",
-    "dev": "npm run build && node dist/index.js",
-    "resideo": "npm run build && node dist/resideo.js",
-    "hue": "npm run build && node dist/hue.js"
+    "start": "node --experimental-strip-types src/index.mts",
+    "dev": "node --experimental-strip-types src/index.mts",
+    "resideo": "node --experimental-strip-types src/resideo.mts",
+    "hue": "node --experimental-strip-types src/hue.mts"
   },
   "keywords": [
     "home-automation",

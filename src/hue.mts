@@ -1,9 +1,41 @@
 #!/usr/bin/env node
 
 import https from 'node:https';
-import { config } from './config.js';
-import { sendToDatadog } from './datadog.js';
-import { HueResponse, LightStatus } from './types.js';
+import { config } from './config.mts';
+import { sendToDatadog } from './datadog.mts';
+
+/**
+ * Philips Hue light data from API
+ */
+type HueLight = {
+  id: string;
+  metadata: {
+    name: string;
+  };
+  on: {
+    on: boolean;
+  };
+  dimming: {
+    brightness: number;
+  };
+};
+
+/**
+ * Hue API response
+ */
+type HueResponse = {
+  data: HueLight[];
+};
+
+/**
+ * Processed light data for logging
+ */
+type LightStatus = {
+  [lightName: string]: {
+    status: boolean;
+    brightness: number;
+  };
+};
 
 /**
  * Creates an HTTPS agent that ignores SSL certificate errors

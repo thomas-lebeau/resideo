@@ -1,7 +1,7 @@
 /**
- * Configuration interface for environment variables
+ * Configuration type for environment variables
  */
-export interface Config {
+export type Config = {
   // Resideo/Honeywell API
   HW_API_KEY: string;
   HW_API_SECRET: string;
@@ -15,21 +15,21 @@ export interface Config {
   
   // Datadog API
   DD_API_KEY: string;
-}
+};
 
 /**
  * Resideo API OAuth token response
  */
-export interface ResideoTokenResponse {
+export type ResideoTokenResponse = {
   access_token: string;
   token_type: string;
   expires_in: number;
-}
+};
 
 /**
  * Resideo thermostat device response
  */
-export interface ResideoDeviceResponse {
+export type ResideoDeviceResponse = {
   changeableValues: {
     mode: string;
     heatSetpoint: number;
@@ -40,23 +40,23 @@ export interface ResideoDeviceResponse {
   };
   outdoorTemperature: number;
   indoorTemperature: number;
-}
+};
 
 /**
  * Processed thermostat data for logging
  */
-export interface ThermostatData {
+export type ThermostatData = {
   mode: string;
   heatSetpoint: number;
   operationMode: string;
   outdoorTemperature: number;
   indoorTemperature: number;
-}
+};
 
 /**
  * Philips Hue light data from API
  */
-export interface HueLight {
+export type HueLight = {
   id: string;
   metadata: {
     name: string;
@@ -67,30 +67,30 @@ export interface HueLight {
   dimming: {
     brightness: number;
   };
-}
+};
 
 /**
  * Hue API response
  */
-export interface HueResponse {
+export type HueResponse = {
   data: HueLight[];
-}
+};
 
 /**
  * Processed light data for logging
  */
-export interface LightStatus {
+export type LightStatus = {
   [lightName: string]: {
     status: boolean;
     brightness: number;
   };
-}
+};
 
 /**
  * Datadog log payload
  */
-export interface DatadogLogPayload {
+export type DatadogLogPayload = {
   message: string;
   timestamp?: string;
   [key: string]: any;
-}
+};

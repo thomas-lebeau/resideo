@@ -1,12 +1,43 @@
 #!/usr/bin/env node
 
-import { config } from './config.js';
-import { sendToDatadog } from './datadog.js';
-import { 
-  ResideoTokenResponse, 
-  ResideoDeviceResponse, 
-  ThermostatData 
-} from './types.js';
+import { config } from './config.mts';
+import { sendToDatadog } from './datadog.mts';
+
+/**
+ * Resideo API OAuth token response
+ */
+type ResideoTokenResponse = {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+};
+
+/**
+ * Resideo thermostat device response
+ */
+type ResideoDeviceResponse = {
+  changeableValues: {
+    mode: string;
+    heatSetpoint: number;
+    coolSetpoint?: number;
+  };
+  operationStatus: {
+    mode: string;
+  };
+  outdoorTemperature: number;
+  indoorTemperature: number;
+};
+
+/**
+ * Processed thermostat data for logging
+ */
+type ThermostatData = {
+  mode: string;
+  heatSetpoint: number;
+  operationMode: string;
+  outdoorTemperature: number;
+  indoorTemperature: number;
+};
 
 /**
  * Gets OAuth access token from Resideo API

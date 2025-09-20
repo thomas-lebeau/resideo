@@ -1,8 +1,26 @@
 import * as dotenv from 'dotenv';
-import { Config } from './types.js';
 
 // Load environment variables from .env file
 dotenv.config();
+
+/**
+ * Configuration type for environment variables
+ */
+type Config = {
+  // Resideo/Honeywell API
+  HW_API_KEY: string;
+  HW_API_SECRET: string;
+  HW_DEVICE_ID: string;
+  HW_LOCATION_ID: string;
+  HW_USER_REF_ID: string;
+  
+  // Philips Hue API
+  HUE_HOST: string;
+  HUE_USERNAME: string;
+  
+  // Datadog API
+  DD_API_KEY: string;
+};
 
 /**
  * Validates that all required environment variables are present

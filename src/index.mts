@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { parseArgs } from 'node:util';
-import { collectThermostatData } from './resideo.js';
-import { collectHueLightData } from './hue.js';
+import { collectThermostatData } from './resideo.mts';
+import { collectHueLightData } from './hue.mts';
 
 /**
  * Main monitoring function that collects data from all sources

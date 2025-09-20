@@ -40,7 +40,7 @@ A TypeScript-based home automation monitoring system that collects data from Res
    # Edit .env with your actual API credentials
    ```
 
-The TypeScript code compiles to JavaScript and runs with Node.js.
+TypeScript files (.mts) run natively with Node.js experimental type stripping - no compilation needed!
 
 ## Configuration
 
@@ -128,22 +128,21 @@ npm run hue
 ### Project Structure
 ```
 src/
-├── index.ts      # Main entry point with CLI
-├── resideo.ts    # Thermostat data collection
-├── hue.ts        # Hue light data collection  
-├── datadog.ts    # Datadog integration
-├── config.ts     # Environment variable handling
-└── types.ts      # TypeScript interfaces
+├── index.mts     # Main entry point with CLI
+├── resideo.mts   # Thermostat data collection  
+├── hue.mts       # Hue light data collection
+├── datadog.mts   # Datadog integration
+├── config.mts    # Environment variable handling
+└── types.mts     # TypeScript interfaces
 ```
 
 ### Scripts
-- `npm run build` - Compile TypeScript to JavaScript
-- `npm run dev` - Build and run in development mode
-- `npm start` - Build and run in production mode
+- `npm run dev` - Run in development mode
+- `npm start` - Run in production mode
 - `npm run resideo` - Run only thermostat monitoring
 - `npm run hue` - Run only Hue light monitoring
 
-All scripts automatically compile TypeScript before running.
+All scripts run TypeScript natively using Node.js experimental type stripping.
 
 ## Utilities
 
