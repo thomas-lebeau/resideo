@@ -11,7 +11,8 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Compiled output (if any build tools are used)
+# Compiled output
+dist/
 build/
 
 # IDE
