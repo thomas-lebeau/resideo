@@ -129,12 +129,13 @@ npm run hue
 ```
 src/
 ├── index.mts     # Main entry point with CLI
-├── resideo.mts   # Thermostat data collection  
-├── hue.mts       # Hue light data collection
-├── datadog.mts   # Datadog integration
-├── config.mts    # Environment variable handling
-└── types.mts     # TypeScript interfaces
+├── resideo.mts   # Thermostat data collection (with local types)
+├── hue.mts       # Hue light data collection (with local types)
+├── datadog.mts   # Datadog integration (with local types)
+└── config.mts    # Environment variable handling (with local types)
 ```
+
+All TypeScript types are defined locally within each file to work with Node.js native type stripping.
 
 ### Scripts
 - `npm run dev` - Run in development mode
