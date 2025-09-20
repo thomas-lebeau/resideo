@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv';
-import { Config } from './types';
+import { Config } from './types.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -39,5 +39,14 @@ function validateConfig(): Config {
 
 /**
  * Configuration object with all environment variables
+ * Lazy-loaded to avoid errors when just showing help
  */
-export const config: Config = validateConfig();
+let _config: Config | null = null;
+export const config = new Proxy({} as Config, {
+  get(_, prop: keyof Config) {
+    if (!_config) {
+      _config = validateConfig();
+    }
+    return _config[prop];
+  }
+});

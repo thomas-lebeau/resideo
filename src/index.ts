@@ -1,7 +1,7 @@
 #!/usr/bin/env ts-node
 
-import { collectThermostatData } from './resideo';
-import { collectHueLightData } from './hue';
+import { collectThermostatData } from './resideo.js';
+import { collectHueLightData } from './hue.js';
 
 /**
  * Main monitoring function that collects data from all sources
@@ -86,6 +86,6 @@ Examples:
 }
 
 // Run main function when executed directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }

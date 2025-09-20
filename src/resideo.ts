@@ -1,13 +1,13 @@
 #!/usr/bin/env ts-node
 
 import axios from 'axios';
-import { config } from './config';
-import { sendToDatadog } from './datadog';
+import { config } from './config.js';
+import { sendToDatadog } from './datadog.js';
 import { 
   ResideoTokenResponse, 
   ResideoDeviceResponse, 
   ThermostatData 
-} from './types';
+} from './types.js';
 
 /**
  * Gets OAuth access token from Resideo API
@@ -105,6 +105,6 @@ export async function collectThermostatData(): Promise<void> {
 }
 
 // Allow running this file directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   collectThermostatData();
 }

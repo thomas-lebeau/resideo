@@ -2,9 +2,9 @@
 
 import axios from 'axios';
 import https from 'https';
-import { config } from './config';
-import { sendToDatadog } from './datadog';
-import { HueResponse, LightStatus } from './types';
+import { config } from './config.js';
+import { sendToDatadog } from './datadog.js';
+import { HueResponse, LightStatus } from './types.js';
 
 /**
  * Creates an HTTPS agent that ignores SSL certificate errors
@@ -79,6 +79,6 @@ export async function collectHueLightData(): Promise<void> {
 }
 
 // Allow running this file directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   collectHueLightData();
 }

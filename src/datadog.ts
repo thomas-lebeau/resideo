@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { config } from './config';
-import { DatadogLogPayload } from './types';
+import { config } from './config.js';
+import { DatadogLogPayload } from './types.js';
 
 /**
  * Sends data to Datadog logs API
