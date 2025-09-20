@@ -12,6 +12,7 @@ A TypeScript-based home automation monitoring system that collects data from Res
 - ⚡ **Concurrent**: Runs data collection from multiple sources in parallel
 - 🌐 **Native Fetch**: Uses Node.js native fetch API (no external HTTP dependencies)
 - 🔧 **Modern Node.js**: Uses native APIs like parseArgs, performance.now(), and node: imports
+- 🤫 **Silent Mode**: Optional --silent flag to run without console output for automated scripts
 
 ## Prerequisites
 
@@ -76,6 +77,11 @@ npm run dev resideo
 
 # Only Hue light monitoring  
 npm run dev hue
+
+# Run silently without console output
+npm run dev --silent
+npm run dev -s resideo
+npm run dev --silent hue
 ```
 
 ### Production

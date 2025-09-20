@@ -15,7 +15,8 @@ type DatadogLogPayload = {
 export async function sendToDatadog(
   data: any, 
   source: string,
-  tags: Record<string, string> = {}
+  tags: Record<string, string> = {},
+  silent: boolean = false
 ): Promise<void> {
   try {
     const tagString = Object.entries({ version: '2.0', ...tags })
@@ -44,9 +45,13 @@ export async function sendToDatadog(
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    console.log(`✅ Successfully sent ${source} data to Datadog`);
+    if (!silent) {
+      console.log(`✅ Successfully sent ${source} data to Datadog`);
+    }
   } catch (error) {
-    console.error(`❌ Failed to send data to Datadog:`, error);
+    if (!silent) {
+      console.error(`❌ Failed to send data to Datadog:`, error);
+    }
     throw error;
   }
 }

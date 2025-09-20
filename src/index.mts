@@ -7,25 +7,31 @@ import { collectHueLightData } from './hue.mts';
 /**
  * Main monitoring function that collects data from all sources
  */
-async function runMonitoring(): Promise<void> {
+async function runMonitoring(silent: boolean = false): Promise<void> {
   const startTime = performance.now();
-  console.log('🏠 Starting home automation monitoring...');
-  console.log(`📅 Timestamp: ${new Date().toISOString()}`);
+  if (!silent) {
+    console.log('🏠 Starting home automation monitoring...');
+    console.log(`📅 Timestamp: ${new Date().toISOString()}`);
+  }
   
   const promises = [];
 
   try {
     // Run both data collection operations in parallel
     promises.push(
-      collectThermostatData().catch(error => {
-        console.error('❌ Thermostat data collection failed:', error.message);
+      collectThermostatData(silent).catch(error => {
+        if (!silent) {
+          console.error('❌ Thermostat data collection failed:', error.message);
+        }
         return Promise.resolve(); // Don't fail the whole operation
       })
     );
 
     promises.push(
-      collectHueLightData().catch(error => {
-        console.error('❌ Hue light data collection failed:', error.message);
+      collectHueLightData(silent).catch(error => {
+        if (!silent) {
+          console.error('❌ Hue light data collection failed:', error.message);
+        }
         return Promise.resolve(); // Don't fail the whole operation
       })
     );
@@ -33,10 +39,14 @@ async function runMonitoring(): Promise<void> {
     await Promise.all(promises);
 
     const duration = performance.now() - startTime;
-    console.log(`✅ Monitoring completed successfully in ${duration.toFixed(2)}ms`);
+    if (!silent) {
+      console.log(`✅ Monitoring completed successfully in ${duration.toFixed(2)}ms`);
+    }
 
   } catch (error) {
-    console.error('❌ Monitoring failed:', error);
+    if (!silent) {
+      console.error('❌ Monitoring failed:', error);
+    }
     process.exit(1);
   }
 }
@@ -54,14 +64,16 @@ Commands:
   hue      Run only Hue light monitoring
 
 Options:
-  --help, -h    Show this help message
+  --help, -h      Show this help message
+  --silent, -s    Run without console output
 
 Examples:
-  npm run dev           # Run all monitoring
-  npm run dev all       # Run all monitoring  
-  npm run dev resideo   # Run only thermostat
-  npm run dev hue       # Run only Hue lights
-  npm run dev --help    # Show this help
+  npm run dev              # Run all monitoring
+  npm run dev all          # Run all monitoring  
+  npm run dev resideo      # Run only thermostat
+  npm run dev hue          # Run only Hue lights
+  npm run dev --silent     # Run all monitoring silently
+  npm run dev --help       # Show this help
   `);
 }
 
@@ -69,6 +81,8 @@ Examples:
  * CLI interface using Node.js parseArgs API
  */
 async function main(): Promise<void> {
+  let silent = false;
+  
   try {
     const { values, positionals } = parseArgs({
       args: process.argv.slice(2),
@@ -76,6 +90,10 @@ async function main(): Promise<void> {
         help: {
           type: 'boolean',
           short: 'h',
+        },
+        silent: {
+          type: 'boolean',
+          short: 's',
         },
       },
       allowPositionals: true,
@@ -87,27 +105,32 @@ async function main(): Promise<void> {
     }
 
     const command = positionals[0] || 'all';
+    silent = values.silent || false;
 
     switch (command) {
       case 'resideo':
-        await collectThermostatData();
+        await collectThermostatData(silent);
         break;
       
       case 'hue':
-        await collectHueLightData();
+        await collectHueLightData(silent);
         break;
       
       case 'all':
-        await runMonitoring();
+        await runMonitoring(silent);
         break;
       
       default:
-        console.error(`❌ Unknown command: ${command}`);
-        showHelp();
+        if (!silent) {
+          console.error(`❌ Unknown command: ${command}`);
+          showHelp();
+        }
         process.exit(1);
     }
   } catch (error) {
-    console.error('❌ Command failed:', error);
+    if (!silent) {
+      console.error('❌ Command failed:', error);
+    }
     process.exit(1);
   }
 }

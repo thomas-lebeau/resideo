@@ -40,7 +40,7 @@ type ThermostatData = {
 /**
  * Gets OAuth access token from Resideo API
  */
-async function getAccessToken(): Promise<string> {
+async function getAccessToken(silent: boolean = false): Promise<string> {
   try {
     const basicAuth = Buffer.from(
       `${config.HW_API_KEY}:${config.HW_API_SECRET}`
@@ -65,7 +65,9 @@ async function getAccessToken(): Promise<string> {
     const data = (await response.json()) as ResideoTokenResponse;
     return data.access_token;
   } catch (error) {
-    console.error("❌ Failed to get access token:", error);
+    if (!silent) {
+      console.error("❌ Failed to get access token:", error);
+    }
     throw error;
   }
 }
@@ -74,7 +76,8 @@ async function getAccessToken(): Promise<string> {
  * Fetches thermostat data from Resideo API
  */
 async function getThermostatData(
-  accessToken: string
+  accessToken: string,
+  silent: boolean = false
 ): Promise<ResideoDeviceResponse> {
   try {
     const params = new URLSearchParams({
@@ -98,7 +101,9 @@ async function getThermostatData(
     const data = (await response.json()) as ResideoDeviceResponse;
     return data;
   } catch (error) {
-    console.error("❌ Failed to fetch thermostat data:", error);
+    if (!silent) {
+      console.error("❌ Failed to fetch thermostat data:", error);
+    }
     throw error;
   }
 }
@@ -119,29 +124,44 @@ function processThermostatData(data: ResideoDeviceResponse): ThermostatData {
 /**
  * Main function to collect and send thermostat data
  */
-export async function collectThermostatData(): Promise<void> {
+export async function collectThermostatData(silent: boolean = false): Promise<void> {
   try {
-    console.log("🌡️  Collecting thermostat data...");
+    if (!silent) {
+      console.log("🌡️  Collecting thermostat data...");
+    }
 
     // Get access token
-    const accessToken = await getAccessToken();
-    console.log("✅ Got access token");
+    const accessToken = await getAccessToken(silent);
+    if (!silent) {
+      console.log("✅ Got access token");
+    }
 
     // Fetch thermostat data
-    const rawData = await getThermostatData(accessToken);
-    console.log("✅ Fetched thermostat data");
+    const rawData = await getThermostatData(accessToken, silent);
+    if (!silent) {
+      console.log("✅ Fetched thermostat data");
+    }
 
     // Process data
     const thermostatData = processThermostatData(rawData);
-    console.log("📊 Processed data:", thermostatData);
+    if (!silent) {
+      console.log("📊 Processed data:", thermostatData);
+    }
 
     // Send to Datadog
     await sendToDatadog(thermostatData, "resideo-gh-action", {
       device: "thermostat",
       location: config.HW_LOCATION_ID,
-    });
+    }, silent);
   } catch (error) {
-    console.error("❌ Failed to collect thermostat data:", error);
+    if (!silent) {
+      console.error("❌ Failed to collect thermostat data:", error);
+    }
     process.exit(1);
   }
+}
+
+// Allow running this file directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  collectThermostatData();
 }
