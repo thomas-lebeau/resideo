@@ -3,10 +3,9 @@
   "version": "2.0.0",
   "description": "Home automation monitoring system for Raspberry Pi",
   "type": "module",
-  "main": "src/index.mts",
+  "main": "src/main.mts",
   "scripts": {
-    "start": "node src/index.mts",
-    "dev": "node src/index.mts"
+    "start": "node src/main.mts"
   },
   "license": "MIT",
   "dependencies": {
