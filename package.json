@@ -1,0 +1,25 @@
+{
+  "name": "raspberry-home-monitor",
+  "version": "2.0.0",
+  "description": "Home automation monitoring system for Raspberry Pi",
+  "type": "module",
+  "main": "src/main.mts",
+  "scripts": {
+    "start": "node src/main.mts"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "17.2.3",
+    "undici": "7.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.7.0",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=24.8.0"
+  },
+  "volta": {
+    "node": "24.8.0"
+  }
+}
