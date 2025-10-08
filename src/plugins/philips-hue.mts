@@ -98,7 +98,7 @@ function processLightData(hueData: HueResponse): LightStatus {
 /**
  * Main function to collect and send Hue light data
  */
-export default async function collectHueLightData(): Promise<LightStatus | void> {
+export default async function collectHueLightData(): Promise<LightStatus> {
   const rawData = await getHueLightData();
   const lightStatus = processLightData(rawData);
 

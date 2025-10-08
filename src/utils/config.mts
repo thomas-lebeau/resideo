@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 export const config = {
   DD_API_KEY: process.env.DD_API_KEY,

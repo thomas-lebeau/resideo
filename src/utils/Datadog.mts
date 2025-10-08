@@ -1,3 +1,5 @@
+import { hostname } from "node:os";
+
 import { config } from "./config.mts";
 import { Logger } from "./Loggers.mts";
 import packageJson from "../../package.json" with { type: "json" };
@@ -38,8 +40,9 @@ class Datadog {
     `env:${config.ENV}`,
   ];
   private readonly apiKey: string;
-  private readonly baseUrl =
+  private readonly intakeUrl =
     "https://http-intake.logs.datadoghq.eu/api/v2/logs";
+  private readonly searchUrl = `https://app.datadoghq.eu/logs?query=@service:${this.service}`;
   private readonly batch: Array<Log> = [];
 
   constructor() {
@@ -52,18 +55,19 @@ class Datadog {
 
   send(plugin: string, payload: unknown) {
     const slug = plugin.replaceAll(/ /g, "-").toLowerCase();
-    const sanitized = sanitize(payload);
+    const formatted = formatLogPayload(payload);
 
-
-    if (!sanitized) {
+    if (!formatted) {
       return;
     }
 
     this.batch.push({
-      ...sanitized,
+      ...formatted,
       ddsource: this.ddsource,
       ddtags: this.ddtags.concat(`plugin:${slug}`).join(","),
+      host: hostname(),
       service: this.service,
+      timestamp: Date.now(),
       logger: {
         name: slug,
       },
@@ -77,7 +81,7 @@ class Datadog {
     }
 
     try {
-      const response = await fetch(this.baseUrl, {
+      const response = await fetch(this.intakeUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -91,6 +95,7 @@ class Datadog {
       }
 
       logger.info(`✅ Sent ${this.batch.length} logs to Datadog`);
+      logger.info(`🔗 ${this.searchUrl}`);
     } catch (error) {
       logger.error(
         new Error("Failed to send data to Datadog", { cause: error })
@@ -102,35 +107,30 @@ class Datadog {
 
 export default new Datadog();
 
-function sanitize(payload: unknown): Record<string, any> | undefined {
-    if (payload === undefined || payload === null || payload === "") {
-      return undefined;
-    }
+function formatLogPayload(payload: unknown): Record<string, any> | undefined {
+  if (payload === undefined || payload === null || payload === "") {
+    return undefined;
+  }
 
-    if (payload instanceof Error) {
-      return {
-        status: "error",
+  if (payload instanceof Error) {
+    return {
+      status: "error",
+      message: payload.message,
+      error: {
         message: payload.message,
-        error: {
-          message: payload.message,
-          stack: payload.stack,
-          causes: flattenErrorCauses(payload),
-        },
-      };
-    }
+        stack: payload.stack,
+        causes: flattenErrorCauses(payload),
+      },
+    };
+  }
 
-    if (typeof payload !== "object") {
-      return {
-        message: String(payload),
-      };
-    }
+  if (typeof payload !== "object") {
+    return {
+      message: String(payload),
+    };
+  }
 
-    return payload;
-}
-
-
-function isError(payload: unknown): payload is Error {
-  return payload instanceof Error;
+  return payload;
 }
 
 function flattenErrorCauses(error: unknown) {
@@ -152,4 +152,8 @@ function flattenErrorCauses(error: unknown) {
   }
 
   return causes;
+}
+
+function isError(payload: unknown): payload is Error {
+  return payload instanceof Error;
 }

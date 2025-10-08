@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "dotenv": "17.2.3",
+    "fast-speedtest-api": "^0.3.2",
     "undici": "7.16.0"
   },
   "devDependencies": {

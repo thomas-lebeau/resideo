@@ -27,7 +27,7 @@ export class Logger {
 
   constructor(name: string, reporters: Partial<Reporters> = DEFAULT_REPORTERS) {
     this.name = name;
-    this.prefix = `[${capitalize(name)}]`.padEnd(15, " ");
+    this.prefix = `[${capitalize(name)}]`.padEnd(18, " ");
     this.reporters = {
       ...DEFAULT_REPORTERS,
       ...reporters,

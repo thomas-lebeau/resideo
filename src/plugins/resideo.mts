@@ -145,7 +145,7 @@ function processThermostatData(data: ResideoDeviceResponse): ThermostatData {
 /**
  * Main function to collect and send thermostat data
  */
-export default async function collectThermostatData(): Promise<ThermostatData | void> {
+export default async function collectThermostatData(): Promise<ThermostatData> {
   const accessToken = await getAccessToken();
   const rawData = await getThermostatData(accessToken);
   const thermostatData = processThermostatData(rawData);

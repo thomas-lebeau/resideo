@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-// @ts-expect-error - TODO: fix this
 import { globSync } from "node:fs";
 import { join } from "node:path";
 import { Plugin } from "./utils/Plugin.mts";
