@@ -1,8 +1,5 @@
-import { agent } from "../shared/index.mts";
+import { AbstractPlugin, agent } from "../shared/index.mts";
 
-/**
- * Philips Hue light data from API
- */
 type HueLight = {
   id: string;
   metadata: {
@@ -16,9 +13,6 @@ type HueLight = {
   };
 };
 
-/**
- * Hue API response
- */
 type HueResponse = {
   data: HueLight[];
 };
@@ -28,73 +22,61 @@ const STATUS = {
   On: 1,
 };
 
-/**
- * Processed light data for logging
- */
-type LightStatus = {
+type LightStatusData = {
   [lightName: string]: {
     status: (typeof STATUS)[keyof typeof STATUS];
     brightness: number;
   };
 };
 
-const CONFIG = {
-  HUE_USERNAME: process.env.HUE_USERNAME,
-  HUE_HOST: process.env.HUE_HOST,
-};
+const CONFIG = ["HUE_USERNAME", "HUE_HOST"] as const;
 
-const BASE_URL = `https://${CONFIG.HUE_HOST}/clip/v2/resource/light`;
+export default class PhilipsHuePlugin extends AbstractPlugin<
+  LightStatusData,
+  typeof CONFIG
+> {
+  private readonly baseUrl: string;
 
-/**
- * Fetches light data from Philips Hue bridge
- */
-async function getHueLightData(): Promise<HueResponse> {
-  if (!CONFIG.HUE_USERNAME) {
-    throw new Error("HUE_USERNAME is not set");
+  constructor() {
+    super(CONFIG);
+
+    this.baseUrl = `https://${this.config.HUE_HOST}/clip/v2/resource/light`;
   }
 
-  if (!CONFIG.HUE_HOST) {
-    throw new Error("HUE_HOST is not set");
+  private async getHueLightData(): Promise<HueResponse> {
+    const response = await fetch(this.baseUrl, {
+      headers: {
+        "Hue-Application-Key": this.config.HUE_USERNAME,
+      },
+      // @ts-expect-error - dispatcher is not defined in the fetch API types
+      dispatcher: agent,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = (await response.json()) as HueResponse;
+    return data;
   }
 
-  const response = await fetch(BASE_URL, {
-    headers: {
-      "Hue-Application-Key": CONFIG.HUE_USERNAME,
-    },
-    // @ts-expect-error - dispatcher is not defined in the fetch API types
-    dispatcher: agent,
-  });
+  private processLightData(hueData: HueResponse): LightStatusData {
+    const lightStatus: LightStatusData = {};
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    for (const light of hueData.data) {
+      lightStatus[light.metadata.name] = {
+        status: light.on.on ? STATUS.On : STATUS.Off,
+        brightness: light.dimming.brightness,
+      };
+    }
+
+    return lightStatus;
   }
 
-  const data = (await response.json()) as HueResponse;
-  return data;
-}
+  async run(): Promise<LightStatusData> {
+    const rawData = await this.getHueLightData();
+    const lightStatus = this.processLightData(rawData);
 
-/**
- * Processes raw Hue light data into a structured format
- */
-function processLightData(hueData: HueResponse): LightStatus {
-  const lightStatus: LightStatus = {};
-
-  for (const light of hueData.data) {
-    lightStatus[light.metadata.name] = {
-      status: light.on.on ? STATUS.On : STATUS.Off,
-      brightness: light.dimming.brightness,
-    };
+    return lightStatus;
   }
-
-  return lightStatus;
-}
-
-/**
- * Main function to collect and send Hue light data
- */
-export default async function collectHueLightData(): Promise<LightStatus> {
-  const rawData = await getHueLightData();
-  const lightStatus = processLightData(rawData);
-
-  return lightStatus;
 }

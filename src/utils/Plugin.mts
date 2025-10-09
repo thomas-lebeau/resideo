@@ -2,16 +2,13 @@ import { AbstractPlugin } from "../shared/index.mts";
 import datadog from "./Datadog.mts";
 import { Logger } from "./Loggers.mts";
 
-type PluginFn = () => Promise<Record<string, unknown> | void>;
 type PluginClass = new () => AbstractPlugin<Record<string, unknown>, string[]>;
 
 export class Plugin {
   private readonly path: string;
   private readonly name: string;
   private readonly logger: Logger;
-  private module: Promise<{
-    default: PluginFn | PluginClass;
-  } | null>;
+  private module: Promise<{ default: PluginClass } | null>;
 
   constructor(path: string) {
     this.path = path;
@@ -42,12 +39,7 @@ export class Plugin {
         throw new Error("No default export function found in plugin");
       }
 
-      let data: Record<string, unknown> | void;
-      if (isPluginClass(Fn)) {
-        data = await new Fn().run();
-      } else {
-        data = await Fn();
-      }
+      const data = await new Fn().run();
 
       if (data) {
         datadog.send(this.name, data);
@@ -56,8 +48,4 @@ export class Plugin {
       this.logger.error(new Error("Failed to run plugin", { cause: error }));
     }
   }
-}
-
-function isPluginClass(Fn: PluginFn | PluginClass): Fn is PluginClass {
-  return typeof Fn === "function" && Fn.prototype?.constructor === Fn;
 }

@@ -1,26 +1,32 @@
 // @ts-expect-error - no types for fast-speedtest-api
 import FastSpeedtest from "fast-speedtest-api";
+import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
 
-type SpeedTestResult = {
+type SpeedTestData = {
   down: number;
 };
 
-const CONFIG = {
-  FAST_SPEEDTEST_TOKEN: process.env.FAST_SPEEDTEST_TOKEN,
-};
+const CONFIG = ["FAST_SPEEDTEST_TOKEN"] as const;
 
-export default async function fastSpeedTest(): Promise<SpeedTestResult> {
-  if (!CONFIG.FAST_SPEEDTEST_TOKEN) {
-    throw new Error("FAST_SPEEDTEST_TOKEN is not set");
+export default class FastSpeedTestPlugin extends AbstractPlugin<
+  SpeedTestData,
+  typeof CONFIG
+> {
+  private readonly speedtest: FastSpeedtest;
+
+  constructor() {
+    super(CONFIG);
+
+    this.speedtest = new FastSpeedtest({
+      token: this.config.FAST_SPEEDTEST_TOKEN,
+    });
   }
 
-  const speedtest = new FastSpeedtest({
-    token: process.env.FAST_SPEEDTEST_TOKEN,
-  });
+  async run(): Promise<SpeedTestData> {
+    const speed = (await this.speedtest.getSpeed()) as number;
 
-  const speed = (await speedtest.getSpeed()) as number;
-
-  return {
-    down: speed,
-  };
+    return {
+      down: speed,
+    };
+  }
 }
