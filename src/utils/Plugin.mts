@@ -2,8 +2,8 @@ import { AbstractPlugin } from "../shared/index.mts";
 import datadog from "./Datadog.mts";
 import { Logger } from "./Loggers.mts";
 
-type PluginFn = () => Promise<Record<string, any> | void>;
-type PluginClass = new () => AbstractPlugin<any, any>;
+type PluginFn = () => Promise<Record<string, unknown> | void>;
+type PluginClass = new () => AbstractPlugin<Record<string, unknown>, string[]>;
 
 export class Plugin {
   private readonly path: string;
@@ -42,7 +42,7 @@ export class Plugin {
         throw new Error("No default export function found in plugin");
       }
 
-      let data: Record<string, any> | void;
+      let data: Record<string, unknown> | void;
       if (isPluginClass(Fn)) {
         data = await new Fn().run();
       } else {

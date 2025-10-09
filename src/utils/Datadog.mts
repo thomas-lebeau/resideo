@@ -29,7 +29,7 @@ type Log = {
       stack: string;
     }>;
   };
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 class Datadog {
@@ -107,7 +107,9 @@ class Datadog {
 
 export default new Datadog();
 
-function formatLogPayload(payload: unknown): Record<string, any> | undefined {
+function formatLogPayload(
+  payload: unknown
+): Record<string, unknown> | undefined {
   if (payload === undefined || payload === null || payload === "") {
     return undefined;
   }
@@ -130,7 +132,7 @@ function formatLogPayload(payload: unknown): Record<string, any> | undefined {
     };
   }
 
-  return payload;
+  return payload as Record<string, unknown>;
 }
 
 function flattenErrorCauses(error: unknown) {

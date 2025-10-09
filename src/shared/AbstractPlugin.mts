@@ -1,5 +1,5 @@
 export abstract class AbstractPlugin<
-  T extends Record<string, any>,
+  T extends Record<string, unknown>,
   U extends readonly string[] = []
 > {
   protected readonly config: Record<U[number], string> = {} as Record<

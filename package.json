@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/main.mts",
   "scripts": {
-    "start": "node src/main.mts"
+    "start": "node src/main.mts",
+    "lint": "eslint ."
   },
   "license": "MIT",
   "dependencies": {
@@ -14,8 +15,11 @@
     "undici": "7.16.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.37.0",
     "@types/node": "24.7.0",
-    "typescript": "5.9.3"
+    "eslint": "^9.37.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0"
   },
   "engines": {
     "node": ">=24.8.0"
