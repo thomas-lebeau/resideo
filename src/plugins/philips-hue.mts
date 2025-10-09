@@ -1,4 +1,4 @@
-import { Agent } from "undici";
+import { agent } from "../shared/index.mts";
 
 /**
  * Philips Hue light data from API
@@ -44,12 +44,6 @@ const CONFIG = {
 };
 
 const BASE_URL = `https://${CONFIG.HUE_HOST}/clip/v2/resource/light`;
-
-const agent = new Agent({
-  connect: {
-    rejectUnauthorized: false,
-  },
-});
 
 /**
  * Fetches light data from Philips Hue bridge

@@ -1,4 +1,4 @@
-import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
+import { AbstractPlugin } from "../shared/index.mts";
 import datadog from "./Datadog.mts";
 import { Logger } from "./Loggers.mts";
 

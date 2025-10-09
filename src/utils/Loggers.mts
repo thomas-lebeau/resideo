@@ -1,3 +1,4 @@
+import { capitalize } from "../shared/index.mts";
 import { config } from "./config.mts";
 import datadog from "./Datadog.mts";
 
@@ -59,8 +60,4 @@ export class Logger {
       datadog.send(this.name, error);
     }
   }
-}
-
-function capitalize(string: string) {
-  return string.charAt(0).toUpperCase() + string.slice(1);
 }
