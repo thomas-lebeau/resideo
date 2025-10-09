@@ -59,5 +59,5 @@ export class Plugin {
 }
 
 function isPluginClass(Fn: PluginFn | PluginClass): Fn is PluginClass {
-  return typeof Fn === "function" && Fn.prototype.constructor === Fn;
+  return typeof Fn === "function" && Fn.prototype?.constructor === Fn;
 }
