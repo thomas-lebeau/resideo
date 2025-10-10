@@ -331,31 +331,37 @@ resource "datadog_logs_metric" "error_rate" {
 # see available units at https://docs.datadoghq.com/metrics/units/
 resource "datadog_metric_metadata" "temperature_readings_metadata" {
   metric = datadog_logs_metric.temperature_readings.name
+  type = "gauge"
   unit   = "degree celsius"
 }
 
 resource "datadog_metric_metadata" "humidity_readings_metadata" {
   metric = datadog_logs_metric.humidity_readings.name
+  type = "gauge"
   unit   = "percent"
 }
 
 resource "datadog_metric_metadata" "battery_levels_metadata" {
   metric = datadog_logs_metric.battery_levels.name
+  type = "gauge"
   unit   = "percent"
 }
 
 resource "datadog_metric_metadata" "thermostat_target_temperature_metadata" {
   metric = datadog_logs_metric.thermostat_target_temperature.name
+  type = "gauge"
   unit   = "degree celsius"
 }
 
 resource "datadog_metric_metadata" "light_brightness_metadata" {
   metric = datadog_logs_metric.light_brightness.name
+  type = "gauge"
   unit   = "percent"
 }
 
 resource "datadog_metric_metadata" "internet_speed_metadata" {
   metric = datadog_logs_metric.internet_speed.name
+  type = "gauge"
   unit   = "byte"
   per_unit = "second"
 }
