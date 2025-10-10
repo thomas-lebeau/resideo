@@ -1,3 +1,4 @@
+import type { Thermometer, Thermostat } from "../shared/AbstractPlugin.mts";
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
 
 type ResideoTokenResponse = {
@@ -29,14 +30,6 @@ const OPERATION_MODE = {
   Heat: 1,
 } as const;
 
-type ThermostatData = {
-  mode: (typeof MODE)[keyof typeof MODE];
-  operation_mode: (typeof OPERATION_MODE)[keyof typeof OPERATION_MODE];
-  in_temp: number;
-  out_temp: number;
-  target_temp: number;
-};
-
 const CONFIG = [
   "HW_API_KEY",
   "HW_API_SECRET",
@@ -46,7 +39,7 @@ const CONFIG = [
 ] as const;
 
 export default class ResideoPlugin extends AbstractPlugin<
-  ThermostatData,
+  Thermometer | Thermostat,
   typeof CONFIG
 > {
   private readonly baseUrl = "https://api.honeywell.com";
@@ -106,17 +99,30 @@ export default class ResideoPlugin extends AbstractPlugin<
     return data;
   }
 
-  private processThermostatData(data: ResideoDeviceResponse): ThermostatData {
-    return {
-      mode: data.changeableValues.mode === "Heat" ? MODE.Heat : MODE.Off,
-      target_temp: data.changeableValues.heatSetpoint,
-      operation_mode:
-        data.operationStatus.mode === "Heat"
-          ? OPERATION_MODE.Heat
-          : OPERATION_MODE.EquipmentOff,
-      out_temp: data.outdoorTemperature,
-      in_temp: data.indoorTemperature,
-    };
+  private processThermostatData(data: ResideoDeviceResponse) {
+    const name = this.config.HW_DEVICE_ID;
+    return [
+      {
+        type: "thermostat",
+        name,
+        state: data.changeableValues.mode === "Heat" ? MODE.Heat : MODE.Off,
+        target: data.changeableValues.heatSetpoint,
+        operation_mode:
+          data.operationStatus.mode === "Heat"
+            ? OPERATION_MODE.Heat
+            : OPERATION_MODE.EquipmentOff,
+      },
+      {
+        type: "thermometer",
+        name: `${name}-indoor`,
+        temperature: data.indoorTemperature,
+      },
+      {
+        type: "thermometer",
+        name: `${name}-outdoor`,
+        temperature: data.outdoorTemperature,
+      },
+    ] satisfies Array<Thermostat | Thermometer>;
   }
 
   async run() {

@@ -1,6 +1,39 @@
+type OnOff = 0 | 1;
+
+export type Thermometer = {
+  type: "thermometer";
+  name: string;
+  temperature?: number;
+  humidity?: number;
+  battery?: number;
+};
+
+export type Thermostat = {
+  type: "thermostat";
+  name: string;
+  state: OnOff;
+  operation_mode: OnOff;
+  target: number;
+};
+
+export type LightBulb = {
+  type: "lightbulb";
+  name: string;
+  state: OnOff;
+  brightness: number;
+};
+
+export type Other = {
+  type: string;
+  name: string;
+  state?: OnOff;
+  mode?: OnOff;
+  [key: string]: unknown;
+};
+
 export abstract class AbstractPlugin<
-  T extends Record<string, unknown> | Array<Record<string, unknown>>,
-  U extends readonly string[] = []
+  T extends Thermometer | Thermostat | LightBulb | Other = Other,
+  U extends readonly string[] = string[]
 > {
   protected readonly config: Record<U[number], string> = {} as Record<
     U[number],
@@ -17,5 +50,5 @@ export abstract class AbstractPlugin<
     }
   }
 
-  abstract run(): Promise<T>;
+  abstract run(): Promise<T | Array<T> | undefined>;
 }

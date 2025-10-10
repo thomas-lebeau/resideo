@@ -1,3 +1,4 @@
+import type { LightBulb } from "../shared/index.mts";
 import { AbstractPlugin, agent, toKebabCase } from "../shared/index.mts";
 
 type HueResponse = {
@@ -18,18 +19,12 @@ type HueResponse = {
 const STATE = {
   Off: 0,
   On: 1,
-};
-
-type PhilipsHuePluginData = Array<{
-  name: string;
-  state: (typeof STATE)[keyof typeof STATE];
-  brightness: number;
-}>;
+} as const;
 
 const CONFIG = ["HUE_USERNAME", "HUE_HOST"] as const;
 
 export default class PhilipsHuePlugin extends AbstractPlugin<
-  PhilipsHuePluginData,
+  LightBulb,
   typeof CONFIG
 > {
   private readonly baseUrl: string;
@@ -57,15 +52,18 @@ export default class PhilipsHuePlugin extends AbstractPlugin<
     return data;
   }
 
-  private processLightData(hueData: HueResponse): PhilipsHuePluginData {
-    return hueData.data.map((light) => ({
-      name: toKebabCase(light.metadata.name),
-      state: light.on.on ? STATE.On : STATE.Off,
-      brightness: light.dimming.brightness,
-    }));
+  private processLightData(hueData: HueResponse) {
+    return hueData.data.map((light) => {
+      return {
+        type: "lightbulb",
+        name: toKebabCase(light.metadata.name),
+        state: light.on.on ? STATE.On : STATE.Off,
+        brightness: light.dimming.brightness,
+      } as const;
+    });
   }
 
-  async run(): Promise<PhilipsHuePluginData> {
+  async run() {
     const rawData = await this.getHueLightData();
     const lightStatus = this.processLightData(rawData);
 

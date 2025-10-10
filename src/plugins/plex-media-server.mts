@@ -1,17 +1,31 @@
 import { agent, AbstractPlugin, toKebabCase } from "../shared/index.mts";
 
-type PlexMediaServerData = Array<{
+type Library = MovieLibrary | ShowLibrary;
+
+type AbstractLibrary = {
   name: string;
-  type: "movie" | "show";
   count: number;
-  episodeCount?: number;
   plexVersion: string;
-}>;
+};
+
+type MovieLibrary = AbstractLibrary & {
+  type: typeof TYPE.Movie;
+};
+
+type ShowLibrary = AbstractLibrary & {
+  type: typeof TYPE.Show;
+  episodeCount: number;
+};
+
+const TYPE = {
+  Movie: "movie-library",
+  Show: "show-library",
+} as const;
 
 const CONFIG = ["PLEX_HOST", "PLEX_TOKEN"] as const;
 
 export default class PlexMediaServer extends AbstractPlugin<
-  PlexMediaServerData,
+  Library,
   typeof CONFIG
 > {
   constructor() {
@@ -61,23 +75,34 @@ export default class PlexMediaServer extends AbstractPlugin<
     const identity = await this.getPlexData("/identity");
     const librarySections = await this.getPlexData("/library/sections");
 
-    const library: PlexMediaServerData = [];
+    const libraries: Library[] = [];
 
     for (const section of librarySections.Directory) {
-      library.push({
+      const library: AbstractLibrary = {
         plexVersion: identity.version,
         name: toKebabCase(section.title),
-        type: section.type,
         count: (await this.getMediaSectionCount(section.key)).totalSize,
-        ...(section.type === "show" && {
-          episodeCount: (
-            await this.getMediaSectionCount(section.key, { type: 4 })
-          ).totalSize,
-        }),
-      });
+      };
+
+      if (section.type === "movie") {
+        libraries.push({
+          ...library,
+          type: TYPE.Movie,
+        });
+      } else {
+        const { totalSize } = await this.getMediaSectionCount(section.key, {
+          type: 4,
+        });
+
+        libraries.push({
+          ...library,
+          type: TYPE.Show,
+          episodeCount: totalSize,
+        });
+      }
     }
 
-    return library;
+    return libraries;
   }
 }
 

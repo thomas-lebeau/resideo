@@ -1,11 +1,8 @@
-import { AbstractPlugin } from "../shared/index.mts";
+import type { AbstractPlugin } from "../shared/index.mts";
 import datadog from "./Datadog.mts";
 import { Logger } from "./Loggers.mts";
 
-type PluginClass = new () => AbstractPlugin<
-  Record<string, unknown> | Array<Record<string, unknown>>,
-  string[]
->;
+type PluginClass = new () => AbstractPlugin;
 
 export class Plugin {
   private readonly path: string;

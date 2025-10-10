@@ -1,9 +1,12 @@
 // @ts-expect-error - no types for fast-speedtest-api
 import FastSpeedtest from "fast-speedtest-api";
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
+import { hostname } from "node:os";
 
 type SpeedTestData = {
-  down: number;
+  type: "speedtest";
+  name: string;
+  speed: number;
 };
 
 const CONFIG = ["FAST_SPEEDTEST_TOKEN"] as const;
@@ -22,11 +25,13 @@ export default class FastSpeedTestPlugin extends AbstractPlugin<
     });
   }
 
-  async run(): Promise<SpeedTestData> {
+  async run() {
     const speed = (await this.speedtest.getSpeed()) as number;
 
     return {
-      down: speed,
-    };
+      type: "speedtest",
+      name: hostname(),
+      speed,
+    } as const;
   }
 }
