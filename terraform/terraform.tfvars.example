@@ -1,0 +1,11 @@
+# Rename this file to terraform.tfvars and fill in your actual values
+
+# Datadog API credentials (required)
+# Get these from https://app.datadoghq.eu/organization-settings/api-keys
+datadog_api_key = "your-datadog-api-key-here"
+datadog_app_key = "your-datadog-app-key-here"
+
+# Datadog API URL (optional)
+# For EU: https://api.datadoghq.eu (default)
+# For US: https://api.datadoghq.com
+datadog_api_url = "https://api.datadoghq.eu"

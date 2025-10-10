@@ -40,3 +40,39 @@ coverage/
 # Dependency directories
 .nyc_output
 .sass-cache
+
+# Local .terraform directories
+**/.terraform/*
+
+# Terraform state files
+*.tfstate
+*.tfstate.*
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Sensitive variable files
+*.tfvars
+*.tfvars.json
+
+# Override files (local-only config)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Plan files
+*.plan
+
+# Backup files
+*.backup
+
+# CLI config files
+.terraformrc
+terraform.rc
+
+# Lock file (optional)
+# If you're sharing providers and versions via .terraform.lock.hcl, keep it.
+# Otherwise, ignore it for more flexible local testing.
+.terraform.lock.hcl

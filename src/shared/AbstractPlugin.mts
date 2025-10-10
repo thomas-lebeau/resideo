@@ -5,7 +5,7 @@ export type Thermometer = {
   name: string;
   temperature?: number;
   humidity?: number;
-  battery?: number;
+  battery_level?: number;
 };
 
 export type Thermostat = {
