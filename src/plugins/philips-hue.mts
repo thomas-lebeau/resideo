@@ -1,38 +1,35 @@
-import { AbstractPlugin, agent } from "../shared/index.mts";
-
-type HueLight = {
-  id: string;
-  metadata: {
-    name: string;
-  };
-  on: {
-    on: boolean;
-  };
-  dimming: {
-    brightness: number;
-  };
-};
+import { AbstractPlugin, agent, toKebabCase } from "../shared/index.mts";
 
 type HueResponse = {
-  data: HueLight[];
+  data: Array<{
+    id: string;
+    metadata: {
+      name: string;
+    };
+    on: {
+      on: boolean;
+    };
+    dimming: {
+      brightness: number;
+    };
+  }>;
 };
 
-const STATUS = {
+const STATE = {
   Off: 0,
   On: 1,
 };
 
-type LightStatusData = {
-  [lightName: string]: {
-    status: (typeof STATUS)[keyof typeof STATUS];
-    brightness: number;
-  };
-};
+type PhilipsHuePluginData = Array<{
+  name: string;
+  state: (typeof STATE)[keyof typeof STATE];
+  brightness: number;
+}>;
 
 const CONFIG = ["HUE_USERNAME", "HUE_HOST"] as const;
 
 export default class PhilipsHuePlugin extends AbstractPlugin<
-  LightStatusData,
+  PhilipsHuePluginData,
   typeof CONFIG
 > {
   private readonly baseUrl: string;
@@ -60,20 +57,15 @@ export default class PhilipsHuePlugin extends AbstractPlugin<
     return data;
   }
 
-  private processLightData(hueData: HueResponse): LightStatusData {
-    const lightStatus: LightStatusData = {};
-
-    for (const light of hueData.data) {
-      lightStatus[light.metadata.name] = {
-        status: light.on.on ? STATUS.On : STATUS.Off,
-        brightness: light.dimming.brightness,
-      };
-    }
-
-    return lightStatus;
+  private processLightData(hueData: HueResponse): PhilipsHuePluginData {
+    return hueData.data.map((light) => ({
+      name: toKebabCase(light.metadata.name),
+      state: light.on.on ? STATE.On : STATE.Off,
+      brightness: light.dimming.brightness,
+    }));
   }
 
-  async run(): Promise<LightStatusData> {
+  async run(): Promise<PhilipsHuePluginData> {
     const rawData = await this.getHueLightData();
     const lightStatus = this.processLightData(rawData);
 

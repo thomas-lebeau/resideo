@@ -2,7 +2,10 @@ import { AbstractPlugin } from "../shared/index.mts";
 import datadog from "./Datadog.mts";
 import { Logger } from "./Loggers.mts";
 
-type PluginClass = new () => AbstractPlugin<Record<string, unknown>, string[]>;
+type PluginClass = new () => AbstractPlugin<
+  Record<string, unknown> | Array<Record<string, unknown>>,
+  string[]
+>;
 
 export class Plugin {
   private readonly path: string;
@@ -45,7 +48,9 @@ export class Plugin {
         datadog.send(this.name, data);
       }
     } catch (error) {
-      this.logger.error(new Error("Failed to run plugin", { cause: error }));
+      this.logger.error(
+        new Error(`Failed to run ${this.name} plugin`, { cause: error })
+      );
     }
   }
 }

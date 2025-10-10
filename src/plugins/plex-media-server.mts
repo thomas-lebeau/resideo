@@ -1,9 +1,12 @@
-import { agent, AbstractPlugin } from "../shared/index.mts";
+import { agent, AbstractPlugin, toKebabCase } from "../shared/index.mts";
 
-type PlexMediaServerData = {
+type PlexMediaServerData = Array<{
+  name: string;
+  type: "movie" | "show";
+  count: number;
+  episodeCount?: number;
   plexVersion: string;
-  library: Record<string, { count: number; episodeCount?: number }>;
-};
+}>;
 
 const CONFIG = ["PLEX_HOST", "PLEX_TOKEN"] as const;
 
@@ -56,33 +59,25 @@ export default class PlexMediaServer extends AbstractPlugin<
 
   async run() {
     const identity = await this.getPlexData("/identity");
-    // const activities = await this.getPlexData("/activities");
-    // const sessions = await this.getPlexData("/status/sessions");
     const librarySections = await this.getPlexData("/library/sections");
 
-    const library: PlexMediaServerData["library"] = {};
-    // const usersByID: Record<string, string> = {};
+    const library: PlexMediaServerData = [];
 
     for (const section of librarySections.Directory) {
-      library[section.title] = {
+      library.push({
+        plexVersion: identity.version,
+        name: toKebabCase(section.title),
+        type: section.type,
         count: (await this.getMediaSectionCount(section.key)).totalSize,
-      };
-
-      if (section.type === "show") {
-        library[section.title].episodeCount = (
-          await this.getMediaSectionCount(section.key, { type: 4 })
-        ).totalSize;
-      }
+        ...(section.type === "show" && {
+          episodeCount: (
+            await this.getMediaSectionCount(section.key, { type: 4 })
+          ).totalSize,
+        }),
+      });
     }
 
-    // for (const session of sessions.Metadata) {
-    //   usersByID[session.User.id] = session.User.title;
-    // }
-
-    return {
-      plexVersion: identity.version,
-      library,
-    };
+    return library;
   }
 }
 

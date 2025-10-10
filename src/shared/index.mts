@@ -1,3 +1,3 @@
 export * from "./AbstractPlugin.mts";
 export * from "./agent.mts";
-export * from "./capitalize.mts";
+export * from "./string.mts";

@@ -1,4 +1,5 @@
 import { hostname } from "node:os";
+import { randomUUID} from "node:crypto";
 
 import { config } from "./config.mts";
 import { Logger } from "./Loggers.mts";
@@ -32,6 +33,8 @@ type Log = {
   [key: string]: unknown;
 };
 
+type RawLog = unknown
+
 class Datadog {
   private readonly ddsource = "NodeJS";
   private readonly service = packageJson.name;
@@ -42,7 +45,7 @@ class Datadog {
   private readonly apiKey: string;
   private readonly intakeUrl =
     "https://http-intake.logs.datadoghq.eu/api/v2/logs";
-  private readonly searchUrl = `https://app.datadoghq.eu/logs?query=@service:${this.service}`;
+  private readonly searchUrl = `https://app.datadoghq.eu/logs/livetail`;
   private readonly batch: Array<Log> = [];
 
   constructor() {
@@ -53,9 +56,9 @@ class Datadog {
     this.apiKey = config.DD_API_KEY;
   }
 
-  send(plugin: string, payload: unknown) {
+  private batchLog(plugin: string, log: RawLog) {
     const slug = plugin.replaceAll(/ /g, "-").toLowerCase();
-    const formatted = formatLogPayload(payload);
+    const formatted = formatLogPayload(log);
 
     if (!formatted) {
       return;
@@ -74,6 +77,23 @@ class Datadog {
     });
   }
 
+  send(plugin: string, data: RawLog | Array<RawLog>) {
+    if (Array.isArray(data)) {
+      data.forEach((log) => this.batchLog(plugin, log));
+    } else {
+      this.batchLog(plugin, data);
+    }
+  }
+
+  private getSearchUrl(requestId: string) {
+    const params = new URLSearchParams({
+      query: `@request_id:${requestId}`,
+      cols: "host,service,env,@logger.name",
+    });
+
+    return `${this.searchUrl}?${params.toString()}`;
+  }
+
   async flush() {
     if (this.batch.length === 0) {
       logger.info("No logs to send to Datadog");
@@ -81,7 +101,8 @@ class Datadog {
     }
 
     try {
-      const response = await fetch(this.intakeUrl, {
+      const requestId = randomUUID();
+      const response = await fetch(this.intakeUrl + `?request_id=${requestId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -95,7 +116,7 @@ class Datadog {
       }
 
       logger.info(`✅ Sent ${this.batch.length} logs to Datadog`);
-      logger.info(`🔗 ${this.searchUrl}`);
+      logger.info(`🔗 ${this.getSearchUrl(requestId)}`);
     } catch (error) {
       logger.error(
         new Error("Failed to send data to Datadog", { cause: error })
