@@ -1,4 +1,4 @@
-import { agent, AbstractPlugin, toKebabCase } from "../shared/index.mts";
+import { agent, AbstractPlugin } from "../shared/index.mts";
 
 type Library = MovieLibrary | ShowLibrary;
 
@@ -80,7 +80,7 @@ export default class PlexMediaServer extends AbstractPlugin<
     for (const section of librarySections.Directory) {
       const library: AbstractLibrary = {
         plexVersion: identity.version,
-        name: toKebabCase(section.title),
+        name: section.title,
         count: (await this.getMediaSectionCount(section.key)).totalSize,
       };
 

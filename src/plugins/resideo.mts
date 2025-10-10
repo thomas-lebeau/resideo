@@ -8,6 +8,7 @@ type ResideoTokenResponse = {
 };
 
 type ResideoDeviceResponse = {
+  name: string;
   changeableValues: {
     mode: "Off" | "Heat";
     heatSetpoint: number;
@@ -18,6 +19,7 @@ type ResideoDeviceResponse = {
   };
   outdoorTemperature: number;
   indoorTemperature: number;
+  displayedOutdoorHumidity: number;
 };
 
 const MODE = {
@@ -100,11 +102,10 @@ export default class ResideoPlugin extends AbstractPlugin<
   }
 
   private processThermostatData(data: ResideoDeviceResponse) {
-    const name = this.config.HW_DEVICE_ID;
     return [
       {
         type: "thermostat",
-        name,
+        name: data.name,
         state: data.changeableValues.mode === "Heat" ? MODE.Heat : MODE.Off,
         target: data.changeableValues.heatSetpoint,
         operation_mode:
@@ -114,13 +115,14 @@ export default class ResideoPlugin extends AbstractPlugin<
       },
       {
         type: "thermometer",
-        name: `${name}-indoor`,
+        name: `${data.name} (indoor)`,
         temperature: data.indoorTemperature,
       },
       {
         type: "thermometer",
-        name: `${name}-outdoor`,
+        name: `${data.name} (outdoor)`,
         temperature: data.outdoorTemperature,
+        humidity: data.displayedOutdoorHumidity,
       },
     ] satisfies Array<Thermostat | Thermometer>;
   }

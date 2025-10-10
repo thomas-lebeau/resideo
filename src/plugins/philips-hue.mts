@@ -1,20 +1,88 @@
-import type { LightBulb } from "../shared/index.mts";
-import { AbstractPlugin, agent, toKebabCase } from "../shared/index.mts";
+import type { Light } from "../shared/index.mts";
+import { AbstractPlugin, agent } from "../shared/index.mts";
 
-type HueResponse = {
-  data: Array<{
-    id: string;
-    metadata: {
-      name: string;
-    };
-    on: {
-      on: boolean;
-    };
-    dimming: {
-      brightness: number;
-    };
-  }>;
+type AbstractButton = {
+  type: "button";
+  name: string;
 };
+
+type ButtonWithEvent = AbstractButton & {
+  event: ButtonEvent;
+  battery_state: BatteryState | "n/a";
+  battery_level?: number;
+  timestamp: number;
+};
+
+type ButtonWithoutEvent = AbstractButton & {
+  battery_state: BatteryState;
+  battery_level: number;
+};
+
+type Button = ButtonWithEvent | ButtonWithoutEvent;
+
+type LightResponse = Array<{
+  id_v1: string;
+  metadata: {
+    name: string;
+  };
+  on: {
+    on: boolean;
+  };
+  dimming: {
+    brightness: number;
+  };
+}>;
+
+type BatteryState = "normal" | "low" | "critical";
+type DevicePowerResponse = Array<{
+  id_v1: string;
+  power_state: {
+    battery_state: BatteryState;
+    battery_level: number;
+  };
+}>;
+
+type ButtonEvent =
+  | "initial_press"
+  | "repeat"
+  | "short_release"
+  | "long_release"
+  | "double_short_release"
+  | "long_press";
+
+type ButtonResponse = Array<{
+  id_v1: string;
+  button: {
+    last_event: ButtonEvent;
+    button_report: {
+      updated: string;
+      event: ButtonEvent;
+    };
+  };
+}>;
+
+type DeviceResponse = Array<{
+  id_v1: string;
+  metadata: {
+    name: string;
+  };
+}>;
+
+type Endpoint =
+  | "/resource/light"
+  | "/resource/button"
+  | "/resource/device_power"
+  | "/resource/device";
+
+type Response<T extends Endpoint> = T extends "/resource/light"
+  ? LightResponse
+  : T extends "/resource/device_power"
+  ? DevicePowerResponse
+  : T extends "/resource/button"
+  ? ButtonResponse
+  : T extends "/resource/device"
+  ? DeviceResponse
+  : unknown;
 
 const STATE = {
   Off: 0,
@@ -22,9 +90,10 @@ const STATE = {
 } as const;
 
 const CONFIG = ["HUE_USERNAME", "HUE_HOST"] as const;
+const ONE_MINUTE = 60_000 as const;
 
 export default class PhilipsHuePlugin extends AbstractPlugin<
-  LightBulb,
+  Light | Button,
   typeof CONFIG
 > {
   private readonly baseUrl: string;
@@ -32,11 +101,11 @@ export default class PhilipsHuePlugin extends AbstractPlugin<
   constructor() {
     super(CONFIG);
 
-    this.baseUrl = `https://${this.config.HUE_HOST}/clip/v2/resource/light`;
+    this.baseUrl = `https://${this.config.HUE_HOST}/clip/v2`;
   }
 
-  private async getHueLightData(): Promise<HueResponse> {
-    const response = await fetch(this.baseUrl, {
+  private async getData<T extends Endpoint>(endpoint: T): Promise<Response<T>> {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
       headers: {
         "Hue-Application-Key": this.config.HUE_USERNAME,
       },
@@ -48,25 +117,83 @@ export default class PhilipsHuePlugin extends AbstractPlugin<
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = (await response.json()) as HueResponse;
+    const { data } = (await response.json()) as { data: Response<T> };
     return data;
   }
 
-  private processLightData(hueData: HueResponse) {
-    return hueData.data.map((light) => {
+  private processLightResponse(
+    lightResponse: Response<"/resource/light">
+  ): Array<Light | undefined> {
+    return lightResponse.map((light) => {
       return {
-        type: "lightbulb",
-        name: toKebabCase(light.metadata.name),
+        type: "light",
+        name: light.metadata.name,
         state: light.on.on ? STATE.On : STATE.Off,
         brightness: light.dimming.brightness,
       } as const;
     });
   }
 
-  async run() {
-    const rawData = await this.getHueLightData();
-    const lightStatus = this.processLightData(rawData);
+  private processButtonResponse(
+    buttonResponse: Response<"/resource/button">,
+    deviceResponse: Response<"/resource/device">,
+    devicePowerResponse: Response<"/resource/device_power">
+  ): Array<Button | undefined> {
+    return buttonResponse.map((button) => {
+      const device = deviceResponse.find(
+        (device) => device.id_v1 === button.id_v1
+      );
+      const devicePower = devicePowerResponse.find(
+        (devicePower) => devicePower.id_v1 === button.id_v1
+      );
 
-    return lightStatus;
+      const { battery_level, battery_state } = devicePower?.power_state ?? {};
+      const { event, updated } = button.button.button_report ?? {};
+      const name = device?.metadata.name;
+
+      if (!name) {
+        return;
+      }
+
+      if (elapsed(updated) < ONE_MINUTE) {
+        // Report last event if it has been updated in the last minute
+        return {
+          type: "button",
+          name,
+          event,
+          battery_state: battery_state ?? "n/a",
+          ...(battery_level ? { battery_level } : {}),
+          // Use the last event timestamp
+          timestamp: new Date(updated).getTime(),
+        } satisfies ButtonWithEvent;
+      } else if (battery_level && battery_state) {
+        // Report only battery level if last event has not been updated in the last minute
+        return {
+          type: "button",
+          name,
+          battery_state,
+          battery_level,
+        } satisfies ButtonWithoutEvent;
+      }
+
+      return;
+    });
   }
+
+  async run() {
+    return [
+      ...this.processLightResponse(await this.getData("/resource/light")),
+      ...this.processButtonResponse(
+        ...(await Promise.all([
+          this.getData("/resource/button"),
+          this.getData("/resource/device"),
+          this.getData("/resource/device_power"),
+        ]))
+      ),
+    ].filter((log) => log !== undefined);
+  }
+}
+
+function elapsed(updated: string): number {
+  return Date.now() - new Date(updated).getTime();
 }

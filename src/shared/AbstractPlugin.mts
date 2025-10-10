@@ -16,8 +16,8 @@ export type Thermostat = {
   target: number;
 };
 
-export type LightBulb = {
-  type: "lightbulb";
+export type Light = {
+  type: "light";
   name: string;
   state: OnOff;
   brightness: number;
@@ -32,7 +32,7 @@ export type Other = {
 };
 
 export abstract class AbstractPlugin<
-  T extends Thermometer | Thermostat | LightBulb | Other = Other,
+  T extends Thermometer | Thermostat | Light | Other = Other,
   U extends readonly string[] = string[]
 > {
   protected readonly config: Record<U[number], string> = {} as Record<

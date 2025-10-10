@@ -70,7 +70,7 @@ class Datadog {
       ddtags: this.ddtags.concat(`plugin:${slug}`).join(","),
       host: hostname(),
       service: this.service,
-      timestamp: Date.now(),
+      timestamp: formatted.timestamp ?? Date.now(),
       logger: {
         name: slug,
       },
@@ -88,7 +88,7 @@ class Datadog {
   private getSearchUrl(requestId: string) {
     const params = new URLSearchParams({
       query: `@request_id:${requestId}`,
-      cols: "host,service,env,@logger.name",
+      cols: "host,service,env,@logger.name,@name,@type",
     });
 
     return `${this.searchUrl}?${params.toString()}`;
