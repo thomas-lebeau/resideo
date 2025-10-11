@@ -158,6 +158,7 @@ function formatLogPayload(
       status: "error",
       message: payload.message,
       error: {
+        type: payload.name,
         message: payload.message,
         stack: payload.stack,
         causes: flattenErrorCauses(payload),
@@ -184,7 +185,7 @@ function flattenErrorCauses(error: unknown) {
 
   while (currentError instanceof Error && causes.length < 10) {
     causes.push({
-      type: "Error",
+      type: currentError.name,
       message: currentError.message,
       stack: currentError.stack,
     });
