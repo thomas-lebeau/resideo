@@ -15,6 +15,8 @@ resource "datadog_logs_index" "request_id_exclusion" {
     filter {
       query       = "@service:${local.service_name} -status:error"
       sample_rate = 0.99
+      # TODO: This is not supported in the Datadog Terraform provider
+      # sample_attribute = "@request_id"
     }
   }
 }
