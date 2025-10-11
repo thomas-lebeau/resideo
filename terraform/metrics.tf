@@ -359,6 +359,6 @@ resource "datadog_metric_metadata" "light_brightness_metadata" {
 resource "datadog_metric_metadata" "internet_speed_metadata" {
   metric = datadog_logs_metric.internet_speed.name
   type = "gauge"
-  unit   = "byte"
+  unit   = "bit"
   per_unit = "second"
 }

@@ -22,6 +22,7 @@ export default class FastSpeedTestPlugin extends AbstractPlugin<
 
     this.speedtest = new FastSpeedtest({
       token: this.config.FAST_SPEEDTEST_TOKEN,
+      unit: FastSpeedtest.UNITS.bps,
     });
   }
 
