@@ -15,3 +15,10 @@ variable "datadog_api_url" {
   type        = string
   default     = "https://api.datadoghq.eu"
 }
+
+# service name - MUST match package.json name
+variable "service_name" {
+  description = "Service name"
+  type        = string
+  default     = "raspberry-home-monitor"
+}

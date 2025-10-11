@@ -2,9 +2,6 @@ locals {
   # metric prefix
   name = "raspberry_home_monitor"
 
-  # service name - MUST match package.json name
-  service_name = "raspberry-home-monitor"
-
   # Common group_by configurations - applied to all metrics
   common_group_by = {
     name = {
@@ -34,7 +31,7 @@ locals {
 resource "datadog_logs_metric" "temperature_readings" {
   name = "${local.name}.temperature"
   filter {
-    query = "service:${local.service_name} @temperature:*"
+    query = "service:${var.service_name} @temperature:*"
   }
   compute {
     aggregation_type = "distribution"
@@ -56,7 +53,7 @@ resource "datadog_logs_metric" "temperature_readings" {
 resource "datadog_logs_metric" "humidity_readings" {
   name = "${local.name}.humidity"
   filter {
-    query = "service:${local.service_name} @humidity:*"
+    query = "service:${var.service_name} @humidity:*"
   }
   compute {
     aggregation_type = "distribution"
@@ -78,7 +75,7 @@ resource "datadog_logs_metric" "humidity_readings" {
 resource "datadog_logs_metric" "battery_levels" {
   name = "${local.name}.battery_level"
   filter {
-    query = "service:${local.service_name} @battery_level:*"
+    query = "service:${var.service_name} @battery_level:*"
   }
   compute {
     aggregation_type = "distribution"
@@ -99,7 +96,7 @@ resource "datadog_logs_metric" "battery_levels" {
 resource "datadog_logs_metric" "thermostat_target_temperature" {
   name = "${local.name}.thermostat.target_temperature"
   filter {
-    query = "service:${local.service_name} @type:thermostat"
+    query = "service:${var.service_name} @type:thermostat"
   }
   compute {
     aggregation_type = "distribution"
@@ -119,7 +116,7 @@ resource "datadog_logs_metric" "thermostat_target_temperature" {
 resource "datadog_logs_metric" "thermostat_state" {
   name = "${local.name}.thermostat.state"
   filter {
-    query = "service:${local.service_name} @type:thermostat"
+    query = "service:${var.service_name} @type:thermostat"
   }
   compute {
     aggregation_type = "distribution"
@@ -139,7 +136,7 @@ resource "datadog_logs_metric" "thermostat_state" {
 resource "datadog_logs_metric" "thermostat_operation_mode" {
   name = "${local.name}.thermostat.operation_mode"
   filter {
-    query = "service:${local.service_name} @type:thermostat"
+    query = "service:${var.service_name} @type:thermostat"
   }
   compute {
     aggregation_type = "distribution"
@@ -160,7 +157,7 @@ resource "datadog_logs_metric" "thermostat_operation_mode" {
 resource "datadog_logs_metric" "light_state" {
   name = "${local.name}.light.state"
   filter {
-    query = "service:${local.service_name} @type:light"
+    query = "service:${var.service_name} @type:light"
   }
   compute {
     aggregation_type = "distribution"
@@ -180,7 +177,7 @@ resource "datadog_logs_metric" "light_state" {
 resource "datadog_logs_metric" "light_brightness" {
   name = "${local.name}.light.brightness"
   filter {
-    query = "service:${local.service_name} @type:light @brightness:*"
+    query = "service:${var.service_name} @type:light @brightness:*"
   }
   compute {
     aggregation_type = "distribution"
@@ -202,7 +199,7 @@ resource "datadog_logs_metric" "light_brightness" {
 resource "datadog_logs_metric" "button_events" {
   name = "${local.name}.button.events"
   filter {
-    query = "service:${local.service_name} @type:button @event:*"
+    query = "service:${var.service_name} @type:button @event:*"
   }
   compute {
     aggregation_type = "count"
@@ -228,7 +225,7 @@ resource "datadog_logs_metric" "button_events" {
 resource "datadog_logs_metric" "internet_speed" {
   name = "${local.name}.internet.speed"
   filter {
-    query = "service:${local.service_name} @type:speedtest @speed:*"
+    query = "service:${var.service_name} @type:speedtest @speed:*"
   }
   compute {
     aggregation_type = "distribution"
@@ -250,7 +247,7 @@ resource "datadog_logs_metric" "internet_speed" {
 resource "datadog_logs_metric" "plex_movie_count" {
   name = "${local.name}.plex.movies"
   filter {
-    query = "service:${local.service_name} @type:movie-library @count:*"
+    query = "service:${var.service_name} @type:movie-library @count:*"
   }
   compute {
     aggregation_type = "distribution"
@@ -270,7 +267,7 @@ resource "datadog_logs_metric" "plex_movie_count" {
 resource "datadog_logs_metric" "plex_show_count" {
   name = "${local.name}.plex.shows"
   filter {
-    query = "service:${local.service_name} @type:show-library @count:*"
+    query = "service:${var.service_name} @type:show-library @count:*"
   }
   compute {
     aggregation_type = "distribution"
@@ -290,7 +287,7 @@ resource "datadog_logs_metric" "plex_show_count" {
 resource "datadog_logs_metric" "plex_episode_count" {
   name = "${local.name}.plex.episodes"
   filter {
-    query = "service:${local.service_name} @type:show-library @episodeCount:*"
+    query = "service:${var.service_name} @type:show-library @episodeCount:*"
   }
   compute {
     aggregation_type = "distribution"
@@ -311,7 +308,7 @@ resource "datadog_logs_metric" "plex_episode_count" {
 resource "datadog_logs_metric" "error_rate" {
   name = "${local.name}.error.rate"
   filter {
-    query = "service:${local.service_name} status:error"
+    query = "service:${var.service_name} status:error"
   }
   compute {
     aggregation_type = "count"
