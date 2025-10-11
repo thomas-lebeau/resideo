@@ -1,6 +1,7 @@
 import { hostname } from "node:os";
-import { randomUUID} from "node:crypto";
+import { randomUUID } from "node:crypto";
 
+import { DD_GIT_COMMIT_SHA, DD_GIT_REPOSITORY_URL } from "./git.mts";
 import { config } from "./config.mts";
 import { Logger } from "./Loggers.mts";
 import packageJson from "../../package.json" with { type: "json" };
@@ -33,19 +34,35 @@ type Log = {
   [key: string]: unknown;
 };
 
-type RawLog = unknown
+type RawLog = unknown;
 
 class Datadog {
-  private readonly ddsource = "NodeJS";
-  private readonly service = packageJson.name;
   private readonly ddtags = [
     `version:${packageJson.version}`,
     `env:${config.ENV}`,
   ];
-  private readonly apiKey: string;
+  private readonly commonProperties = {
+    ddsource: "NodeJS",
+    host: hostname(),
+    service: packageJson.name,
+    // Source code integration
+    //
+    // Note:
+    // This only works because we are runing the code from the local git repository.
+    // This is good enough for now but we should evaluate this at build time in the future (in the CI/CD pipeline)
+    //
+    // @see https://docs.datadoghq.com/integrations/guide/source-code-integration/?tab=civisibility#configure-telemetry-tagging
+    git: {
+      commit: {
+        sha: DD_GIT_COMMIT_SHA,
+      },
+      repository_url: DD_GIT_REPOSITORY_URL,
+    },
+  };
   private readonly intakeUrl =
     "https://http-intake.logs.datadoghq.eu/api/v2/logs";
   private readonly searchUrl = `https://app.datadoghq.eu/logs/livetail`;
+  private readonly apiKey: string;
   private readonly batch: Array<Log> = [];
 
   constructor() {
@@ -66,10 +83,8 @@ class Datadog {
 
     this.batch.push({
       ...formatted,
-      ddsource: this.ddsource,
+      ...this.commonProperties,
       ddtags: this.ddtags.concat(`plugin:${slug}`).join(","),
-      host: hostname(),
-      service: this.service,
       timestamp: formatted.timestamp ?? Date.now(),
       logger: {
         name: slug,
@@ -102,14 +117,17 @@ class Datadog {
 
     try {
       const requestId = randomUUID();
-      const response = await fetch(this.intakeUrl + `?request_id=${requestId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "DD-API-KEY": this.apiKey,
-        },
-        body: JSON.stringify(this.batch),
-      });
+      const response = await fetch(
+        this.intakeUrl + `?request_id=${requestId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "DD-API-KEY": this.apiKey,
+          },
+          body: JSON.stringify(this.batch),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
