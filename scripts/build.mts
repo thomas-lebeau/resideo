@@ -15,7 +15,7 @@ export const gitRepositoryUrl = execSync(
 
 await build({
   entryPoints: ["src/main.mts"],
-  outfile: "dist/main.js",
+  outfile: "bin/raspberry-home-monitor",
   bundle: true,
   platform: "node",
   target: "node18",
