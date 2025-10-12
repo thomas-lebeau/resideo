@@ -44,9 +44,12 @@ jobs:
       - name: Bump version
         id: version
         run: |
+          PREVIOUS_VERSION=$(node -p "require('./package.json').version")
           npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
           NEW_VERSION=$(node -p "require('./package.json').version")
           echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
 
       - name: Build binary
         run: |
@@ -69,5 +72,7 @@ jobs:
           working_directory: bin
           files: |
             raspberry-home-monitor
+          body: |
+            **Full Changelog**: https://github.com/thomas-lebeau/resideo/compare/v${{ steps.version.outputs.previous_version }}...v${{ steps.version.outputs.new_version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
