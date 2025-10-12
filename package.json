@@ -2,7 +2,7 @@
   "name": "raspberry-home-monitor",
   "version": "2.0.0",
   "description": "Home automation monitoring system for Raspberry Pi",
-  "main": "dist/main.mjs",
+  "main": "src/main.mts",
   "scripts": {
     "build": "node scripts/build.mts",
     "lint": "eslint ."
