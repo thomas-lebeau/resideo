@@ -1,10 +1,8 @@
 import { hostname } from "node:os";
 import { randomUUID } from "node:crypto";
 
-import { DD_GIT_COMMIT_SHA, DD_GIT_REPOSITORY_URL } from "./git.mts";
 import { config } from "./config.mts";
 import { Logger } from "./Loggers.mts";
-import packageJson from "../../package.json" with { type: "json" };
 
 // Prevent Datadog error to be reported to Datadog
 const logger = new Logger("Datadog", { error: [Logger.REPORTER.console] });
@@ -38,13 +36,14 @@ type RawLog = unknown;
 
 class Datadog {
   private readonly ddtags = [
-    `version:${packageJson.version}`,
+    `version:${config.PACKAGE_VERSION}`,
     `env:${config.ENV}`,
   ];
   private readonly commonProperties = {
     ddsource: "NodeJS",
+    node_version: process.version,
     host: hostname(),
-    service: packageJson.name,
+    service: config.PACKAGE_NAME,
     // Source code integration
     //
     // Note:
@@ -54,9 +53,9 @@ class Datadog {
     // @see https://docs.datadoghq.com/integrations/guide/source-code-integration/?tab=civisibility#configure-telemetry-tagging
     git: {
       commit: {
-        sha: DD_GIT_COMMIT_SHA,
+        sha: config.GIT_COMMIT_SHA,
       },
-      repository_url: DD_GIT_REPOSITORY_URL,
+      repository_url: config.GIT_REPOSITORY_URL,
     },
   };
   private readonly intakeUrl =

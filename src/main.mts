@@ -1,20 +1,17 @@
 #!/usr/bin/env node
 
-import { globSync } from "node:fs";
-import { join } from "node:path";
-import { Plugin } from "./utils/Plugin.mts";
+import "./polyfills.js";
+
 import datadog from "./utils/Datadog.mts";
 import { Logger } from "./utils/Loggers.mts";
 import { parseArgs } from "node:util";
+import { plugins as availablePlugins } from "./plugins/index.mts";
+import { toKebabCase } from "./shared/string.mts";
 
 const logger = new Logger("Main");
 
 async function main(): Promise<void> {
   try {
-    const promises = [];
-    const availablePugins = globSync(
-      join(import.meta.dirname, "/plugins/*.mts")
-    );
     const args = parseArgs({
       args: process.argv.slice(2),
       options: {
@@ -30,23 +27,34 @@ async function main(): Promise<void> {
     const selectedPlugins = args.values.plugin
       ? args.values.plugin
           .map((selectedPlugin) =>
-            availablePugins.find((availablePugin) =>
-              availablePugin.includes(selectedPlugin)
+            availablePlugins.find(
+              (plugin) => toKebabCase(plugin.name) === selectedPlugin
             )
           )
           .filter((plugin) => plugin !== undefined)
-      : availablePugins;
+      : availablePlugins;
 
     if (selectedPlugins.length === 0) {
       logger.error(new Error("No plugins found"));
       return;
     }
 
-    for (const plugin of selectedPlugins) {
-      promises.push(new Plugin(plugin).run());
-    }
+    for (const Plugin of selectedPlugins) {
+      const name = toKebabCase(Plugin.name);
+      const logger = new Logger(name);
 
-    await Promise.all(promises);
+      try {
+        logger.info(`🔄 Running plugin ${name}...`);
+
+        const data = await new Plugin().run();
+
+        if (data) {
+          datadog.send(name, data);
+        }
+      } catch (error) {
+        logger.error(error as Error);
+      }
+    }
   } catch (error) {
     logger.error(new Error("Unknown error", { cause: error }));
   } finally {

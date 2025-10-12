@@ -40,7 +40,7 @@ const CONFIG = [
   "HW_USER_REF_ID",
 ] as const;
 
-export default class ResideoPlugin extends AbstractPlugin<
+export class Resideo extends AbstractPlugin<
   Thermometer | Thermostat,
   typeof CONFIG
 > {
