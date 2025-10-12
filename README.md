@@ -56,8 +56,10 @@ Create a `.env` file with the following variables:
 ## Usage
 
 ### Run the application
+
+Use a cron job to run the application every minute:
 ```bash
-raspberry-home-monitor --env ~/.path/to/.env
+* * * * * raspberry-home-monitor --env ~/.path/to/.env
 ```
 
 ### Options
