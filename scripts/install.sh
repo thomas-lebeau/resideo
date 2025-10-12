@@ -47,12 +47,12 @@ echo -e "${GREEN}Installation complete!${NC}"
 echo ""
 
 # Check if install directory is in PATH
-if echo "$PATH" | grep -q "$INSTALL_DIR"; then
-    echo -e "${GREEN}✓${NC} $INSTALL_DIR is in your PATH"
+if echo "$PATH" | grep -q "$INSTALL_DIR/bin"; then
+    echo -e "${GREEN}✓${NC} $INSTALL_DIR/bin is in your PATH"
 else
-    echo -e "${YELLOW}⚠${NC}  $INSTALL_DIR is not in your PATH"
+    echo -e "${YELLOW}⚠${NC}  $INSTALL_DIR/bin is not in your PATH"
     echo "   Add this line to your shell profile (~/.bashrc, ~/.zshrc, etc.):"
-    echo "   export PATH=\"$INSTALL_DIR:\$PATH\""
+    echo "   export PATH=\"$INSTALL_DIR/bin:\$PATH\""
     echo ""
 fi
 
