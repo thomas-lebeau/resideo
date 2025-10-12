@@ -18,7 +18,7 @@ A TypeScript-based home automation monitoring system with a plugin architecture 
 Install the latest release with a single command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/scripts/install.sh | bash
 ```
 
 This will:

@@ -22,7 +22,7 @@ elif [ -w "$HOME/.local/" ]; then
     INSTALL_DIR="$HOME/.local"
 fi
 
-if [ ! -d "$INSTALL_DIR" ]; then
+if [ ! -d "$INSTALL_DIR/$DIR_NAME" ]; then
     mkdir -p "$INSTALL_DIR/$DIR_NAME"
 fi
 
