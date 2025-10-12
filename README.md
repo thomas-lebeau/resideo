@@ -13,6 +13,20 @@ A TypeScript-based home automation monitoring system with a plugin architecture 
 
 ## Installation
 
+### Quick Install (Recommended)
+
+Install the latest release with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/install.sh | bash
+```
+
+This will:
+- Download the latest release binary
+- Install it to `/usr/local/bin` or `~/.local/bin`
+
+### Manual Installation (Development)
+
 1. Clone the repository:
    ```bash
    git clone <repository-url>
