@@ -21,6 +21,6 @@
   "environment": {
     "node": true
   },
-  "include": ["src/**/*.mts", "src/polyfills.js"],
+  "include": ["src/**/*.mts", "src/**/*.d.ts", "src/polyfills.js"],
   "exclude": ["node_modules", "**/*.test.mts"]
 }

@@ -65,11 +65,11 @@ class Datadog {
   private readonly batch: Array<Log> = [];
 
   constructor() {
-    if (!config.DD_API_KEY) {
+    if (!process.env.DD_API_KEY) {
       throw new Error("DD_API_KEY is not set");
     }
 
-    this.apiKey = config.DD_API_KEY;
+    this.apiKey = process.env.DD_API_KEY;
   }
 
   private batchLog(plugin: string, log: RawLog) {

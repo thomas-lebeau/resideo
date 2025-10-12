@@ -12,10 +12,9 @@ export const gitRepositoryUrl = execSync(
   OPTIONS
 ).trim();
 
-
 await build({
   entryPoints: ["src/main.mts"],
-  outfile: "bin/raspberry-home-monitor",
+  outfile: `bin/${packageJson.name}`,
   bundle: true,
   platform: "node",
   target: "node18",

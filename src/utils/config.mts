@@ -1,23 +1,30 @@
 import * as dotenv from "dotenv";
+import { parseArgs } from "node:util";
 
-dotenv.config({ quiet: true });
+export const args = parseArgs({
+  args: process.argv.slice(2),
+  options: {
+    plugin: {
+      type: "string",
+      short: "p",
+      long: "plugin",
+      multiple: true,
+    },
+    env: {
+      type: "string",
+      short: "e",
+      long: "env",
+      multiple: true,
+      default: [".env"],
+    },
+  },
+});
 
-// Defined in scripts/build.mts
-declare global {
-  var PACKAGE_VERSION: string | undefined;
-  var PACKAGE_NAME: string | undefined;
-  var GIT_COMMIT_SHA: string | undefined;
-  var GIT_REPOSITORY_URL: string | undefined;
-}
-
-function getBuildConstant(
-  name: keyof typeof globalThis,
-  fallback: string
-): string {
-  return typeof globalThis[name] !== "undefined"
-    ? (globalThis[name] as string)
-    : fallback;
-}
+dotenv.config({
+  path: args.values.env,
+  quiet: true,
+  override: true,
+});
 
 export const config = {
   PACKAGE_VERSION: getBuildConstant("PACKAGE_VERSION", "0.0.0"),
@@ -27,6 +34,13 @@ export const config = {
 
   ENV: process.env.ENV || "dev",
   DEBUG: process.env.DEBUG === "true" || process.env.DEBUG === "1",
-
-  DD_API_KEY: process.env.DD_API_KEY,
 };
+
+function getBuildConstant(
+  name: keyof typeof globalThis,
+  fallback: string
+): string {
+  return typeof globalThis[name] !== "undefined"
+    ? (globalThis[name] as string)
+    : fallback;
+}
