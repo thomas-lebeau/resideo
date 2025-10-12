@@ -92,10 +92,7 @@ const STATE = {
 const CONFIG = ["HUE_USERNAME", "HUE_HOST"] as const;
 const ONE_MINUTE = 60_000 as const;
 
-export default class PhilipsHuePlugin extends AbstractPlugin<
-  Light | Button,
-  typeof CONFIG
-> {
+export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
   private readonly baseUrl: string;
 
   constructor() {

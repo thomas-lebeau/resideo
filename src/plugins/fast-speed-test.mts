@@ -11,7 +11,7 @@ type SpeedTestData = {
 
 const CONFIG = ["FAST_SPEEDTEST_TOKEN"] as const;
 
-export default class FastSpeedTestPlugin extends AbstractPlugin<
+export class FastSpeedTest extends AbstractPlugin<
   SpeedTestData,
   typeof CONFIG
 > {

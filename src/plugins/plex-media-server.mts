@@ -24,10 +24,7 @@ const TYPE = {
 
 const CONFIG = ["PLEX_HOST", "PLEX_TOKEN"] as const;
 
-export default class PlexMediaServer extends AbstractPlugin<
-  Library,
-  typeof CONFIG
-> {
+export class PlexMediaServer extends AbstractPlugin<Library, typeof CONFIG> {
   constructor() {
     super(CONFIG);
   }
