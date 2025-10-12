@@ -1,3 +1,5 @@
+import { toKebabCase } from "./string.mts";
+
 type OnOff = 0 | 1;
 
 export type Thermometer = {
@@ -40,6 +42,10 @@ export abstract class AbstractPlugin<
     string
   >;
 
+  static get pluginName(): string {
+    return toKebabCase(this.name);
+  }
+
   constructor(keys: U) {
     for (const key of keys) {
       if (!process.env[key]) {
@@ -52,3 +58,8 @@ export abstract class AbstractPlugin<
 
   abstract run(): Promise<T | Array<T> | undefined>;
 }
+export type PluginConstructor = (new () => AbstractPlugin) &
+  Omit<
+    typeof AbstractPlugin,
+    "prototype" | "length" | "name" | "arguments" | "caller"
+  >;
