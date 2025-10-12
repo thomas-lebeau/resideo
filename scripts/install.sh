@@ -41,7 +41,7 @@ fi
 echo -e "${YELLOW}Installing $BINARY_NAME to $INSTALL_DIR...${NC}"
 mv "$TEMP_FILE" "$INSTALL_DIR/$DIR_NAME/$BINARY_NAME"
 chmod +x "$INSTALL_DIR/$DIR_NAME/$BINARY_NAME"
-ln -s "$INSTALL_DIR/$DIR_NAME/$BINARY_NAME" "$INSTALL_DIR/bin/$BINARY_NAME"
+ln -sf "$INSTALL_DIR/$DIR_NAME/$BINARY_NAME" "$INSTALL_DIR/bin/$BINARY_NAME"
 
 echo -e "${GREEN}Installation complete!${NC}"
 echo ""
