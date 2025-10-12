@@ -47,6 +47,10 @@ jobs:
           NEW_VERSION=$(node -p "require('./package.json').version")
           echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Build binary
+        run: |
+          npm run build
+
       - name: Commit version bump
         run: |
           git add package.json package-lock.json
