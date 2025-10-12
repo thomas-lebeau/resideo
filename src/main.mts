@@ -6,7 +6,7 @@ import datadog from "./utils/Datadog.mts";
 import { Logger } from "./utils/Loggers.mts";
 import { parseArgs } from "node:util";
 import { plugins as availablePlugins } from "./plugins/index.mts";
-import { toKebabCase } from "./shared/string.mts";
+import { filterPlugins, runPlugin } from "./utils/plugins.mts";
 
 const logger = new Logger("Main");
 
@@ -24,39 +24,21 @@ async function main(): Promise<void> {
       },
     });
 
-    const selectedPlugins = args.values.plugin
-      ? args.values.plugin
-          .map((selectedPlugin) =>
-            availablePlugins.find(
-              (plugin) => toKebabCase(plugin.name) === selectedPlugin
-            )
-          )
-          .filter((plugin) => plugin !== undefined)
-      : availablePlugins;
+    const selectedPlugins = filterPlugins(availablePlugins, args.values.plugin);
 
     if (selectedPlugins.length === 0) {
-      logger.error(new Error("No plugins found"));
-      return;
+      throw new Error("No plugins found");
     }
+
+    const promises: Promise<void>[] = [];
 
     for (const Plugin of selectedPlugins) {
-      const name = toKebabCase(Plugin.name);
-      const logger = new Logger(name);
-
-      try {
-        logger.info(`🔄 Running plugin ${name}...`);
-
-        const data = await new Plugin().run();
-
-        if (data) {
-          datadog.send(name, data);
-        }
-      } catch (error) {
-        logger.error(error as Error);
-      }
+      promises.push(runPlugin(Plugin));
     }
+
+    await Promise.all(promises);
   } catch (error) {
-    logger.error(new Error("Unknown error", { cause: error }));
+    logger.error(error as Error);
   } finally {
     await datadog.flush();
   }
