@@ -25,6 +25,8 @@ const TYPE = {
 const CONFIG = ["PLEX_HOST", "PLEX_TOKEN"] as const;
 
 export class PlexMediaServer extends AbstractPlugin<Library, typeof CONFIG> {
+  static readonly description = "Plex Media Server library informations";
+
   constructor() {
     super(CONFIG);
   }

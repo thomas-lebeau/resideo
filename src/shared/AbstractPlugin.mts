@@ -42,7 +42,7 @@ export abstract class AbstractPlugin<
     string
   >;
 
-  static get pluginName(): string {
+  static get slug(): string {
     return toKebabCase(this.name);
   }
 
@@ -58,8 +58,11 @@ export abstract class AbstractPlugin<
 
   abstract run(): Promise<T | Array<T> | undefined>;
 }
+
 export type PluginConstructor = (new () => AbstractPlugin) &
   Omit<
     typeof AbstractPlugin,
     "prototype" | "length" | "name" | "arguments" | "caller"
-  >;
+  > & {
+    readonly description: string;
+  };

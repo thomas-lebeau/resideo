@@ -3,7 +3,7 @@ import datadog from "./Datadog.mts";
 import { Logger } from "./Loggers.mts";
 
 export async function runPlugin(Plugin: PluginConstructor) {
-  const name = Plugin.pluginName;
+  const name = Plugin.slug;
   const logger = new Logger(name);
 
   try {
@@ -18,17 +18,18 @@ export async function runPlugin(Plugin: PluginConstructor) {
     logger.error(error as Error);
   }
 }
+
 export function filterPlugins(
   availablePlugins: PluginConstructor[],
   pluginNames: string[] = []
 ) {
-  if (pluginNames.length === 0) {
+  if (pluginNames.length === 0 || pluginNames.includes("all")) {
     return availablePlugins;
   }
 
   return pluginNames
     .map((selectedPlugin) =>
-      availablePlugins.find((Plugin) => Plugin.pluginName === selectedPlugin)
+      availablePlugins.find((Plugin) => Plugin.slug === selectedPlugin)
     )
     .filter((Plugin) => Plugin !== undefined);
 }

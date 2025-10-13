@@ -3,12 +3,14 @@ import { parseArgs } from "node:util";
 
 export const args = parseArgs({
   args: process.argv.slice(2),
+  strict: true,
   options: {
     plugin: {
       type: "string",
       short: "p",
       long: "plugin",
       multiple: true,
+      default: ["all"],
     },
     env: {
       type: "string",
@@ -16,6 +18,34 @@ export const args = parseArgs({
       long: "env",
       multiple: true,
       default: [".env"],
+    },
+    help: {
+      type: "boolean",
+      long: "help",
+      multiple: false,
+      short: "h",
+      default: false,
+    },
+    version: {
+      type: "boolean",
+      long: "version",
+      short: "v",
+      multiple: false,
+      default: false,
+    },
+    dryRun: {
+      type: "boolean",
+      short: "d",
+      long: "dry-run",
+      multiple: false,
+      default: false,
+    },
+    update: {
+      type: "boolean",
+      short: "u",
+      long: "update",
+      multiple: false,
+      default: false,
     },
   },
 });

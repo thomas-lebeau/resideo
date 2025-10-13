@@ -1,7 +1,7 @@
 import { hostname } from "node:os";
 import { randomUUID } from "node:crypto";
 
-import { config } from "./config.mts";
+import { args, config } from "./config.mts";
 import { Logger } from "./Loggers.mts";
 
 // Prevent Datadog error to be reported to Datadog
@@ -109,6 +109,13 @@ class Datadog {
   }
 
   async flush() {
+    if (args.values.dryRun) {
+      logger.info(
+        `Dry run mode, skipping sending ${this.batch.length} logs to Datadog`
+      );
+      return;
+    }
+
     if (this.batch.length === 0) {
       logger.info("No logs to send to Datadog");
       return;

@@ -28,7 +28,7 @@ export class Logger {
 
   constructor(name: string, reporters: Partial<Reporters> = DEFAULT_REPORTERS) {
     this.name = name;
-    this.prefix = `[${capitalize(name)}]`.padEnd(20, " ");
+    this.prefix = name ? `[${capitalize(name)}]`.padEnd(20, " ") + "" : "";
     this.reporters = {
       ...DEFAULT_REPORTERS,
       ...reporters,
@@ -43,7 +43,7 @@ export class Logger {
 
   info(message: string) {
     if (this.reporters.info.includes(REPORTER.console)) {
-      console.log(`${this.prefix} ${message}`);
+      console.log(`${this.prefix}${message}`);
     }
 
     if (this.reporters.info.includes(REPORTER.datadog)) {
@@ -53,7 +53,7 @@ export class Logger {
 
   error(error: Error) {
     if (this.reporters.error.includes(REPORTER.console)) {
-      console.error(`${this.prefix} ❌`, error);
+      console.error(`${this.prefix}❌`, error);
     }
 
     if (this.reporters.error.includes(REPORTER.datadog)) {
