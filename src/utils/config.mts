@@ -57,7 +57,7 @@ dotenv.config({
 });
 
 export const config = {
-  PACKAGE_VERSION: getBuildConstant("PACKAGE_VERSION", "0.0.0"),
+  PACKAGE_VERSION: getBuildConstant("PACKAGE_VERSION", "2.1.1"),
   PACKAGE_NAME: getBuildConstant("PACKAGE_NAME", "raspberry-home-monitor"),
   GIT_COMMIT_SHA: getBuildConstant("GIT_COMMIT_SHA", "unknown"),
   GIT_REPOSITORY_URL: getBuildConstant("GIT_REPOSITORY_URL", "unknown"),
