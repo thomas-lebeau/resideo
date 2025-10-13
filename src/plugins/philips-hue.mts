@@ -93,7 +93,7 @@ const CONFIG = ["HUE_USERNAME", "HUE_HOST"] as const;
 const ONE_MINUTE = 60_000 as const;
 
 export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
-  static readonly description = "Philips Hue lights and buttons data";
+  static readonly description = "Philips Hue lights and buttons";
   private readonly baseUrl: string;
 
   constructor() {
