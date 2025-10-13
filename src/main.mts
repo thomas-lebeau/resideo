@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import "source-map-support/register";
 import "./polyfills.js";
 
 import datadog from "./utils/Datadog.mts";
