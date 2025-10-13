@@ -5,6 +5,20 @@ import {
   getPackageName,
   getPackageVersion,
 } from "../src/utils/package.mts";
+import { parseArgs } from "util";
+
+const args = parseArgs({
+  args: process.argv.slice(2),
+  strict: true,
+  options: {
+    dev: {
+      type: "boolean",
+      default: false,
+    },
+  },
+});
+
+const versionSuffix = args.values.dev ? "-dev" : "";
 
 await build({
   entryPoints: ["src/main.mts"],
@@ -15,7 +29,7 @@ await build({
   sourcemap: true,
   banner: {
     js: `
-globalThis.PACKAGE_VERSION = "${getPackageVersion()}";
+globalThis.PACKAGE_VERSION = "${getPackageVersion()}${versionSuffix}";
 globalThis.PACKAGE_NAME = "${getPackageName()}";
 globalThis.GIT_COMMIT_SHA = "${getGitCommitSha()}";
 globalThis.GIT_REPOSITORY_URL = "${getGitRepositoryUrl()}";

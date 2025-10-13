@@ -73,7 +73,7 @@ export const config = {
   // so we need to add the git commit sha because the package version might not change between commits
   PACKAGE_VERSION: getBuildConstant(
     "PACKAGE_VERSION",
-    () => `${getPackageVersion()}-${getGitCommitSha()}`
+    () => `${getPackageVersion()}-dev`
   ),
   PACKAGE_NAME: getBuildConstant("PACKAGE_NAME", getPackageName),
   GIT_COMMIT_SHA: getBuildConstant("GIT_COMMIT_SHA", getGitCommitSha),

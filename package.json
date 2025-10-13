@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mts",
+    "build:dev": "node scripts/build.mts --dev",
     "dev": "node src/main.mts",
     "lint": "eslint ."
   },
