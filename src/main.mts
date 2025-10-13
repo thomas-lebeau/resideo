@@ -5,7 +5,7 @@ import "./polyfills.js";
 import datadog from "./utils/Datadog.mts";
 import { Logger } from "./utils/Loggers.mts";
 import { plugins as availablePlugins } from "./plugins/index.mts";
-import { filterPlugins, runPlugin } from "./utils/plugins.mts";
+import { getSelectedPlugins, runPlugin } from "./utils/plugins.mts";
 import { args, config } from "./utils/config.mts";
 import semver from "semver";
 import { getLatestVersion } from "./utils/getLatestVersion.mts";
@@ -66,7 +66,7 @@ curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/scripts/
   }
 
   try {
-    const selectedPlugins = filterPlugins(availablePlugins, args.values.plugin);
+    const selectedPlugins = getSelectedPlugins();
 
     if (selectedPlugins.length === 0) {
       throw new Error("No plugins found");

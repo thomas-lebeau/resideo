@@ -12,6 +12,12 @@ export const args = parseArgs({
       multiple: true,
       default: ["all"],
     },
+    "no-plugin": {
+      type: "string",
+      long: "no-plugin",
+      multiple: true,
+      default: [],
+    },
     env: {
       type: "string",
       short: "e",
