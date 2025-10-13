@@ -1,27 +1,23 @@
-import { execSync } from "node:child_process";
 import { build } from "esbuild";
-import packageJson from "../package.json" with { type: "json" };
-
-const OPTIONS = {
-  encoding: "utf8",
-} as const;
-
-export const gitCommitSha = execSync("git rev-parse HEAD", OPTIONS).trim();
-export const gitRepositoryUrl = execSync(
-  "git config --get remote.origin.url",
-  OPTIONS
-).trim();
+import {
+  getGitCommitSha,
+  getGitRepositoryUrl,
+  getPackageName,
+  getPackageVersion,
+} from "../src/utils/package.mts";
 
 await build({
   entryPoints: ["src/main.mts"],
-  outfile: `bin/${packageJson.name}`,
+  outfile: `bin/${getPackageName()}`,
   bundle: true,
   platform: "node",
   target: "node18",
-  define: {
-    PACKAGE_VERSION: JSON.stringify(packageJson.version),
-    PACKAGE_NAME: JSON.stringify(packageJson.name),
-    GIT_COMMIT_SHA: JSON.stringify(gitCommitSha),
-    GIT_REPOSITORY_URL: JSON.stringify(gitRepositoryUrl),
+  banner: {
+    js: `
+globalThis.PACKAGE_VERSION = "${getPackageVersion()}";
+globalThis.PACKAGE_NAME = "${getPackageName()}";
+globalThis.GIT_COMMIT_SHA = "${getGitCommitSha()}";
+globalThis.GIT_REPOSITORY_URL = "${getGitRepositoryUrl()}";
+  `,
   },
 });

@@ -1,5 +1,11 @@
 import * as dotenv from "dotenv";
 import { parseArgs } from "node:util";
+import {
+  getPackageVersion,
+  getGitCommitSha,
+  getGitRepositoryUrl,
+  getPackageName,
+} from "./package.mts";
 
 export const args = parseArgs({
   args: process.argv.slice(2),
@@ -63,10 +69,18 @@ dotenv.config({
 });
 
 export const config = {
-  PACKAGE_VERSION: getBuildConstant("PACKAGE_VERSION", "2.1.1"),
-  PACKAGE_NAME: getBuildConstant("PACKAGE_NAME", "raspberry-home-monitor"),
-  GIT_COMMIT_SHA: getBuildConstant("GIT_COMMIT_SHA", "unknown"),
-  GIT_REPOSITORY_URL: getBuildConstant("GIT_REPOSITORY_URL", "unknown"),
+  // when not defined at build time, this means we are running the code from the local git repository
+  // so we need to add the git commit sha because the package version might not change between commits
+  PACKAGE_VERSION: getBuildConstant(
+    "PACKAGE_VERSION",
+    () => `${getPackageVersion()}-${getGitCommitSha()}`
+  ),
+  PACKAGE_NAME: getBuildConstant("PACKAGE_NAME", getPackageName),
+  GIT_COMMIT_SHA: getBuildConstant("GIT_COMMIT_SHA", getGitCommitSha),
+  GIT_REPOSITORY_URL: getBuildConstant(
+    "GIT_REPOSITORY_URL",
+    getGitRepositoryUrl
+  ),
 
   ENV: process.env.ENV || "dev",
   DEBUG: process.env.DEBUG === "true" || process.env.DEBUG === "1",
@@ -74,9 +88,11 @@ export const config = {
 
 function getBuildConstant(
   name: keyof typeof globalThis,
-  fallback: string
+  fallback: string | (() => string)
 ): string {
   return typeof globalThis[name] !== "undefined"
     ? (globalThis[name] as string)
+    : typeof fallback === "function"
+    ? fallback()
     : fallback;
 }
