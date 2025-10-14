@@ -18,5 +18,5 @@ export function getGitCommitSha(): string {
 }
 
 export function getGitRepositoryUrl(): string {
-  return execSync("git config --get remote.origin.url", OPTIONS).trim();
+  return execSync("git config --get remote.origin.url", OPTIONS).trim().replace(/^https?:\/\//, "git@")
 }
