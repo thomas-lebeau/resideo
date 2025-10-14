@@ -168,6 +168,7 @@ function formatLogPayload(
         message: payload.message,
         stack: payload.stack,
         causes: flattenErrorCauses(payload),
+        ...("code" in payload ? { code: payload.code } : {}),
       },
     };
   }
@@ -194,6 +195,7 @@ function flattenErrorCauses(error: unknown) {
       type: currentError.name,
       message: currentError.message,
       stack: currentError.stack,
+      ...("code" in currentError ? { code: currentError.code } : {}),
     });
 
     currentError = currentError.cause;

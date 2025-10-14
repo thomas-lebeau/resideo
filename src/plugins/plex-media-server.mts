@@ -31,7 +31,7 @@ export class PlexMediaServer extends AbstractPlugin<Library, typeof CONFIG> {
     super(CONFIG);
   }
 
-  private async getPlexData<T extends PlexEndpoint>(
+  private async fetch<T extends PlexEndpoint>(
     endpoint: T,
     params?: Record<string, string>
   ): Promise<PlexResponse<T>> {
@@ -63,7 +63,7 @@ export class PlexMediaServer extends AbstractPlugin<Library, typeof CONFIG> {
     key: number,
     params: Record<string, number> = {}
   ) {
-    return this.getPlexData(`/library/sections/${key}/all`, {
+    return this.fetch(`/library/sections/${key}/all`, {
       ...params,
       "X-Plex-Container-Size": "0",
       "X-Plex-Container-Start": "0",
@@ -71,8 +71,8 @@ export class PlexMediaServer extends AbstractPlugin<Library, typeof CONFIG> {
   }
 
   async run() {
-    const identity = await this.getPlexData("/identity");
-    const librarySections = await this.getPlexData("/library/sections");
+    const identity = await this.fetch("/identity");
+    const librarySections = await this.fetch("/library/sections");
 
     const libraries: Library[] = [];
 

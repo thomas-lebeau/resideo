@@ -102,7 +102,7 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
     this.baseUrl = `https://${this.config.HUE_HOST}/clip/v2`;
   }
 
-  private async getData<T extends Endpoint>(endpoint: T): Promise<Response<T>> {
+  private async fetch<T extends Endpoint>(endpoint: T): Promise<Response<T>> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       headers: {
         "Hue-Application-Key": this.config.HUE_USERNAME,
@@ -180,12 +180,12 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
 
   async run() {
     return [
-      ...this.processLightResponse(await this.getData("/resource/light")),
+      ...this.processLightResponse(await this.fetch("/resource/light")),
       ...this.processButtonResponse(
         ...(await Promise.all([
-          this.getData("/resource/button"),
-          this.getData("/resource/device"),
-          this.getData("/resource/device_power"),
+          this.fetch("/resource/button"),
+          this.fetch("/resource/device"),
+          this.fetch("/resource/device_power"),
         ]))
       ),
     ].filter((log) => log !== undefined);
