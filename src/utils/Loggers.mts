@@ -61,3 +61,6 @@ export class Logger {
     }
   }
 }
+
+// Force console reporters for the main logger
+export default new Logger("", { info: [Logger.REPORTER.console] });
