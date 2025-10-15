@@ -182,7 +182,6 @@ resource "datadog_logs_metric" "light_brightness" {
   compute {
     aggregation_type = "distribution"
     path             = "@brightness"
-    include_percentiles = true
   }
 
   # Apply all common group_by configurations
@@ -314,7 +313,31 @@ resource "datadog_logs_metric" "error_rate" {
     aggregation_type = "count"
   }
 
-  # Apply all common group_by configurations plus logger name
+  # Apply all common group_by configurations
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+}
+
+
+# Transmission Metrics
+resource "datadog_logs_metric" "transmission" {
+  for_each = toset(["active_torrent_count", "paused_torrent_count", "torrent_count", "upload_speed", "download_speed", "total_downloaded", "total_uploaded", "total_files_added", "total_session_count", "total_seconds_active"])
+  name = "${local.name}.transmission.${each.value}"
+  filter {
+    query = "service:${var.service_name} @type:transmission"
+  }
+
+  compute {
+    aggregation_type = "distribution"
+    path             = "@${each.value}"
+  }
+
+  # Apply all common group_by configurations
   dynamic "group_by" {
     for_each = local.common_group_by
     content {
@@ -327,38 +350,159 @@ resource "datadog_logs_metric" "error_rate" {
 # Metric Metadata Configuration for Units
 # see available units at https://docs.datadoghq.com/metrics/units/
 resource "datadog_metric_metadata" "temperature_readings_metadata" {
-  metric = datadog_logs_metric.temperature_readings.name
-  type = "gauge"
-  unit   = "degree celsius"
+  metric      = datadog_logs_metric.temperature_readings.name
+  type        = "gauge"
+  unit        = "degree celsius"
+  description = "Temperature readings from sensors"
 }
 
 resource "datadog_metric_metadata" "humidity_readings_metadata" {
-  metric = datadog_logs_metric.humidity_readings.name
-  type = "gauge"
-  unit   = "percent"
+  metric      = datadog_logs_metric.humidity_readings.name
+  type        = "gauge"
+  unit        = "percent"
+  description = "Humidity level readings from sensors"
 }
 
 resource "datadog_metric_metadata" "battery_levels_metadata" {
-  metric = datadog_logs_metric.battery_levels.name
-  type = "gauge"
-  unit   = "percent"
+  metric      = datadog_logs_metric.battery_levels.name
+  type        = "gauge"
+  unit        = "percent"
+  description = "Battery level percentage for devices"
 }
 
 resource "datadog_metric_metadata" "thermostat_target_temperature_metadata" {
-  metric = datadog_logs_metric.thermostat_target_temperature.name
-  type = "gauge"
-  unit   = "degree celsius"
+  metric      = datadog_logs_metric.thermostat_target_temperature.name
+  type        = "gauge"
+  unit        = "degree celsius"
+  description = "Target temperature set on thermostat"
+}
+
+resource "datadog_metric_metadata" "thermostat_state_metadata" {
+  metric      = datadog_logs_metric.thermostat_state.name
+  type        = "gauge"
+  description = "Current state of the thermostat (0=off, 1=auto)"
+}
+
+resource "datadog_metric_metadata" "thermostat_operation_mode_metadata" {
+  metric      = datadog_logs_metric.thermostat_operation_mode.name
+  type        = "gauge"
+  description = "Thermostat operation mode (0=off, 1=heat)"
+}
+
+resource "datadog_metric_metadata" "light_state_metadata" {
+  metric      = datadog_logs_metric.light_state.name
+  type        = "gauge"
+  description = "Light state (0=off, 1=on)"
 }
 
 resource "datadog_metric_metadata" "light_brightness_metadata" {
-  metric = datadog_logs_metric.light_brightness.name
-  type = "gauge"
-  unit   = "percent"
+  metric      = datadog_logs_metric.light_brightness.name
+  type        = "gauge"
+  unit        = "percent"
+  description = "Light brightness level"
+}
+
+resource "datadog_metric_metadata" "button_events_metadata" {
+  metric      = datadog_logs_metric.button_events.name
+  type        = "count"
+  description = "Count of button press events"
 }
 
 resource "datadog_metric_metadata" "internet_speed_metadata" {
-  metric = datadog_logs_metric.internet_speed.name
-  type = "gauge"
-  unit   = "bit"
-  per_unit = "second"
+  metric      = datadog_logs_metric.internet_speed.name
+  type        = "gauge"
+  unit        = "bit"
+  per_unit    = "second"
+  description = "Internet connection speed"
+}
+
+resource "datadog_metric_metadata" "plex_movie_count_metadata" {
+  metric      = datadog_logs_metric.plex_movie_count.name
+  type        = "gauge"
+  description = "Number of movies in Plex library"
+}
+
+resource "datadog_metric_metadata" "plex_show_count_metadata" {
+  metric      = datadog_logs_metric.plex_show_count.name
+  type        = "gauge"
+  description = "Number of TV shows in Plex library"
+}
+
+resource "datadog_metric_metadata" "plex_episode_count_metadata" {
+  metric      = datadog_logs_metric.plex_episode_count.name
+  type        = "gauge"
+  description = "Number of TV shows episodes in Plex library"
+}
+
+resource "datadog_metric_metadata" "error_rate_metadata" {
+  metric      = datadog_logs_metric.error_rate.name
+  type        = "count"
+  description = "Count of errors by plugin"
+}
+
+resource "datadog_metric_metadata" "transmission_active_torrent_count_metadata" {
+  metric      = datadog_logs_metric.transmission["active_torrent_count"].name
+  type        = "gauge"
+  description = "Number of active torrents currently downloading or uploading"
+}
+
+resource "datadog_metric_metadata" "transmission_paused_torrent_count_metadata" {
+  metric      = datadog_logs_metric.transmission["paused_torrent_count"].name
+  type        = "gauge"
+  description = "Number of paused torrents"
+}
+
+resource "datadog_metric_metadata" "transmission_torrent_count_metadata" {
+  metric      = datadog_logs_metric.transmission["torrent_count"].name
+  type        = "gauge"
+  description = "Total number of torrents in Transmission"
+}
+
+resource "datadog_metric_metadata" "transmission_download_speed_metadata" {
+  metric      = datadog_logs_metric.transmission["download_speed"].name
+  type        = "gauge"
+  unit        = "byte"
+  per_unit    = "second"
+  description = "Current download speed"
+}
+
+resource "datadog_metric_metadata" "transmission_upload_speed_metadata" {
+  metric      = datadog_logs_metric.transmission["upload_speed"].name
+  type        = "gauge"
+  unit        = "byte"
+  per_unit    = "second"
+  description = "Current upload speed"
+}
+
+resource "datadog_metric_metadata" "transmission_total_downloaded_metadata" {
+  metric      = datadog_logs_metric.transmission["total_downloaded"].name
+  type        = "gauge"
+  unit        = "byte"
+  description = "Cumulative total bytes downloaded across all sessions"
+}
+
+resource "datadog_metric_metadata" "transmission_total_uploaded_metadata" {
+  metric      = datadog_logs_metric.transmission["total_uploaded"].name
+  type        = "gauge"
+  unit        = "byte"
+  description = "Cumulative total bytes uploaded across all sessions"
+}
+
+resource "datadog_metric_metadata" "transmission_total_files_added_metadata" {
+  metric      = datadog_logs_metric.transmission["total_files_added"].name
+  type        = "gauge"
+  description = "Total number of torrent files added to Transmission"
+}
+
+resource "datadog_metric_metadata" "transmission_total_session_count_metadata" {
+  metric      = datadog_logs_metric.transmission["total_session_count"].name
+  type        = "gauge"
+  description = "Total number of Transmission sessions started"
+}
+
+resource "datadog_metric_metadata" "transmission_total_seconds_active_metadata" {
+  metric      = datadog_logs_metric.transmission["total_seconds_active"].name
+  type        = "gauge"
+  unit        = "second"
+  description = "Cumulative total seconds Transmission has been active"
 }
