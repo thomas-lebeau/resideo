@@ -3,8 +3,8 @@ import logger from "../utils/Loggers.mts";
 
 export function version() {
   logger.info(`
-    ${config.PACKAGE_NAME}
-    Version: ${config.PACKAGE_VERSION}
-    `);
+${config.PACKAGE_NAME}
+Version: ${config.PACKAGE_VERSION}
+`);
   return;
 }
