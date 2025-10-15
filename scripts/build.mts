@@ -26,7 +26,6 @@ await build({
   bundle: true,
   platform: "node",
   target: "node18",
-  sourcemap: true,
   banner: {
     js: `
 globalThis.PACKAGE_VERSION = "${getPackageVersion()}${versionSuffix}";
