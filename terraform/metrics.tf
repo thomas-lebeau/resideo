@@ -347,6 +347,33 @@ resource "datadog_logs_metric" "transmission" {
   }
 }
 
+# Huawei Router WAN Connection Metrics
+resource "datadog_logs_metric" "wan_connection" {
+  for_each = toset(["state", "uptime", "bytes_received", "bytes_sent"])
+  name = "${local.name}.wan.${each.value}"
+  filter {
+    query = "service:${var.service_name} @type:wan_connection"
+  }
+  compute {
+    aggregation_type = "distribution"
+    path             = "@${each.value}"
+  }
+
+  # Apply all common group_by configurations
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+
+  group_by {
+    path     = "@ip_address"
+    tag_name = "ip_address"
+  }
+}
+
 # Metric Metadata Configuration for Units
 # see available units at https://docs.datadoghq.com/metrics/units/
 resource "datadog_metric_metadata" "temperature_readings_metadata" {
@@ -505,4 +532,32 @@ resource "datadog_metric_metadata" "transmission_total_seconds_active_metadata" 
   type        = "gauge"
   unit        = "second"
   description = "Cumulative total seconds Transmission has been active"
+}
+
+# Huawei Router Metric Metadata
+resource "datadog_metric_metadata" "wan_connection_state_metadata" {
+  metric      = datadog_logs_metric.wan_connection["state"].name
+  type        = "gauge"
+  description = "WAN connection state (0=down, 1=up)"
+}
+
+resource "datadog_metric_metadata" "wan_connection_uptime_metadata" {
+  metric      = datadog_logs_metric.wan_connection["uptime"].name
+  type        = "gauge"
+  unit        = "second"
+  description = "WAN connection uptime in seconds"
+}
+
+resource "datadog_metric_metadata" "wan_connection_bytes_received_metadata" {
+  metric      = datadog_logs_metric.wan_connection["bytes_received"].name
+  type        = "gauge"
+  unit        = "byte"
+  description = "Total bytes received on WAN connection"
+}
+
+resource "datadog_metric_metadata" "wan_connection_bytes_sent_metadata" {
+  metric      = datadog_logs_metric.wan_connection["bytes_sent"].name
+  type        = "gauge"
+  unit        = "byte"
+  description = "Total bytes sent on WAN connection"
 }
