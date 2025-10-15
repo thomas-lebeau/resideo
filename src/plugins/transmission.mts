@@ -108,6 +108,6 @@ export class Transmission extends AbstractPlugin<
       total_files_added: stats["cumulative-stats"].filesAdded,
       total_session_count: stats["cumulative-stats"].sessionCount,
       total_seconds_active: stats["cumulative-stats"].secondsActive,
-    } as const;
+    } satisfies TransmissionData;
   }
 }

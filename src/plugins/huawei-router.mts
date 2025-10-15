@@ -21,8 +21,7 @@ type WanConnection = {
   ip_address?: string;
   gateway?: string;
   dns_servers?: string[];
-  uptime_seconds?: number;
-  error?: string;
+  uptime?: number;
   bytes_received?: number;
   bytes_sent?: number;
 };
@@ -328,9 +327,9 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
       ip_address: internetConnection.ipAddress,
       gateway: internetConnection.gateway,
       dns_servers: internetConnection.dnsServers.filter((dns) => dns !== ""),
-      uptime_seconds: internetConnection.uptime,
+      uptime: internetConnection.uptime,
       bytes_received: internetConnection.bytesReceived,
       bytes_sent: internetConnection.bytesSent,
-    } as const;
+    } satisfies WanConnection;
   }
 }

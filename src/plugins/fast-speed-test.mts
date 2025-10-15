@@ -34,6 +34,6 @@ export class FastSpeedTest extends AbstractPlugin<
       type: "speedtest",
       name: hostname(),
       speed,
-    } as const;
+    } satisfies SpeedTestData;
   }
 }

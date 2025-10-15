@@ -134,6 +134,6 @@ export class Resideo extends AbstractPlugin<
     const rawData = await this.getThermostatData(accessToken);
     const thermostatData = this.processThermostatData(rawData);
 
-    return thermostatData;
+    return thermostatData satisfies Array<Thermostat | Thermometer>;
   }
 }
