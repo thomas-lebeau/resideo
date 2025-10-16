@@ -136,16 +136,13 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
         (conn) => conn.id_v1 === light.id_v1
       );
 
+      const reachable = connectivity?.status === "connected";
+
       return {
         type: "light",
         name: light.metadata.name,
-        state:
-          connectivity?.status !== "connected"
-            ? STATE.Off
-            : light.on.on
-            ? STATE.On
-            : STATE.Off,
-        brightness: light.dimming.brightness,
+        state: reachable ? (light.on.on ? STATE.On : STATE.Off) : STATE.Off,
+        brightness: reachable ? light.dimming.brightness : 0,
       } as const;
     });
   }
