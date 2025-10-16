@@ -43,7 +43,7 @@
       const url = new URL('https://api.home-connect.com/security/oauth/authorize')
       url.searchParams.set('response_type', 'code')
       url.searchParams.set('client_id', apikey.value)
-      url.searchParams.set('scope', ['IdentifyAppliance', 'Monitor'].join('%20'))
+      url.searchParams.set('scope', ['IdentifyAppliance', 'Monitor', 'Control', 'Images', 'Settings'].join('%20'))
       url.searchParams.set('redirect_uri', window.location.origin + window.location.pathname)
       url.searchParams.set('state', JSON.stringify({
         apikey: apikey.value,
