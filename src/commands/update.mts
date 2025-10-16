@@ -29,17 +29,22 @@ ${UPDATE_COMMAND}
     output: process.stdout,
   });
 
-  const answer = await rl.question("Are you sure you want to update? (y/n) ");
+  const answer = await rl.question("Are you sure you want to update? (Y/n) ");
 
   rl.close();
 
-  if (answer !== "y") {
+  const normalizedAnswer = answer.trim().toLowerCase();
+  if (
+    normalizedAnswer !== "" &&
+    normalizedAnswer !== "y" &&
+    normalizedAnswer !== "yes"
+  ) {
     logger.info("Update cancelled");
     return;
   }
 
   try {
-    execSync(UPDATE_COMMAND);
+    execSync(UPDATE_COMMAND, { stdio: "inherit" });
   } catch (error) {
     logger.error(error as Error);
     return;
