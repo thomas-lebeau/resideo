@@ -35,7 +35,7 @@ const CONFIG = ["ROUTER_HOST", "ROUTER_USERNAME", "ROUTER_PASSWORD"] as const;
  * connection status by checking WAN connection data.
  *
  * Environment variables:
- * - ROUTER_HOST: Router IP address (e.g., 192.168.18.1)
+ * - ROUTER_HOST: Router IP address (e.g., 192.168.0.1)
  * - ROUTER_USERNAME: Router admin username
  * - ROUTER_PASSWORD: Router admin password
  */
