@@ -15,13 +15,12 @@
       secret:
       <input id="secret" onblur="setUrlParam(this)" required>
     </label>
-    <button type="button" id="btnCode" onclick="getCode()" disabled>get code</button>
+    <button type="button" id="btnAuth" onclick="auth()" disabled>login with balay</button>
     <label>
       code:
       <input id="code" readonly>
     </label>
-
-    <button type="button" id="btnLogin" onclick="login()" disabled>login with balay</button>
+    <button type="button" id="btnGetToken" onclick="getToken()" disabled>get Token</button>
     <label>
       token:
       <input id="token" readonly>
@@ -40,10 +39,11 @@
 
       window.location.href = url
     }
-    const login = () => {
+    const auth = () => {
       const url = new URL('https://api.home-connect.com/security/oauth/authorize')
-      url.searchParams.set('grant_type', 'authorization_code')
+      url.searchParams.set('response_type', 'code')
       url.searchParams.set('client_id', apikey.value)
+      url.searchParams.set('scope', ['IdentifyAppliance', 'Monitor'].join('%20'))
       url.searchParams.set('redirect_uri', window.location.origin + window.location.pathname)
       url.searchParams.set('state', JSON.stringify({
         apikey: apikey.value,
@@ -53,23 +53,21 @@
       window.location.href = url
     }
 
-    const getCode = () => {
-      const url = new URL('https://api.home-connect.com/security/oauth/authorize')
+    const getToken = () => {
+      const url = new URL('https://api.home-connect.com/security/oauth/token')
       url.searchParams.set('grant_type', 'authorization_code')
+      url.searchParams.set('code', code.value)
       url.searchParams.set('client_id', apikey.value)
+      url.searchParams.set('client_secret', secret.value)
       url.searchParams.set('redirect_uri', window.location.origin + window.location.pathname)
-      url.searchParams.set('state', JSON.stringify({
-        apikey: apikey.value,
-        secret: secret.value,
-        code: code.value
-      }))
 
       window.location.href = url
     }
 
     // handle response from login
     if (getUrlParam('state')) {
-      const { apikey, secret, code } = JSON.parse(getUrlParam('state'))
+      const { apikey, secret } = JSON.parse(getUrlParam('state'))
+      const code = getUrlParam('code')
 
       const url = new URL(window.location.href)
       url.searchParams.set('apikey', apikey)
@@ -83,17 +81,17 @@
     apikey.value = getUrlParam('apikey')
     secret.value = getUrlParam('secret')
     code.value = getUrlParam('code')
-    token.value = getUrlParam('token')
+    token.value = getUrlParam('access_token')
     refresh_token.value = getUrlParam('refresh_token')
 
     // enable get code button if we don't have a code
     if (apikey.value && secret.value && !code.value) {
-      btnCode.disabled = false
+      btnAuth.disabled = false
     }
 
     // enable login button if we're not logged in
     if (apikey.value && secret.value && code.value) {
-      btnLogin.disabled = false
+      btnGetToken.disabled = false
     }
 
   </script>
