@@ -43,6 +43,7 @@ export class Logger {
 
   info(message: string) {
     if (this.reporters.info.includes(REPORTER.console)) {
+      // eslint-disable-next-line no-console
       console.log(`${this.prefix}${message}`);
     }
 
@@ -53,6 +54,7 @@ export class Logger {
 
   error(error: Error) {
     if (this.reporters.error.includes(REPORTER.console)) {
+      // eslint-disable-next-line no-console
       console.error(`${this.prefix}❌`, error);
     }
 

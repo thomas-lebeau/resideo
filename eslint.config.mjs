@@ -9,6 +9,24 @@ export default defineConfig([
     files: ["src/**/*.mts"],
     rules: {
       "@typescript-eslint/consistent-type-imports": "error",
+      "no-console": "error",
+    },
+  },
+  {
+    files: ["src/plugins/**/*.mts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^\\.\\./(?!shared)",
+              message:
+                "Plugins can only import from the shared folder (not from other project folders)",
+            },
+          ],
+        },
+      ],
     },
   },
 ]);
