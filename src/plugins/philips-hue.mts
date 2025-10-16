@@ -33,6 +33,11 @@ type LightResponse = Array<{
   };
 }>;
 
+type ZigbeeConnectivityResponse = Array<{
+  id_v1: string;
+  status: "connected" | "disconnected" | "connectivity_issue";
+}>;
+
 type BatteryState = "normal" | "low" | "critical";
 type DevicePowerResponse = Array<{
   id_v1: string;
@@ -72,7 +77,8 @@ type Endpoint =
   | "/resource/light"
   | "/resource/button"
   | "/resource/device_power"
-  | "/resource/device";
+  | "/resource/device"
+  | "/resource/zigbee_connectivity";
 
 type Response<T extends Endpoint> = T extends "/resource/light"
   ? LightResponse
@@ -82,6 +88,8 @@ type Response<T extends Endpoint> = T extends "/resource/light"
   ? ButtonResponse
   : T extends "/resource/device"
   ? DeviceResponse
+  : T extends "/resource/zigbee_connectivity"
+  ? ZigbeeConnectivityResponse
   : unknown;
 
 const STATE = {
@@ -120,13 +128,23 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
   }
 
   private processLightResponse(
-    lightResponse: Response<"/resource/light">
+    lightResponse: Response<"/resource/light">,
+    connectivityResponse: Response<"/resource/zigbee_connectivity">
   ): Array<Light | undefined> {
     return lightResponse.map((light) => {
+      const connectivity = connectivityResponse.find(
+        (conn) => conn.id_v1 === light.id_v1
+      );
+
       return {
         type: "light",
         name: light.metadata.name,
-        state: light.on.on ? STATE.On : STATE.Off,
+        state:
+          connectivity?.status !== "connected"
+            ? STATE.Off
+            : light.on.on
+            ? STATE.On
+            : STATE.Off,
         brightness: light.dimming.brightness,
       } as const;
     });
@@ -179,14 +197,26 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
   }
 
   async run() {
+    const [
+      lightResponse,
+      connectivityResponse,
+      buttonResponse,
+      deviceResponse,
+      devicePowerResponse,
+    ] = await Promise.all([
+      this.fetch("/resource/light"),
+      this.fetch("/resource/zigbee_connectivity"),
+      this.fetch("/resource/button"),
+      this.fetch("/resource/device"),
+      this.fetch("/resource/device_power"),
+    ]);
+
     return [
-      ...this.processLightResponse(await this.fetch("/resource/light")),
+      ...this.processLightResponse(lightResponse, connectivityResponse),
       ...this.processButtonResponse(
-        ...(await Promise.all([
-          this.fetch("/resource/button"),
-          this.fetch("/resource/device"),
-          this.fetch("/resource/device_power"),
-        ]))
+        buttonResponse,
+        deviceResponse,
+        devicePowerResponse
       ),
     ].filter((log) => log !== undefined);
   }
