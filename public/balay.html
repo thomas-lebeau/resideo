@@ -55,8 +55,8 @@
 
     const getToken = async () => {
       const body = new FormData()
-      body.set('grant_type', 'authorization_code')
 
+      body.set('grant_type', 'authorization_code')
       body.set('code', code.value)
       body.set('client_id', apikey.value)
       body.set('client_secret', secret.value)
