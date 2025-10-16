@@ -24,6 +24,7 @@ await build({
   entryPoints: ["src/main.mts"],
   outfile: `bin/${getPackageName()}`,
   bundle: true,
+  sourcemap: true,
   platform: "node",
   target: "node18",
   banner: {
