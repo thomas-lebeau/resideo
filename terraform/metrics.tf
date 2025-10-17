@@ -404,6 +404,47 @@ resource "datadog_logs_metric" "wan_connection" {
   }
 }
 
+# Balay Dishwasher Metrics
+resource "datadog_logs_metric" "dishwasher_state" {
+  name = "${local.name}.dishwasher.state"
+  filter {
+    query = "service:${var.service_name} @type:dishwasher"
+  }
+  compute {
+    aggregation_type = "distribution"
+    path             = "@state"
+  }
+
+  # Apply all common group_by configurations
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+}
+
+resource "datadog_logs_metric" "dishwasher_door_state" {
+  name = "${local.name}.dishwasher.door_state"
+  filter {
+    query = "service:${var.service_name} @type:dishwasher"
+  }
+  compute {
+    aggregation_type = "distribution"
+    path             = "@door_state"
+  }
+
+  # Apply all common group_by configurations
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+}
+
 # Metric Metadata Configuration for Units
 # see available units at https://docs.datadoghq.com/metrics/units/
 resource "datadog_metric_metadata" "temperature_readings_metadata" {
@@ -596,4 +637,17 @@ resource "datadog_metric_metadata" "wan_connection_bytes_sent_metadata" {
   type        = "gauge"
   unit        = "byte"
   description = "Total bytes sent on WAN connection"
+}
+
+# Balay Dishwasher Metric Metadata
+resource "datadog_metric_metadata" "dishwasher_state_metadata" {
+  metric      = datadog_logs_metric.dishwasher_state.name
+  type        = "gauge"
+  description = "Dishwasher state (0=off/inactive, 1=on/running)"
+}
+
+resource "datadog_metric_metadata" "dishwasher_door_state_metadata" {
+  metric      = datadog_logs_metric.dishwasher_door_state.name
+  type        = "gauge"
+  description = "Dishwasher door state (0=closed, 1=open)"
 }
