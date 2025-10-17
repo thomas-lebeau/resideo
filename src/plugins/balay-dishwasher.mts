@@ -11,11 +11,9 @@ type BalayDishwasherData = {
   type: "dishwasher";
   name: string;
   state: 0 | 1; // 0 = off/inactive, 1 = on/running
-  door_state?: 0 | 1; // 0 = closed, 1 = open
-  operation_state?: string;
+  door_state: 0 | 1; // 0 = closed, 1 = open
+  operation_state: string;
   program_name?: string;
-  remaining_time?: number; // in seconds
-  progress?: number; // percentage
 };
 
 const CONFIG = ["BALAY_CLIENT_ID", "BALAY_CLIENT_SECRET"] as const;
