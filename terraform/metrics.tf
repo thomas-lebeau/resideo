@@ -323,6 +323,36 @@ resource "datadog_logs_metric" "error_rate" {
   }
 }
 
+# Event Count Metrics
+resource "datadog_logs_metric" "event_count" {
+  name = "${local.name}.event.count"
+  filter {
+    query = "service:${var.service_name}"
+  }
+  compute {
+    aggregation_type = "count"
+  }
+
+  # Apply all common group_by configurations
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+
+  group_by {
+    path     = "@status"
+    tag_name = "status"
+  }
+
+  group_by {
+    path     = "version"
+    tag_name = "version"
+  }
+}
+
 
 # Transmission Metrics
 resource "datadog_logs_metric" "transmission" {
@@ -464,7 +494,13 @@ resource "datadog_metric_metadata" "plex_episode_count_metadata" {
 resource "datadog_metric_metadata" "error_rate_metadata" {
   metric      = datadog_logs_metric.error_rate.name
   type        = "count"
-  description = "Count of errors by plugin"
+  description = "Count of errors"
+}
+
+resource "datadog_metric_metadata" "event_count_metadata" {
+  metric      = datadog_logs_metric.event_count.name
+  type        = "count"
+  description = "Count of events"
 }
 
 resource "datadog_metric_metadata" "transmission_active_torrent_count_metadata" {
