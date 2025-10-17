@@ -125,7 +125,8 @@ jobs:
         run: |
           docker run --rm -v $PWD:/app -w /app --platform linux/arm/v7 node:18-bullseye bash -c "
             apt update &&
-            apt install -y bluetooth bluez libbluetooth-dev libudev-dev build-essential python3 make g++ &&
+            apt install -y bluetooth bluez libbluetooth-dev libudev-dev build-essential python3 make g++ git &&
+            git config --global --add safe.directory /app &&
             npm ci --build-from-source &&
             npm run build
           "
