@@ -1,8 +1,8 @@
-import type { PluginConstructor } from "../shared/AbstractPlugin.mts";
 import datadog from "./Datadog.mts";
 import { Logger } from "./Loggers.mts";
 import { plugins as availablePlugins } from "../plugins/index.mts";
 import { args } from "./config.mts";
+import type { PluginConstructor } from "../shared/AbstractPlugin.mts";
 
 export async function runPlugin(Plugin: PluginConstructor) {
   const name = Plugin.slug;

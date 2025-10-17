@@ -1,5 +1,4 @@
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
-import { wait } from "../shared/wait.mts";
 
 type Token = {
   access_token: string;
@@ -254,6 +253,10 @@ export class BalayDishwasher extends AbstractPlugin<
       ...(program && { program_name: program.name }),
     } satisfies BalayDishwasherData;
   }
+}
+
+function wait(seconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
 }
 
 type PostEndpoint =
