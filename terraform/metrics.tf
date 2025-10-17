@@ -423,6 +423,16 @@ resource "datadog_logs_metric" "dishwasher_state" {
       tag_name = group_by.value.tag_name
     }
   }
+
+  group_by {
+    path     = "@operation_state"
+    tag_name = "operation_state"
+  }
+
+  group_by {
+    path     = "@program_name"
+    tag_name = "program_name"
+  }
 }
 
 resource "datadog_logs_metric" "dishwasher_door_state" {
