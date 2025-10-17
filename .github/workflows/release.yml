@@ -13,12 +13,13 @@ on:
           - major
         default: "patch"
 
+permissions:
+  contents: write
+
 jobs:
   # version_bump:
   #   if: github.actor == 'thomas-lebeau'
   #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write
   #   outputs:
   #     tag: ${{ steps.version.outputs.tag }}
   #     new_version: ${{ steps.version.outputs.new_version }}
@@ -66,8 +67,6 @@ jobs:
   build:
     # needs: version_bump
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout code
@@ -107,8 +106,6 @@ jobs:
   build_armv7:
     # needs: version_bump
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout code
@@ -153,8 +150,6 @@ jobs:
   # release:
   #   needs: [version_bump, build, build_armv7]
   #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write
 
   #   steps:
   #     - name: Download artifacts

@@ -7,9 +7,9 @@
     "raspberry-home-monitor": "bin/raspberry-home-monitor"
   },
   "scripts": {
-    "build": "node scripts/build.mts",
-    "build:dev": "node scripts/build.mts --dev",
-    "dev": "node src/main.mts",
+    "build": "node scripts/build.mjs",
+    "build:dev": "node scripts/build.mjs --dev",
+    "dev": "node src/main.mjs",
     "lint": "eslint ."
   },
   "license": "MIT",
