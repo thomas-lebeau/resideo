@@ -72,7 +72,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: main
+          # ref: main  # Uncomment this when version_bump is active
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -111,7 +111,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: main
+          # ref: main  # Uncomment this when version_bump is active
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
