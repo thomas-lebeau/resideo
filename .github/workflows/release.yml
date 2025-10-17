@@ -14,7 +14,7 @@ on:
         default: "patch"
 
 jobs:
-  release:
+  version_bump:
     if: contains('["thomas-lebeau"]', github.actor)
     runs-on: ubuntu-latest
     permissions:
@@ -41,8 +41,17 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
+      ## we need to verify the last commit is not from a previous release to skip version bump
+      - name: Verify last commit
+        run: |
+          LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
+          if [[ $LAST_COMMIT_MSG == chore:\ release* ]]; then
+            echo "skip_version_bump=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Bump version
         id: version
+        if: ${{ !steps.verify_last_commit.outputs.skip_version_bump }}
         run: |
           PREVIOUS_VERSION=$(node -p "require('./package.json').version")
           npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
@@ -51,17 +60,93 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build binary
-        run: |
-          npm run build
-
       - name: Commit version bump
+        if: ${{ !steps.verify_last_commit.outputs.skip_version_bump }}
         run: |
           git add package.json package-lock.json
           git commit -m "chore: release ${{ steps.version.outputs.tag }}"
           git tag ${{ steps.version.outputs.tag }}
           git push origin main
           git push origin ${{ steps.version.outputs.tag }}
+
+  build:
+    needs: version_bump
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.8.0"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build binary
+        run: |
+          npm run build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: raspberry-home-monitor
+          path: bin/raspberry-home-monitor
+
+  build_armv7:
+    needs: version_bump
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build for ARMv7
+        run: |
+          docker run --rm -v $PWD:/app -w /app --platform linux/arm/v7 node:18-bullseye bash -c "
+            apt update &&
+            apt install -y bluetooth bluez libbluetooth-dev libudev-dev build-essential python3 make g++ &&
+            npm ci --build-from-source
+            npm run build
+          "
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: raspberry-home-monitor-armv7
+          path: |
+            bin/raspberry-home-monitor
+            node_modules/@stoprocent/bluetooth-hci-socket/**/*.node
+            node_modules/@stoprocent/noble/**/*.node
+
+  release:
+    needs: [build, build_armv7]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download ARMv7 artifacts
+        uses: actions/download-artifact@v4
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -72,6 +157,7 @@ jobs:
           working_directory: bin
           files: |
             raspberry-home-monitor
+            raspberry-home-monitor-armv7
           body: |
             **Full Changelog**: https://github.com/thomas-lebeau/resideo/compare/v${{ steps.version.outputs.previous_version }}...v${{ steps.version.outputs.new_version }}
         env:

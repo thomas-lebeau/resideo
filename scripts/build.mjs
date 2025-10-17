@@ -1,3 +1,5 @@
+// @ts-check
+import process from "node:process";
 import { build } from "esbuild";
 import {
   getGitCommitSha,
