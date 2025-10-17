@@ -1,3 +1,4 @@
+import { Store } from "../utils/store.mts";
 import { toKebabCase } from "./string.mts";
 
 type OnOff = 0 | 1;
@@ -35,12 +36,17 @@ export type Other = {
 
 export abstract class AbstractPlugin<
   T extends Thermometer | Thermostat | Light | Other = Other,
-  U extends readonly string[] = string[]
+  U extends readonly string[] = string[],
+  V extends Record<string, string | number | boolean> = Record<
+    string,
+    string | number | boolean
+  >
 > {
   protected readonly config: Record<U[number], string> = {} as Record<
     U[number],
     string
   >;
+  protected readonly store = new Store<V>(this.constructor.name);
 
   static get slug(): string {
     return toKebabCase(this.name);

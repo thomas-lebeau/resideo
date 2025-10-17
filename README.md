@@ -53,6 +53,24 @@ Create a `.env` file with the following variables:
 ### Speed Test Plugin
 - `FAST_SPEEDTEST_TOKEN`: Your Fast SpeedTest token
 
+### Balay Dishwasher Plugin
+- `BALAY_CLIENT_ID`: Your Home Connect API client ID
+- `BALAY_CLIENT_SECRET`: Your Home Connect API client secret
+
+To get these credentials:
+1. Register as a developer at [Home Connect Developer Portal](https://developer.home-connect.com/)
+2. Create an application (the redirect URI is not required for device flow)
+3. Connect your Balay dishwasher to the Home Connect app on your phone
+4. Add the client ID and secret to your `.env` file
+
+**Authentication**: The plugin uses OAuth 2.0 device flow authentication. On the first run, it will:
+- Display a URL and code for you to authorize the application
+- Wait for you to complete the authorization in your browser
+- Automatically save and manage the access tokens
+- Refresh tokens automatically when they expire
+
+Tokens are securely stored in `~/.resideo/tokens/` and will be automatically refreshed. You don't need to manually manage refresh tokens.
+
 ## Usage
 
 ### Run the application
@@ -65,7 +83,7 @@ Use a cron job to run the application every minute:
 ### Options
 
 - `--env` `-e`: Specify an environment file (e.g., `raspberry-home-monitor --env ~/.path/to/.env`)
-- `--plugin` `-p`: Run a specific plugin (e.g., `raspberry-home-monitor --plugin resideo`). Available plugins: `resideo`, `philips-hue`, `plex-media-server`, `fast-speedtest`
+- `--plugin` `-p`: Run a specific plugin (e.g., `raspberry-home-monitor --plugin resideo`). Available plugins: `resideo`, `philips-hue`, `plex-media-server`, `fast-speedtest`, `balay-dishwasher`
 
 
 ## Development
