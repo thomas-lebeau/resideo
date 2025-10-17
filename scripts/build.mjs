@@ -1,12 +1,8 @@
 // @ts-check
 import process from "node:process";
 import { build } from "esbuild";
-import {
-  getGitCommitSha,
-  getGitRepositoryUrl,
-  getPackageName,
-  getPackageVersion,
-} from "../src/utils/package.mts";
+import { execSync } from "child_process";
+import packageJson from "../package.json" with { type: "json" };
 import { parseArgs } from "util";
 
 const args = parseArgs({
@@ -21,20 +17,22 @@ const args = parseArgs({
 });
 
 const versionSuffix = args.values.dev ? "-dev" : "";
+const gitCommitSha = execSync("git rev-parse HEAD", {encoding: "utf8"}).trim();
+const gitRepositoryUrl = execSync("git config --get remote.origin.url", {encoding: "utf8"}).trim().replace(/^https?:\/\//, "git@");
 
 await build({
   entryPoints: ["src/main.mts"],
-  outfile: `bin/${getPackageName()}`,
+  outfile: `bin/${packageJson.name}`,
   bundle: true,
   sourcemap: true,
   platform: "node",
   target: "node18",
   banner: {
     js: `
-globalThis.PACKAGE_VERSION = "${getPackageVersion()}${versionSuffix}";
-globalThis.PACKAGE_NAME = "${getPackageName()}";
-globalThis.GIT_COMMIT_SHA = "${getGitCommitSha()}";
-globalThis.GIT_REPOSITORY_URL = "${getGitRepositoryUrl()}";
+globalThis.PACKAGE_VERSION = "${packageJson.version}${versionSuffix}";
+globalThis.PACKAGE_NAME = "${packageJson.name}";
+globalThis.GIT_COMMIT_SHA = "${gitCommitSha}";
+globalThis.GIT_REPOSITORY_URL = "${gitRepositoryUrl}";
   `,
   },
 });
