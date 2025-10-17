@@ -27,6 +27,11 @@ await build({
   sourcemap: true,
   platform: "node",
   target: "node18",
+  external: [
+    // Native modules must be external (can't be bundled)
+    "@stoprocent/noble",
+    "@stoprocent/bluetooth-hci-socket",
+  ],
   banner: {
     js: `
 globalThis.PACKAGE_VERSION = "${packageJson.version}${versionSuffix}";

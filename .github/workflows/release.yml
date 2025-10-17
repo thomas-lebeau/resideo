@@ -133,10 +133,9 @@ jobs:
 
       - name: Create release archive
         run: |
-          mkdir -p release
+          mkdir -p release/node_modules/@stoprocent
           cp bin/raspberry-home-monitor release/
           chmod +x release/raspberry-home-monitor
-          mkdir -p release/node_modules/@stoprocent
           cp -r node_modules/@stoprocent/bluetooth-hci-socket release/node_modules/@stoprocent/
           cp -r node_modules/@stoprocent/noble release/node_modules/@stoprocent/
           cd release
