@@ -109,15 +109,16 @@ class Datadog {
   }
 
   async flush() {
-    if (args.values.dryRun) {
-      logger.info(
-        `Dry run mode, skipping sending ${this.batch.length} logs to Datadog`
-      );
+    if (this.batch.length === 0) {
+      logger.info("No logs to send to Datadog");
       return;
     }
 
-    if (this.batch.length === 0) {
-      logger.info("No logs to send to Datadog");
+    if (args.values.dryRun) {
+      logger.info("Batch:\n" + JSON.stringify(this.batch, null, 2));
+      logger.info(
+        `Dry run mode, skipping sending ${this.batch.length} logs to Datadog`
+      );
       return;
     }
 
