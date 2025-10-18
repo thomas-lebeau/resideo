@@ -151,6 +151,17 @@ export class BalayDishwasher extends AbstractPlugin<
     return tokenData.access_token;
   }
 
+  private async handleError(response: Response): Promise<void> {
+    const { error } = (await response.json()) as HomeConnectGetErrorResponse;
+
+    throw new Error(
+      `Failed to ${response.url.replace(this.baseUrl, "")}: ${
+        response.status
+      } ${response.statusText}`,
+      { cause: new Error(error.description) }
+    );
+  }
+
   private async post<T extends PostEndpoint, U extends PostData<T>>(
     endpoint: T,
     data: U
@@ -166,7 +177,6 @@ export class BalayDishwasher extends AbstractPlugin<
     if (!response.ok) {
       const error = (await response.json()) as {
         error?: string;
-        error_description?: string;
       };
 
       if (error.error === "authorization_pending") {
@@ -196,9 +206,7 @@ export class BalayDishwasher extends AbstractPlugin<
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to get ${endpoint}: ${response.status} ${response.statusText}`
-      );
+      await this.handleError(response);
     }
 
     const { data } = (await response.json()) as {
@@ -387,3 +395,15 @@ type HomeConnectStatus =
       name: "Operation";
       displayValue: string;
     };
+
+type HomeConnectGetErrorResponse = {
+  error: {
+    key: string;
+    description: string;
+  };
+};
+
+type HomeConnectPostErrorResponse = {
+  error?: string;
+  error_description?: string;
+};
