@@ -351,11 +351,6 @@ resource "datadog_logs_metric" "event_count" {
     path     = "version"
     tag_name = "version"
   }
-
-  group_by {
-    path     = "@request_id"
-    tag_name = "request_id"
-  }
 }
 
 
