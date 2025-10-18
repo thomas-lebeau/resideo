@@ -48,7 +48,7 @@ export class Logger {
     if (this.logLevels[0] >= LOG_LEVEL[level]) {
       console[level](
         `${this.prefix}${message}`,
-        inspect(payload, { depth: 5 })
+        inspect(payload, { depth: 5, colors: true })
       );
     }
 
