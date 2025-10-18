@@ -17,12 +17,23 @@ Options:
   -h, --help             Show the help
 
 Plugins:
-${availablePlugins
-  .map((Plugin) => `  ${Plugin.slug} - ${Plugin.description}`)
-  .join("\n")}
+${listPlugins()}
 
 Examples:
   ${config.PACKAGE_NAME} -e ~/.path/to/.env
 `);
   return;
+}
+
+function listPlugins() {
+  const maxSlugLength = Math.max(
+    ...availablePlugins.map((Plugin) => Plugin.slug.length)
+  );
+
+  return availablePlugins
+    .map((Plugin) => {
+      const paddedSlug = Plugin.slug.padEnd(maxSlugLength);
+      return `  ${paddedSlug}  ${Plugin.description}`;
+    })
+    .join("\n");
 }
