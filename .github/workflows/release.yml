@@ -17,62 +17,62 @@ permissions:
   contents: write
 
 jobs:
-  # version_bump:
-  #   if: github.actor == 'thomas-lebeau'
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     tag: ${{ steps.version.outputs.tag }}
-  #     new_version: ${{ steps.version.outputs.new_version }}
-  #     previous_version: ${{ steps.version.outputs.previous_version }}
+  version_bump:
+    if: github.actor == 'thomas-lebeau'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      new_version: ${{ steps.version.outputs.new_version }}
+      previous_version: ${{ steps.version.outputs.previous_version }}
 
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-  #         token: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: "24.8.0"
-  #         cache: "npm"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.8.0"
+          cache: "npm"
 
-  #     - name: Install dependencies
-  #       run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-  #     - name: Configure Git
-  #       run: |
-  #         git config --global user.name 'github-actions[bot]'
-  #         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-  #     - name: Bump version
-  #       id: version
-  #       run: |
-  #         PREVIOUS_VERSION=$(node -p "require('./package.json').version")
-  #         npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
-  #         NEW_VERSION=$(node -p "require('./package.json').version")
-  #         echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
-  #         echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-  #         echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+      - name: Bump version
+        id: version
+        run: |
+          PREVIOUS_VERSION=$(node -p "require('./package.json').version")
+          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
 
-  #     - name: Commit version bump
-  #       run: |
-  #         git add package.json package-lock.json
-  #         git commit -m "chore: release ${{ steps.version.outputs.tag }}"
-  #         git tag ${{ steps.version.outputs.tag }}
-  #         git push origin main
-  #         git push origin ${{ steps.version.outputs.tag }}
+      - name: Commit version bump
+        run: |
+          git add package.json package-lock.json
+          git commit -m "chore: release ${{ steps.version.outputs.tag }}"
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin main
+          git push origin ${{ steps.version.outputs.tag }}
 
   build-linux-x64:
-    # needs: version_bump
+    needs: version_bump
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # ref: main  # Uncomment this when version_bump is active
+          ref: main
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -104,14 +104,14 @@ jobs:
           path: raspberry-home-monitor-linux-x64.tar.gz
 
   build-linux-armv7:
-    # needs: version_bump
+    needs: version_bump
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # ref: main  # Uncomment this when version_bump is active
+          ref: main
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -148,24 +148,24 @@ jobs:
           name: raspberry-home-monitor-linux-armv7
           path: raspberry-home-monitor-linux-armv7.tar.gz
 
-  # release:
-  #   needs: [version_bump, build-linux-x64, build-linux-armv7]
-  #   runs-on: ubuntu-latest
+  release:
+    needs: [version_bump, build-linux-x64, build-linux-armv7]
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     - name: Download artifacts
-  #       uses: actions/download-artifact@v4
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
 
-  #     - name: Create GitHub Release
-  #       uses: softprops/action-gh-release@v2
-  #       with:
-  #         tag_name: ${{ needs.version_bump.outputs.tag }}
-  #         name: Release ${{ needs.version_bump.outputs.tag }}
-  #         fail_on_unmatched_files: true
-  #         files: |
-  #           raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz
-  #           raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz
-  #         body: |
-  #           **Full Changelog**: https://github.com/thomas-lebeau/resideo/compare/v${{ needs.version_bump.outputs.previous_version }}...${{ needs.version_bump.outputs.tag }}
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version_bump.outputs.tag }}
+          name: Release ${{ needs.version_bump.outputs.tag }}
+          fail_on_unmatched_files: true
+          files: |
+            raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz
+            raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz
+          body: |
+            **Full Changelog**: https://github.com/thomas-lebeau/resideo/compare/v${{ needs.version_bump.outputs.previous_version }}...${{ needs.version_bump.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
