@@ -51,6 +51,8 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
 
   async stop() {
     clearTimeout(this.timer);
+    // Hack to force noble to stop scanning
+    await noble.startScanningAsync([], true);
     await noble.stopScanningAsync();
     noble.removeAllListeners();
   }
