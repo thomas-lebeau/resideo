@@ -7,13 +7,13 @@ resource "datadog_logs_index" "request_id_exclusion" {
     query = ""
   }
 
-  # Production exclusion filter (excludes 99% but keeps errors)
+  # Production exclusion filter (excludes 99% but keeps errors, debug and warning logs)
   exclusion_filter {
     name       = "${var.service_name}"
     is_enabled = true
 
     filter {
-      query       = "@service:${var.service_name} -status:error"
+      query       = "@service:${var.service_name} status:info"
       sample_rate = 0.99
       # TODO: This is not supported in the Datadog Terraform provider
       # sample_attribute = "@request_id"
