@@ -46,10 +46,14 @@ export class Logger {
     payload?: Record<string, unknown> | Error
   ): void {
     if (this.logLevels[0] >= LOG_LEVEL[level]) {
-      console[level](
-        `${this.prefix}${message}`,
-        inspect(payload, { depth: 5, colors: true })
-      );
+      if (payload) {
+        console[level](
+          `${this.prefix}${message}`,
+          inspect(payload, { depth: 5, colors: true })
+        );
+      } else {
+        console[level](`${this.prefix}${message}`);
+      }
     }
 
     if (this.logLevels[1] >= LOG_LEVEL[level]) {
