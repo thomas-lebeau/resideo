@@ -64,7 +64,7 @@ jobs:
   #         git push origin main
   #         git push origin ${{ steps.version.outputs.tag }}
 
-  build:
+  build-linux-x64:
     # needs: version_bump
     runs-on: ubuntu-latest
 
@@ -103,7 +103,7 @@ jobs:
           name: raspberry-home-monitor-linux-x64
           path: raspberry-home-monitor-linux-x64.tar.gz
 
-  build_armv7:
+  build-linux-armv7:
     # needs: version_bump
     runs-on: ubuntu-latest
 
@@ -123,21 +123,22 @@ jobs:
 
       - name: Build for ARMv7
         run: |
-          docker run --rm -v $PWD:/app -w /app --platform linux/arm/v7 node:18-bullseye bash -c "
+          docker run --rm -v $PWD:/app -w /app --platform linux/arm/v7 node:18-buster bash -c "
+            sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/sources.list &&
+            sed -i 's|security.debian.org|archive.debian.org/debian-security|g' /etc/apt/sources.list &&
+            sed -i '/stretch-updates/d' /etc/apt/sources.list &&
             apt update &&
             apt install -y bluetooth bluez libbluetooth-dev libudev-dev build-essential python3 make g++ git &&
             git config --global --add safe.directory /app &&
             npm ci --build-from-source &&
             npm run build
           "
-
       - name: Create release archive
         run: |
-          mkdir -p release/node_modules/@stoprocent
+          mkdir -p release
           cp bin/raspberry-home-monitor release/
           chmod +x release/raspberry-home-monitor
-          cp -r node_modules/@stoprocent/bluetooth-hci-socket release/node_modules/@stoprocent/
-          cp -r node_modules/@stoprocent/noble release/node_modules/@stoprocent/
+          cp -r node_modules release/
           cd release
           tar -czf ../raspberry-home-monitor-linux-armv7.tar.gz raspberry-home-monitor node_modules
 
@@ -148,7 +149,7 @@ jobs:
           path: raspberry-home-monitor-linux-armv7.tar.gz
 
   # release:
-  #   needs: [version_bump, build, build_armv7]
+  #   needs: [version_bump, build-linux-x64, build-linux-armv7]
   #   runs-on: ubuntu-latest
 
   #   steps:
