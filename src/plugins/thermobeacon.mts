@@ -1,4 +1,4 @@
-import noble from "@stoprocent/noble";
+import noble, { type Peripheral } from "@stoprocent/noble";
 import type { Thermometer } from "../shared/AbstractPlugin.mts";
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
 
@@ -47,13 +47,12 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
     await noble.waitForPoweredOnAsync();
     await noble.startScanningAsync([], true);
     noble.setMaxListeners(50);
-
-    this.timer = setTimeout(() => this.stop(), SCAN_TIMEOUT);
   }
 
   async stop() {
     clearTimeout(this.timer);
     await noble.stopScanningAsync();
+    noble.removeAllListeners();
   }
 
   parseMacAddress(buffer: Buffer) {
@@ -94,27 +93,41 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
     await this.start();
     const data: ThermoBeacon[] = [];
 
-    for await (const peripheral of noble.discoverAsync()) {
-      const { address, rssi } = peripheral;
-      const { manufacturerData, serviceUuids } = peripheral.advertisement;
+    return new Promise<ThermoBeacon[]>((resolve) => {
+      const onDiscover = (peripheral: Peripheral) => {
+        const { address, rssi } = peripheral;
+        const { manufacturerData, serviceUuids } = peripheral.advertisement;
 
-      if (serviceUuids.includes(SERVICE_UUID)) {
-        const readings = this.parseSensorReadings(manufacturerData);
-        const macAddress = address || this.parseMacAddress(manufacturerData);
+        if (serviceUuids.includes(SERVICE_UUID)) {
+          const readings = this.parseSensorReadings(manufacturerData);
+          const macAddress = address || this.parseMacAddress(manufacturerData);
 
-        data.push({
-          type: "thermometer",
-          name: THERMOMETERS[macAddress],
-          mac_address: macAddress,
-          rssi,
-          ...readings,
-        });
+          if (!readings) {
+            return;
+          }
 
-        break;
-      }
-    }
+          data.push({
+            type: "thermometer",
+            name: THERMOMETERS[macAddress],
+            mac_address: macAddress,
+            rssi,
+            ...readings,
+          });
 
-    await noble.stopScanningAsync();
-    return data;
+          // Found our device, clean up and resolve
+          noble.removeListener("discover", onDiscover);
+          this.stop().then(() => resolve(data));
+        }
+      };
+
+      noble.on("discover", onDiscover);
+
+      // If timeout occurs, resolve with whatever data we have
+      this.timer = setTimeout(async () => {
+        noble.removeListener("discover", onDiscover);
+        await this.stop();
+        resolve(data);
+      }, SCAN_TIMEOUT);
+    });
   }
 }
