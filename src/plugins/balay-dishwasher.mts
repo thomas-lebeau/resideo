@@ -402,8 +402,3 @@ type HomeConnectGetErrorResponse = {
     description: string;
   };
 };
-
-type HomeConnectPostErrorResponse = {
-  error?: string;
-  error_description?: string;
-};

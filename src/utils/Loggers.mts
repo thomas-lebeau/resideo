@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 
+import { inspect } from "node:util";
 import datadog from "./Datadog.mts";
 import { config } from "./config.mts";
 
@@ -7,7 +8,7 @@ import { config } from "./config.mts";
 const LOG_LEVEL = {
   emerg: 0, // used to silently ignore messages
   error: 3,
-  warning: 4,
+  warn: 4,
   info: 6,
   debug: 7,
 } as const;
@@ -17,7 +18,7 @@ type LogLevel = (typeof LOG_LEVEL)[keyof typeof LOG_LEVEL];
 // [Console Loglevel, Datadog Loglevel]
 const DEFAULT_LOG_LEVELS: [LogLevel, LogLevel] = [
   +(config.LOG_LEVEL ?? LOG_LEVEL.info) as LogLevel,
-  LOG_LEVEL.warning,
+  LOG_LEVEL.warn,
 ];
 
 export class Logger {
@@ -39,52 +40,40 @@ export class Logger {
     ];
   }
 
-  debug(message: string, payload?: Record<string, unknown>): void {
-    if (this.logLevels[0] >= LOG_LEVEL.debug) {
-      console.debug(`${this.prefix}${message}`, payload);
+  private log(
+    level: "debug" | "info" | "warn" | "error",
+    message: string,
+    payload?: Record<string, unknown> | Error
+  ): void {
+    if (this.logLevels[0] >= LOG_LEVEL[level]) {
+      console[level](
+        `${this.prefix}${message}`,
+        inspect(payload, { depth: 5 })
+      );
     }
 
-    if (this.logLevels[1] >= LOG_LEVEL.debug) {
-      datadog.send(this.name, {
-        ...payload,
-        level: "notice",
-        message,
-      });
+    if (this.logLevels[1] >= LOG_LEVEL[level]) {
+      datadog.send(
+        this.name,
+        payload instanceof Error ? payload : { ...payload, level, message }
+      );
     }
+  }
+
+  debug(message: string, payload?: Record<string, unknown>): void {
+    this.log("debug", message, payload);
   }
 
   info(message: string) {
-    if (this.logLevels[0] >= LOG_LEVEL.info) {
-      console.log(`${this.prefix}${message}`);
-    }
-
-    if (this.logLevels[1] >= LOG_LEVEL.info) {
-      datadog.send(this.name, message);
-    }
+    this.log("info", message);
   }
 
   warn(message: string, payload?: Record<string, unknown>): void {
-    if (this.logLevels[0] >= LOG_LEVEL.warning) {
-      console.warn(`${this.prefix}${message}`);
-    }
-
-    if (this.logLevels[1] >= LOG_LEVEL.warning) {
-      datadog.send(this.name, {
-        ...payload,
-        level: "warning",
-        message,
-      });
-    }
+    this.log("warn", message, payload);
   }
 
   error(error: Error) {
-    if (this.logLevels[0] >= LOG_LEVEL.error) {
-      console.error(`${this.prefix}❌`, error);
-    }
-
-    if (this.logLevels[1] >= LOG_LEVEL.error) {
-      datadog.send(this.name, error);
-    }
+    this.log("error", error.message, error);
   }
 }
 
