@@ -5,7 +5,10 @@ import { args, config } from "./config.mts";
 import { Logger } from "./Loggers.mts";
 
 // Prevent Datadog error to be reported to Datadog
-const logger = new Logger("Datadog", { error: [Logger.REPORTER.console] });
+const logger = new Logger("Datadog", [
+  undefined, // use default
+  Logger.LOG_LEVELS.emerg, // silently ignore messages
+]);
 
 /**
  * @see https://docs.datadoghq.com/api/latest/logs/
@@ -115,7 +118,7 @@ class Datadog {
     }
 
     if (args.values.dryRun) {
-      logger.info("Batch:\n" + JSON.stringify(this.batch, null, 2));
+      logger.debug("Batch", { batch: this.batch });
       logger.info(
         `Dry run mode, skipping sending ${this.batch.length} logs to Datadog`
       );

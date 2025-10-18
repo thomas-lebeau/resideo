@@ -83,8 +83,8 @@ export const config = {
   ),
 
   ENV: process.env.ENV || "dev",
-  DEBUG: process.env.DEBUG === "true" || process.env.DEBUG === "1",
-};
+  LOG_LEVEL: process.env.LOG_LEVEL,
+} as const;
 
 function getBuildConstant(
   name: keyof typeof globalThis,

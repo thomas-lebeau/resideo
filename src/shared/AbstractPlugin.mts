@@ -1,3 +1,4 @@
+import { Logger } from "../utils/Loggers.mts";
 import { Store } from "../utils/store.mts";
 
 type OnOff = 0 | 1;
@@ -41,15 +42,21 @@ export abstract class AbstractPlugin<
     string | number | boolean
   >
 > {
+  static get slug(): string {
+    return toKebabCase(this.name);
+  }
+
+  static get logger(): Logger {
+    return new Logger(this.slug);
+  }
+
   protected readonly config: Record<U[number], string> = {} as Record<
     U[number],
     string
   >;
   protected readonly store = new Store<V>(this.constructor.name);
 
-  static get slug(): string {
-    return toKebabCase(this.name);
-  }
+  public readonly logger: Logger = new Logger(this.constructor.name);
 
   constructor(keys: U) {
     for (const key of keys) {

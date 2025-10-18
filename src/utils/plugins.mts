@@ -1,23 +1,19 @@
 import datadog from "./Datadog.mts";
-import { Logger } from "./Loggers.mts";
 import { plugins as availablePlugins } from "../plugins/index.mts";
 import { args } from "./config.mts";
 import type { PluginConstructor } from "../shared/AbstractPlugin.mts";
 
 export async function runPlugin(Plugin: PluginConstructor) {
-  const name = Plugin.slug;
-  const logger = new Logger(name);
-
   try {
-    logger.info(`🔄 Running plugin ${name}...`);
+    Plugin.logger.info(`🔄 Running plugin ${Plugin.slug}...`);
 
     const data = await new Plugin().run();
 
     if (data) {
-      datadog.send(name, data);
+      datadog.send(Plugin.slug, data);
     }
   } catch (error) {
-    logger.error(error as Error);
+    Plugin.logger.error(error as Error);
   }
 }
 
