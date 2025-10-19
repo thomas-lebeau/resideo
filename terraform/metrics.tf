@@ -455,6 +455,72 @@ resource "datadog_logs_metric" "dishwasher_door_state" {
   }
 }
 
+# Philips TV Metrics
+resource "datadog_logs_metric" "tv_state" {
+  name = "${local.name}.tv.state"
+  filter {
+    query = "service:${var.service_name} @type:philips_tv"
+  }
+  compute {
+    aggregation_type = "distribution"
+    path             = "@state"
+  }
+
+  # Apply all common group_by configurations
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+
+  group_by {
+    path     = "@power_state"
+    tag_name = "power_state"
+  }
+}
+
+resource "datadog_logs_metric" "tv_volume" {
+  name = "${local.name}.tv.volume"
+  filter {
+    query = "service:${var.service_name} @type:philips_tv @volume:*"
+  }
+  compute {
+    aggregation_type = "distribution"
+    path             = "@volume"
+  }
+
+  # Apply all common group_by configurations
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+}
+
+resource "datadog_logs_metric" "tv_muted" {
+  name = "${local.name}.tv.muted"
+  filter {
+    query = "service:${var.service_name} @type:philips_tv @muted:*"
+  }
+  compute {
+    aggregation_type = "distribution"
+    path             = "@muted"
+  }
+
+  # Apply all common group_by configurations
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+}
+
 # Metric Metadata Configuration for Units
 # see available units at https://docs.datadoghq.com/metrics/units/
 resource "datadog_metric_metadata" "temperature_readings_metadata" {
@@ -660,4 +726,23 @@ resource "datadog_metric_metadata" "dishwasher_door_state_metadata" {
   metric      = datadog_logs_metric.dishwasher_door_state.name
   type        = "gauge"
   description = "Dishwasher door state (0=closed, 1=open)"
+}
+
+# Philips TV Metric Metadata
+resource "datadog_metric_metadata" "tv_state_metadata" {
+  metric      = datadog_logs_metric.tv_state.name
+  type        = "gauge"
+  description = "TV state (0=off, 1=on)"
+}
+
+resource "datadog_metric_metadata" "tv_volume_metadata" {
+  metric      = datadog_logs_metric.tv_volume.name
+  type        = "gauge"
+  description = "TV volume level"
+}
+
+resource "datadog_metric_metadata" "tv_muted_metadata" {
+  metric      = datadog_logs_metric.tv_muted.name
+  type        = "gauge"
+  description = "TV muted state (false=not muted, true=muted)"
 }
