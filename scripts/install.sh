@@ -85,23 +85,9 @@ mkdir -p "$INSTALL_DIR/$DIR_NAME"
 cp -r "$TEMP_DIR/"* "$INSTALL_DIR/$DIR_NAME/"
 chmod +x "$INSTALL_DIR/$DIR_NAME/$BINARY_NAME"
 
-# Create wrapper script if node_modules exist (ARMv7 build)
-if [ -d "$INSTALL_DIR/$DIR_NAME/node_modules" ]; then
-    cat > "$INSTALL_DIR/$DIR_NAME/${BINARY_NAME}-wrapper.sh" << EOF
-#!/bin/bash
-SCRIPT_DIR="\$( cd "\$( dirname "\${BASH_SOURCE[0]}" )" && pwd )"
-export NODE_PATH="\$SCRIPT_DIR/node_modules:\$NODE_PATH"
-exec "\$SCRIPT_DIR/$BINARY_NAME" "\$@"
-EOF
-    chmod +x "$INSTALL_DIR/$DIR_NAME/${BINARY_NAME}-wrapper.sh"
-    # Symlink to the wrapper instead
-    mkdir -p "$INSTALL_DIR/bin"
-    ln -sf "$INSTALL_DIR/$DIR_NAME/${BINARY_NAME}-wrapper.sh" "$INSTALL_DIR/bin/$BINARY_NAME"
-else
-    # No node_modules, link directly to binary
-    mkdir -p "$INSTALL_DIR/bin"
-    ln -sf "$INSTALL_DIR/$DIR_NAME/$BINARY_NAME" "$INSTALL_DIR/bin/$BINARY_NAME"
-fi
+# Create symlink to binary (Node.js will automatically find node_modules in the same directory)
+mkdir -p "$INSTALL_DIR/bin"
+ln -sf "$INSTALL_DIR/$DIR_NAME/$BINARY_NAME" "$INSTALL_DIR/bin/$BINARY_NAME"
 
 # Cleanup
 rm -f "$TEMP_FILE"
@@ -128,7 +114,7 @@ echo ""
 echo -e "${BLUE}Installed:${NC} $ARCHIVE_NAME"
 echo -e "${BLUE}Location:${NC}  $INSTALL_DIR/$DIR_NAME/$BINARY_NAME"
 echo ""
-echo "Run '${GREEN}$BINARY_NAME --help${NC}' to get started"
+echo -e "Run '${GREEN}$BINARY_NAME --help${NC}' to get started"
 echo ""
 echo "Configuration and documentation:"
 echo "https://github.com/$REPO_OWNER/$REPO_NAME/blob/main/README.md"
