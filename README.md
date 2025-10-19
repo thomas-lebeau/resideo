@@ -44,8 +44,14 @@ Create a `.env` file with the following variables:
 ### Philips Hue Plugin
 - `HUE_HOST`: IP address of your Hue bridge (e.g., `192.168.1.100`)
 - `HUE_USERNAME`: Your Hue API username/key
-- `HUE_API_KEY`: Your Hue API key
-- 
+
+### Philips TV Plugin
+- `PHILIPS_TV_HOST`: IP address of your Philips Android TV (e.g., `192.168.1.101`)
+- `PHILIPS_TV_DEVICE_ID`: Device ID obtained during pairing
+- `PHILIPS_TV_AUTH_KEY`: Authentication key obtained during pairing
+
+To get these credentials, you need to pair with your TV first. See the "Philips TV Pairing" section below.
+
 ### Plex Media Center Plugin
 - `PLEX_HOST`: Your Plex server host
 - `PLEX_TOKEN`: Your Plex API token
@@ -71,6 +77,20 @@ To get these credentials:
 
 Tokens are securely stored in `~/.resideo/tokens/` and will be automatically refreshed. You don't need to manually manage refresh tokens.
 
+### Philips TV Pairing
+
+Before using the Philips TV plugin, you need to pair with your TV to obtain the device ID and authentication key:
+
+1. Make sure your TV is on and connected to the same network
+2. Run the pairing script:
+   ```bash
+   node scripts/pair-philips-tv.mjs --host 192.168.1.101
+   ```
+3. A PIN code will be displayed on your TV screen
+4. Enter the PIN code when prompted
+5. The script will display your `PHILIPS_TV_DEVICE_ID` and `PHILIPS_TV_AUTH_KEY`
+6. Add these to your `.env` file along with the `PHILIPS_TV_HOST`
+
 ## Usage
 
 ### Run the application
@@ -83,7 +103,7 @@ Use a cron job to run the application every minute:
 ### Options
 
 - `--env` `-e`: Specify an environment file (e.g., `raspberry-home-monitor --env ~/.path/to/.env`)
-- `--plugin` `-p`: Run a specific plugin (e.g., `raspberry-home-monitor --plugin resideo`). Available plugins: `resideo`, `philips-hue`, `plex-media-server`, `fast-speedtest`, `balay-dishwasher`
+- `--plugin` `-p`: Run a specific plugin (e.g., `raspberry-home-monitor --plugin resideo`). Available plugins: `resideo`, `philips-hue`, `philips-tv`, `plex-media-server`, `fast-speedtest`, `balay-dishwasher`
 
 
 ## Development

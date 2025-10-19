@@ -29,4 +29,10 @@ export default defineConfig([
       ],
     },
   },
+  {
+    files: ["scripts/**/*.mjs"],
+    env: {
+      node: true,
+    },
+  },
 ]);
