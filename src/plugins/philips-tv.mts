@@ -10,6 +10,16 @@ type PhilipsTVDevice = Other & {
   ambilight_mode?: string;
 };
 
+type Endpoint = "/powerstate" | "/audio/volume" | "/ambilight/mode";
+
+type PhilipsTVResponse<T extends Endpoint> = T extends "/powerstate"
+  ? PowerStateResponse
+  : T extends "/audio/volume"
+  ? VolumeResponse
+  : T extends "/ambilight/mode"
+  ? AmbilightModeResponse
+  : never;
+
 type PowerStateResponse = {
   powerstate: "On" | "Standby" | "StandbyKeep";
 };
@@ -90,61 +100,56 @@ export class PhilipsTV extends AbstractPlugin<PhilipsTVDevice, typeof CONFIG> {
   /**
    * Makes an authenticated request to the Philips TV API
    */
-  private async fetchWithAuth<T>(endpoint: string): Promise<T> {
+  private async fetch<T extends Endpoint>(
+    endpoint: T
+  ): Promise<PhilipsTVResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
     const path = `/6${endpoint}`;
 
-    try {
-      // First attempt without auth to get the challenge
-      const response = await fetch(url, {
+    // First attempt without auth to get the challenge
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+      // @ts-expect-error - dispatcher is not defined in the fetch API types
+      dispatcher: agent,
+    });
+
+    if (response.status === 401) {
+      // Create digest auth header from the challenge
+      const authHeader = this.createDigestAuth("GET", path, response);
+
+      // Retry with authentication
+      const authResponse = await fetch(url, {
         method: "GET",
         headers: {
+          Authorization: authHeader,
           Accept: "application/json",
         },
         // @ts-expect-error - dispatcher is not defined in the fetch API types
         dispatcher: agent,
       });
 
-      if (response.status === 401) {
-        // Create digest auth header from the challenge
-        const authHeader = this.createDigestAuth("GET", path, response);
-
-        // Retry with authentication
-        const authResponse = await fetch(url, {
-          method: "GET",
-          headers: {
-            Authorization: authHeader,
-            Accept: "application/json",
-          },
-          // @ts-expect-error - dispatcher is not defined in the fetch API types
-          dispatcher: agent,
-        });
-
-        if (!authResponse.ok) {
-          throw new Error(`HTTP error! status: ${authResponse.status}`);
-        }
-
-        return (await authResponse.json()) as T;
+      if (!authResponse.ok) {
+        throw new Error(`HTTP error! status: ${authResponse.status}`);
       }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return (await response.json()) as T;
-    } catch (error) {
-      this.logger.debug(`Failed to fetch ${endpoint}`, { error });
-      throw error;
+      return (await authResponse.json()) as PhilipsTVResponse<T>;
     }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return (await response.json()) as PhilipsTVResponse<T>;
   }
 
   private async getPowerState(): Promise<
     PowerStateResponse["powerstate"] | undefined
   > {
     try {
-      const response = await this.fetchWithAuth<PowerStateResponse>(
-        "/powerstate"
-      );
+      const response = await this.fetch("/powerstate");
       return response.powerstate;
     } catch (error) {
       this.logger.debug("Failed to get power state", { error });
@@ -156,9 +161,7 @@ export class PhilipsTV extends AbstractPlugin<PhilipsTVDevice, typeof CONFIG> {
     Pick<VolumeResponse, "current" | "muted"> | undefined
   > {
     try {
-      const response = await this.fetchWithAuth<VolumeResponse>(
-        "/audio/volume"
-      );
+      const response = await this.fetch("/audio/volume");
       return {
         current: response.current,
         muted: response.muted,
@@ -171,9 +174,7 @@ export class PhilipsTV extends AbstractPlugin<PhilipsTVDevice, typeof CONFIG> {
 
   private async getAmbilightMode(): Promise<string | undefined> {
     try {
-      const response = await this.fetchWithAuth<AmbilightModeResponse>(
-        "/ambilight/mode"
-      );
+      const response = await this.fetch("/ambilight/mode");
       return response.current;
     } catch (error) {
       this.logger.debug("Failed to get ambilight mode", { error });
