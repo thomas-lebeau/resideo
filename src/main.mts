@@ -11,8 +11,6 @@ import { help } from "./commands/help.mts";
 import { version } from "./commands/version.mts";
 import { update } from "./commands/update.mts";
 
-let exitCode = 0;
-
 async function main(): Promise<void> {
   if (args.values.help) {
     return help();
@@ -42,10 +40,9 @@ async function main(): Promise<void> {
     await Promise.all(promises);
   } catch (error) {
     logger.error(error as Error);
-    exitCode = 1;
+    process.exitCode = 1;
   } finally {
     await datadog.flush();
-    process.exit(exitCode);
   }
 }
 
