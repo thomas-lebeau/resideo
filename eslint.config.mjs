@@ -1,6 +1,7 @@
 import { defineConfig } from "eslint/config";
 import tslint from "typescript-eslint";
 import eslint from "@eslint/js";
+import globals from "globals";
 
 export default defineConfig([
   eslint.configs.recommended,
@@ -31,8 +32,8 @@ export default defineConfig([
   },
   {
     files: ["scripts/**/*.mjs"],
-    env: {
-      node: true,
+    languageOptions: {
+      globals: globals.node,
     },
   },
 ]);
