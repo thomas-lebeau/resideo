@@ -1,6 +1,7 @@
 import noble, { type Peripheral } from "@stoprocent/noble";
 import type { Thermometer } from "../shared/AbstractPlugin.mts";
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
+import { resolve } from "dns";
 
 type Offset = [Offset: number, ByteLength: number];
 type SubArray = [Start: number, End: number];
@@ -51,10 +52,11 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
 
   async stop() {
     clearTimeout(this.timer);
+    noble.removeAllListeners();
+
     // Hack to force noble to stop scanning
     await noble.startScanningAsync([], true);
     await noble.stopScanningAsync();
-    noble.removeAllListeners();
   }
 
   parseMacAddress(buffer: Buffer) {
@@ -96,7 +98,12 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
     const data: ThermoBeacon[] = [];
 
     return new Promise<ThermoBeacon[]>((resolve) => {
-      const onDiscover = (peripheral: Peripheral) => {
+      const stopAndResolve = async (data: ThermoBeacon[]) => {
+        await this.stop();
+        resolve(data);
+      };
+
+      noble.on("discover", (peripheral: Peripheral) => {
         const { address, rssi } = peripheral;
         const { manufacturerData, serviceUuids } = peripheral.advertisement;
 
@@ -105,6 +112,7 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
           const macAddress = address || this.parseMacAddress(manufacturerData);
 
           if (!readings) {
+            // continue scanning
             return;
           }
 
@@ -116,20 +124,11 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
             ...readings,
           });
 
-          // Found our device, clean up and resolve
-          noble.removeListener("discover", onDiscover);
-          this.stop().then(() => resolve(data));
+          stopAndResolve(data);
         }
-      };
+      });
 
-      noble.on("discover", onDiscover);
-
-      // If timeout occurs, resolve with whatever data we have
-      this.timer = setTimeout(async () => {
-        noble.removeListener("discover", onDiscover);
-        await this.stop();
-        resolve(data);
-      }, SCAN_TIMEOUT);
+      this.timer = setTimeout(() => stopAndResolve(data), SCAN_TIMEOUT);
     });
   }
 }

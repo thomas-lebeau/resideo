@@ -43,6 +43,7 @@ async function main(): Promise<void> {
     process.exitCode = 1;
   } finally {
     await datadog.flush();
+    process.exit(process.exitCode);
   }
 }
 
