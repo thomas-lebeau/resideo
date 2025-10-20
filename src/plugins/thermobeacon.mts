@@ -1,7 +1,6 @@
 import noble, { type Peripheral } from "@stoprocent/noble";
 import type { Thermometer } from "../shared/AbstractPlugin.mts";
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
-import { resolve } from "dns";
 
 type Offset = [Offset: number, ByteLength: number];
 type SubArray = [Start: number, End: number];
