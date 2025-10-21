@@ -9,7 +9,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:dev": "node scripts/build.mjs --dev",
-    "dev": "node src/main.mjs",
+    "dev": "node src/main.mts",
     "lint": "eslint ."
   },
   "license": "MIT",
