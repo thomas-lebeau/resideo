@@ -123,13 +123,9 @@ jobs:
 
       - name: Build for ARMv7
         run: |
-          docker run --rm -v $PWD:/app -w /app --platform linux/arm/v7 node:18-buster bash -c "
-            sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/sources.list &&
-            sed -i 's|security.debian.org|archive.debian.org/debian-security|g' /etc/apt/sources.list &&
-            sed -i '/stretch-updates/d' /etc/apt/sources.list &&
+          docker run --rm -v $PWD:/app -w /app --platform linux/arm/v7 node:18-bullseye bash -c "
             apt update &&
-            apt install -y bluetooth bluez libbluetooth-dev libudev-dev build-essential python3.9 make g++ git &&
-            update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1 &&
+            apt install -y bluetooth bluez libbluetooth-dev libudev-dev build-essential python3 make g++ git &&
             git config --global --add safe.directory /app &&
             npm ci --build-from-source &&
             npm run build
