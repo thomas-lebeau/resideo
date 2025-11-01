@@ -1,4 +1,4 @@
-import noble, { type Peripheral } from "@stoprocent/noble";
+import noble, { type Peripheral } from "@abandonware/noble";
 import type { Thermometer } from "../shared/AbstractPlugin.mts";
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
 
@@ -44,9 +44,17 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
   }
 
   async start() {
-    await noble.waitForPoweredOnAsync();
+    // Wait for Bluetooth adapter to be powered on
+    if (noble._state !== "poweredOn") {
+      await new Promise<void>((resolve) => {
+        noble.once("stateChange", (state) => {
+          if (state === "poweredOn") {
+            resolve();
+          }
+        });
+      });
+    }
     await noble.startScanningAsync([], true);
-    noble.setMaxListeners(50);
   }
 
   async stop() {
