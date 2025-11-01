@@ -29,8 +29,9 @@ await build({
   target: "node18",
   external: [
     // Native modules must be external (can't be bundled)
-    "@stoprocent/noble",
-    "@stoprocent/bluetooth-hci-socket",
+    "@abandonware/noble",
+    "@abandonware/bluetooth-hci-socket",
+    "ws", // Required by @abandonware/noble
   ],
   banner: {
     js: `
