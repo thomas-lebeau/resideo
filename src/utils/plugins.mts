@@ -7,6 +7,11 @@ export async function runPlugin(Plugin: PluginConstructor) {
   try {
     Plugin.logger.info(`🔄 Running plugin ${Plugin.slug}...`);
 
+    if (args.values.setup) {
+      await new Plugin().setup();
+      return;
+    }
+
     const data = await new Plugin().run();
 
     if (data) {

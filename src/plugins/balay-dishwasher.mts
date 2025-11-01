@@ -18,6 +18,10 @@ type BalayDishwasherData = {
 
 const CONFIG = ["BALAY_CLIENT_ID", "BALAY_CLIENT_SECRET"] as const;
 
+const AUTHENTICATION_ERROR = new Error(
+  "Authentication error: Run `raspbberry-home-monitor --setup --plugin balay-dishwasher to authenticate"
+);
+
 export class BalayDishwasher extends AbstractPlugin<
   BalayDishwasherData,
   typeof CONFIG,
@@ -78,7 +82,7 @@ export class BalayDishwasher extends AbstractPlugin<
   /**
    * Performs the complete device flow authentication
    */
-  private async authenticateWithDeviceFlow(): Promise<Token> {
+  private async authenticateWithDeviceFlow() {
     const deviceCodeInfo = await this.initiateDeviceFlow();
 
     /* eslint-disable no-console */
@@ -93,7 +97,6 @@ export class BalayDishwasher extends AbstractPlugin<
       );
     }
     console.log("\nWaiting for authorization...");
-    /* eslint-enable no-console */
 
     const tokenResponse = await this.pollForToken(deviceCodeInfo);
 
@@ -104,8 +107,10 @@ export class BalayDishwasher extends AbstractPlugin<
       token_type: tokenResponse.token_type,
     };
 
+    console.log("Authentication successful");
+    /* eslint-enable no-console */
+
     this.store.set(token);
-    return token;
   }
 
   /**
@@ -133,8 +138,7 @@ export class BalayDishwasher extends AbstractPlugin<
     let tokenData = this.store.get();
 
     if (!tokenData) {
-      tokenData = await this.authenticateWithDeviceFlow();
-      return tokenData.access_token;
+      throw AUTHENTICATION_ERROR;
     }
 
     // If token is expired or will expire soon, refresh it
@@ -144,7 +148,7 @@ export class BalayDishwasher extends AbstractPlugin<
       } catch {
         // If refresh fails, delete old token and initiate device flow again
         this.store.clear();
-        tokenData = await this.authenticateWithDeviceFlow();
+        throw AUTHENTICATION_ERROR;
       }
     }
 
@@ -229,6 +233,10 @@ export class BalayDishwasher extends AbstractPlugin<
         statuses.get(STATUS.DOOR_STATE)?.value === DOOR_STATE.OPEN ? 1 : 0,
       operation_state: statuses.get(STATUS.OPERATION_STATE)!.displayValue,
     };
+  }
+
+  async setup(): Promise<void> {
+    await this.authenticateWithDeviceFlow();
   }
 
   async run(): Promise<BalayDishwasherData | undefined> {

@@ -59,6 +59,13 @@ export const args = parseArgs({
       multiple: false,
       default: false,
     },
+    setup: {
+      type: "boolean",
+      short: "s",
+      long: "setup",
+      multiple: false,
+      default: false,
+    },
   },
 });
 

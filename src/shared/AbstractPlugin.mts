@@ -50,12 +50,25 @@ export abstract class AbstractPlugin<
     return new Logger(this.slug);
   }
 
+  /**
+   * Configuration for the plugin from the environment variables.
+   */
   protected readonly config: Record<U[number], string> = {} as Record<
     U[number],
     string
   >;
+
+  /**
+   * Store for the plugin.
+   * It can be used to store authentication tokens, etc. that are needed for the plugin to work.
+   */
   protected readonly store = new Store<V>(this.constructor.name);
 
+  /**
+   * Logger for the plugin.
+   * It is initialized with the name of the plugin.
+   * It is used to log messages from the plugin.
+   */
   public readonly logger: Logger = new Logger(this.constructor.name);
 
   constructor(keys: U) {
@@ -68,6 +81,19 @@ export abstract class AbstractPlugin<
     }
   }
 
+  /**
+   * Method to be optionally implemented by the plugin.
+   * It should be used to setup the plugin.
+   * For example, to authenticate with the service, to start the scan, etc.
+   */
+  setup(): Promise<void> {
+    throw new Error("setup method not implemented");
+  }
+
+  /**
+   * Main method to be implemented by the plugin.
+   * It should return the data collected by the plugin.
+   */
   abstract run(): Promise<T | Array<T> | undefined>;
 }
 
