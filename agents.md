@@ -12,7 +12,6 @@
 
 3. **Debugging Feedback Loop**: When debugging:
    - Add `logger.debug()` calls with relevant state/data
-   - Run with `LOG_LEVEL=7 npm run dev -- --plugin <plugin-name>` to see debug output
    - Remove debug logs before committing, or keep only essential ones
 
 4. **File Extensions**: All TypeScript files use `.mts` extension (ES modules). Node.js runs them natively without compilation.
