@@ -128,7 +128,8 @@ jobs:
             sed -i 's|security.debian.org|archive.debian.org/debian-security|g' /etc/apt/sources.list &&
             sed -i '/stretch-updates/d' /etc/apt/sources.list &&
             apt update &&
-            apt install -y bluetooth bluez libbluetooth-dev libudev-dev build-essential python3 make g++ git &&
+            apt install -y bluetooth bluez libbluetooth-dev libudev-dev build-essential python3.9 make g++ git &&
+            update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1 &&
             git config --global --add safe.directory /app &&
             npm ci --build-from-source &&
             npm run build
