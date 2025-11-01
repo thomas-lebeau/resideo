@@ -123,7 +123,7 @@ jobs:
 
       - name: Build for ARMv7
         run: |
-          docker run --rm -v $PWD:/app -w /app --platform linux/arm/v7 node:16-buster bash -c "
+          docker run --rm -v $PWD:/app -w /app --platform linux/arm/v7 node:18-buster bash -c "
             sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/sources.list &&
             sed -i 's|security.debian.org|archive.debian.org/debian-security|g' /etc/apt/sources.list &&
             sed -i '/stretch-updates/d' /etc/apt/sources.list &&
