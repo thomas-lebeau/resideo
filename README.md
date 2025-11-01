@@ -25,6 +25,20 @@ This will:
 - Download the latest release binary
 - Install it to `/usr/local/bin` or `~/.local/bin`
 
+### Running Without Root/Sudo on Linux
+
+To use Bluetooth features without running as root, grant the node binary `cap_net_raw` privileges:
+
+```bash
+sudo setcap cap_net_raw+eip $(eval readlink -f `which node`)
+```
+
+This allows node to start/stop BLE advertising without sudo.
+
+**Note**: Requires `setcap` to be installed:
+- Debian/Ubuntu: `sudo apt-get install libcap2-bin`
+- RHEL/CentOS: `sudo yum install libcap2-bin`
+
 ## Configuration
 
 Create a `.env` file with the following variables:
