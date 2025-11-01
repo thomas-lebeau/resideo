@@ -91,6 +91,16 @@ To get these credentials:
 
 Tokens are securely stored in `~/.resideo/tokens/` and will be automatically refreshed. You don't need to manually manage refresh tokens.
 
+### ThermoBeacon Plugin
+- `THERMOBEACON_DEVICES`: JSON object mapping MAC addresses to device names
+
+Example configuration:
+```json
+THERMOBEACON_DEVICES={"8e:bb:00:00:05:77":"Living Room","ab:cd:ef:12:34:56":"Bedroom"}
+```
+
+The plugin will scan for ThermoBeacon WS08 temperature and humidity sensors via Bluetooth and report data only for devices configured in this environment variable.
+
 ### Philips TV Pairing
 
 Before using the Philips TV plugin, you need to pair with your TV to obtain the device ID and authentication key:
@@ -117,7 +127,7 @@ Use a cron job to run the application every minute:
 ### Options
 
 - `--env` `-e`: Specify an environment file (e.g., `raspberry-home-monitor --env ~/.path/to/.env`)
-- `--plugin` `-p`: Run a specific plugin (e.g., `raspberry-home-monitor --plugin resideo`). Available plugins: `resideo`, `philips-hue`, `philips-tv`, `plex-media-server`, `fast-speedtest`, `balay-dishwasher`
+- `--plugin` `-p`: Run a specific plugin (e.g., `raspberry-home-monitor --plugin resideo`). Available plugins: `resideo`, `philips-hue`, `philips-tv`, `plex-media-server`, `fast-speedtest`, `balay-dishwasher`, `thermobeacon`
 
 
 ## Development

@@ -24,13 +24,7 @@ const HUMIDITY: Offset = [14, 2];
 // Service UUID for Thermobeacon sensors
 const SERVICE_UUID = "fff0" as const;
 
-// Name of the thermometer for each MAC address
-// TODO: make that configurable (yaml file?)
-const THERMOMETERS: Record<string, string> = {
-  "8e:bb:00:00:05:77": "Living Room",
-};
-
-const CONFIG = [] as const;
+const CONFIG = ["THERMOBEACON_DEVICES"] as const;
 
 export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
   public static readonly description =
@@ -38,9 +32,12 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
 
   public readonly names = ["ThermoBeacon"];
   private timer: NodeJS.Timeout | undefined;
+  private readonly devices: Record<string, string>;
 
   constructor() {
     super(CONFIG);
+
+    this.devices = JSON.parse(this.config.THERMOBEACON_DEVICES);
   }
 
   async start() {
@@ -84,7 +81,7 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
     }
 
     const macAddress = this.parseMacAddress(buffer);
-    const thermometerName = THERMOMETERS[macAddress];
+    const thermometerName = this.devices[macAddress];
 
     if (!thermometerName) {
       this.logger.debug(
@@ -125,7 +122,7 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
 
           data.push({
             type: "thermometer",
-            name: THERMOMETERS[macAddress],
+            name: this.devices[macAddress],
             mac_address: macAddress,
             rssi,
             ...readings,
