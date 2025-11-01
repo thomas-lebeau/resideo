@@ -92,6 +92,28 @@ resource "datadog_logs_metric" "battery_levels" {
   }
 }
 
+# RSSI (Signal Strength) Metrics
+resource "datadog_logs_metric" "rssi" {
+  name = "${local.name}.rssi"
+  filter {
+    query = "service:${var.service_name} @rssi:*"
+  }
+  compute {
+    aggregation_type = "distribution"
+    path             = "@rssi"
+    include_percentiles = true
+  }
+
+  # Apply all common group_by configurations
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+}
+
 # Thermostat Metrics
 resource "datadog_logs_metric" "thermostat_target_temperature" {
   name = "${local.name}.thermostat.target_temperature"
@@ -542,6 +564,14 @@ resource "datadog_metric_metadata" "battery_levels_metadata" {
   type        = "gauge"
   unit        = "percent"
   description = "Battery level percentage for devices"
+}
+
+resource "datadog_metric_metadata" "rssi_metadata" {
+  metric      = datadog_logs_metric.rssi.name
+  type        = "gauge"
+  # using milliwatt as unit because datadog doesn't support decibel milliwatt
+  unit        = "milliwatt"
+  description = "Received Signal Strength Indicator (RSSI) for Bluetooth devices (in dBm)"
 }
 
 resource "datadog_metric_metadata" "thermostat_target_temperature_metadata" {
