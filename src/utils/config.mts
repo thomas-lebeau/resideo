@@ -1,73 +1,11 @@
 import * as dotenv from "dotenv";
-import { parseArgs } from "node:util";
 import {
   getPackageVersion,
   getGitCommitSha,
   getGitRepositoryUrl,
   getPackageName,
 } from "./package.mts";
-
-export const args = parseArgs({
-  args: process.argv.slice(2),
-  strict: true,
-  options: {
-    plugin: {
-      type: "string",
-      short: "p",
-      long: "plugin",
-      multiple: true,
-      default: ["all"],
-    },
-    "no-plugin": {
-      type: "string",
-      long: "no-plugin",
-      multiple: true,
-      default: [],
-    },
-    env: {
-      type: "string",
-      short: "e",
-      long: "env",
-      multiple: true,
-      default: [".env"],
-    },
-    help: {
-      type: "boolean",
-      long: "help",
-      multiple: false,
-      short: "h",
-      default: false,
-    },
-    version: {
-      type: "boolean",
-      long: "version",
-      short: "v",
-      multiple: false,
-      default: false,
-    },
-    dryRun: {
-      type: "boolean",
-      short: "d",
-      long: "dry-run",
-      multiple: false,
-      default: false,
-    },
-    update: {
-      type: "boolean",
-      short: "u",
-      long: "update",
-      multiple: false,
-      default: false,
-    },
-    setup: {
-      type: "boolean",
-      short: "s",
-      long: "setup",
-      multiple: false,
-      default: false,
-    },
-  },
-});
+import { args } from "./args.mts";
 
 dotenv.config({
   path: args.values.env,

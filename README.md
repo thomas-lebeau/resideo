@@ -119,15 +119,23 @@ Before using the Philips TV plugin, you need to pair with your TV to obtain the 
 
 ### Run the application
 
-Use a cron job to run the application every minute:
+Use a cron job to run the application when needed. For example, to run the application every minute except for the fast-speedtest plugin which should be run every 5 minutes:
 ```bash
-* * * * * raspberry-home-monitor --env ~/.path/to/.env
+*/1 * * * * raspberry-home-monitor --env ~/.path/to/.env --no-plugin fast-speedtest
+*/5 * * * * raspberry-home-monitor --env ~/.path/to/.env --plugin fast-speedtest
 ```
 
 ### Options
 
-- `--env` `-e`: Specify an environment file (e.g., `raspberry-home-monitor --env ~/.path/to/.env`)
-- `--plugin` `-p`: Run a specific plugin (e.g., `raspberry-home-monitor --plugin resideo`). Available plugins: `resideo`, `philips-hue`, `philips-tv`, `plex-media-server`, `fast-speedtest`, `balay-dishwasher`, `thermobeacon`
+- `--env` `-e`: Specify an environment file (default: `.env`). Example: `raspberry-home-monitor --env ~/.path/to/.env`
+- `--plugin` `-p`: Run specific plugin(s) (default: `all`). Can be specified multiple times. Example: `raspberry-home-monitor --plugin resideo --plugin philips-hue`
+- `--list-plugins` `-l`: List available plugins
+- `--no-plugin`: Exclude specific plugin(s). Can be specified multiple times. Example: `raspberry-home-monitor --no-plugin fast-speedtest`
+- `--dry-run` `-d`: Run in dry-run mode (no data will be sent to Datadog)
+- `--update` `-u`: Update the application
+- `--setup` `-s`: Setup the plugins authentication tokens
+- `--help` `-h`: Display help information
+- `--version` `-v`: Display version information
 
 
 ## Development

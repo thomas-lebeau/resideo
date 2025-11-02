@@ -6,14 +6,19 @@ import "./polyfills.js";
 import datadog from "./utils/Datadog.mts";
 import logger from "./utils/Loggers.mts";
 import { getSelectedPlugins, runPlugin } from "./utils/plugins.mts";
-import { args } from "./utils/config.mts";
+import { args } from "./utils/args.mts";
 import { help } from "./commands/help.mts";
 import { version } from "./commands/version.mts";
 import { update } from "./commands/update.mts";
+import { listPlugins } from "./commands/list-plugins.mts";
 
 async function main(): Promise<void> {
   if (args.values.help) {
     return help();
+  }
+
+  if (args.values["list-plugins"]) {
+    return listPlugins();
   }
 
   if (args.values.version) {

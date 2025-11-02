@@ -1,7 +1,8 @@
 import { hostname } from "node:os";
 import { randomUUID } from "node:crypto";
 
-import { args, config } from "./config.mts";
+import { config } from "./config.mts";
+import { args } from "./args.mts";
 import { Logger } from "./Loggers.mts";
 
 // Prevent Datadog error to be reported to Datadog

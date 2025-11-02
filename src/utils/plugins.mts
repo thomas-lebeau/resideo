@@ -1,6 +1,6 @@
 import datadog from "./Datadog.mts";
 import { plugins as availablePlugins } from "../plugins/index.mts";
-import { args } from "./config.mts";
+import { args } from "./args.mts";
 import type { PluginConstructor } from "../shared/AbstractPlugin.mts";
 
 export async function runPlugin(Plugin: PluginConstructor) {
