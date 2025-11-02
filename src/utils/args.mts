@@ -1,9 +1,21 @@
 import type { ParseArgsOptionDescriptor } from "node:util";
 import { parseArgs } from "node:util";
 
-export const argsConfig: {
-  [longOption: string]: ParseArgsOptionDescriptor & { description?: string };
-} = {
+export const argsConfig = {
+  help: {
+    type: "boolean",
+    multiple: false,
+    short: "h",
+    default: false,
+    description: "Show help",
+  },
+  "list-plugins": {
+    type: "boolean",
+    short: "l",
+    multiple: false,
+    default: false,
+    description: "List available plugins",
+  },
   plugin: {
     type: "string",
     short: "p",
@@ -25,19 +37,19 @@ export const argsConfig: {
     default: [".env"],
     description: "Environment variables file",
   },
-  help: {
+  setup: {
     type: "boolean",
+    short: "s",
     multiple: false,
-    short: "h",
     default: false,
-    description: "Show help",
+    description: "Setup the plugins authentication tokens",
   },
-  version: {
+  "clear-store": {
     type: "boolean",
-    short: "v",
+    short: "S",
     multiple: false,
     default: false,
-    description: "Show version",
+    description: "Clear the plugin store files",
   },
   dryRun: {
     type: "boolean",
@@ -46,6 +58,13 @@ export const argsConfig: {
     default: false,
     description: "Run in dry-run mode (no data will be sent to Datadog)",
   },
+  version: {
+    type: "boolean",
+    short: "v",
+    multiple: false,
+    default: false,
+    description: "Show version",
+  },
   update: {
     type: "boolean",
     short: "u",
@@ -53,21 +72,9 @@ export const argsConfig: {
     default: false,
     description: "Update the application",
   },
-  setup: {
-    type: "boolean",
-    short: "s",
-    multiple: false,
-    default: false,
-    description: "Setup the plugins authentication tokens",
-  },
-  "list-plugins": {
-    type: "boolean",
-    short: "l",
-    multiple: false,
-    default: false,
-    description: "List available plugins",
-  },
-} as const;
+} as const satisfies {
+  [longOption: string]: ParseArgsOptionDescriptor & { description?: string };
+};
 
 export const args = parseArgs({
   args: process.argv.slice(2),

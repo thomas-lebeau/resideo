@@ -12,6 +12,11 @@ export async function runPlugin(Plugin: PluginConstructor) {
       return;
     }
 
+    if (args.values["clear-store"]) {
+      new Plugin().clearStore();
+      return;
+    }
+
     const data = await new Plugin().run();
 
     if (data) {

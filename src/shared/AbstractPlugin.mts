@@ -91,6 +91,14 @@ export abstract class AbstractPlugin<
   }
 
   /**
+   * Clear the plugin store.
+   * It is used to clear the authentication tokens, etc. that are needed for the plugin to work.
+   */
+  clearStore(): void {
+    this.store.clear();
+  }
+
+  /**
    * Main method to be implemented by the plugin.
    * It should return the data collected by the plugin.
    */
