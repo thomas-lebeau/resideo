@@ -32,6 +32,7 @@ await build({
     "@abandonware/noble",
     "@abandonware/bluetooth-hci-socket",
     "ws", // Required by @abandonware/noble
+    "node-dht-sensor",
   ],
   banner: {
     js: `
