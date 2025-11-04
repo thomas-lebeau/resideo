@@ -10,7 +10,7 @@ type ThermoBeacon = Thermometer & {
   rssi: number;
 };
 
-const SCAN_TIMEOUT = 5_000;
+const TIMEOUT = 5_000;
 
 // Only 20-byte packets contain real-time sensor data
 // 22-byte packets appear to be device info/config packets (static data)
@@ -44,6 +44,8 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
     // Wait for Bluetooth adapter to be powered on
     if (noble._state !== "poweredOn") {
       await new Promise<void>((resolve) => {
+        setTimeout(() => resolve(), TIMEOUT);
+
         noble.once("stateChange", (state) => {
           if (state === "poweredOn") {
             resolve();
@@ -132,7 +134,7 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
         }
       });
 
-      this.timer = setTimeout(() => stopAndResolve(data), SCAN_TIMEOUT);
+      this.timer = setTimeout(() => stopAndResolve(data), TIMEOUT);
     });
   }
 }
