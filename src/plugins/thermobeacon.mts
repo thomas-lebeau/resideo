@@ -130,7 +130,9 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
             ...readings,
           });
 
-          stopAndResolve(data);
+          if (data.length >= Object.keys(this.devices).length) {
+            stopAndResolve(data);
+          }
         }
       });
 
