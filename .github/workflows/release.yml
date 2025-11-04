@@ -148,8 +148,34 @@ jobs:
           name: raspberry-home-monitor-linux-armv7
           path: raspberry-home-monitor-linux-armv7.tar.gz
 
+  cleanup_on_failure:
+    needs: [version_bump, build-linux-x64, build-linux-armv7]
+    if: ${{ always() && needs.version_bump.result == 'success' && (needs.build-linux-x64.result == 'failure' || needs.build-linux-armv7.result == 'failure') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Delete tag and revert commit
+        run: |
+          echo "Build failed, reverting version bump..."
+          git push origin :refs/tags/${{ needs.version_bump.outputs.tag }}
+          git reset --hard HEAD~1
+          git push origin main --force
+
   release:
     needs: [version_bump, build-linux-x64, build-linux-armv7]
+    if: ${{ success() }}
     runs-on: ubuntu-latest
 
     steps:
