@@ -179,6 +179,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREVIOUS_TAG="v${{ needs.version_bump.outputs.previous_version }}"
+          CURRENT_TAG="${{ needs.version_bump.outputs.tag }}"
+
+          git log $PREVIOUS_TAG..$CURRENT_TAG~1 --pretty=format:"- %s (%h)" --no-merges >> changelog.md
+          echo "" >> changelog.md
+          echo "[Full Changelog](https://github.com/thomas-lebeau/resideo/compare/$PREVIOUS_TAG...$CURRENT_TAG)" >> changelog.md
+
+          cat changelog.md
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
 
@@ -188,10 +206,9 @@ jobs:
           tag_name: ${{ needs.version_bump.outputs.tag }}
           name: Release ${{ needs.version_bump.outputs.tag }}
           fail_on_unmatched_files: true
+          body_path: changelog.md
           files: |
             raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz
             raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz
-          body: |
-            **Full Changelog**: https://github.com/thomas-lebeau/resideo/compare/v${{ needs.version_bump.outputs.previous_version }}...${{ needs.version_bump.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
