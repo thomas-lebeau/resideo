@@ -101,6 +101,18 @@ The plugin will scan for ThermoBeacon WS08 temperature and humidity sensors via 
 - `TRANSMISSION_USERNAME`: Transmission username (if authentication is enabled)
 - `TRANSMISSION_PASSWORD`: Transmission password (if authentication is enabled)
 
+### DHT22 Plugin
+- `DHT22_SENSORS`: JSON object mapping GPIO pin numbers to sensor names
+
+Example configuration:
+```json
+DHT22_SENSORS={"4":"Server Room","17":"Living Room"}
+```
+
+The plugin will read temperature and humidity from each configured DHT22 sensor on the specified GPIO pins.
+
+**Note**: The DHT22 plugin requires the `node-dht-sensor` package and appropriate GPIO permissions. On Linux, you may need to run with sudo or configure GPIO permissions.
+
 ### Philips TV Pairing
 
 Before using the Philips TV plugin, you need to pair with your TV to obtain the device ID and authentication key:
@@ -158,6 +170,7 @@ Use a cron job to run the application when needed. For example, to run the appli
 | **Philips TV**        | Monitor Android TV        | Power state, current source, volume    |
 | **Plex Media Server** | Track media playback      | Active streams, library stats          |
 | **ThermoBeacon**      | BLE temperature sensors   | Temperature, humidity, battery         |
+| **DHT22**             | GPIO temperature sensor   | Temperature, humidity                  |
 | **Balay Dishwasher**  | Home Connect appliances   | Program status, remaining time         |
 | **Fast SpeedTest**    | Internet speed monitoring | Download/upload speeds, latency        |
 | **Huawei Router**     | Router statistics         | Connection status, bandwidth usage     |
