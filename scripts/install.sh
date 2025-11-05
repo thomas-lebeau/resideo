@@ -168,8 +168,8 @@ if [ "$IS_ROOT" = true ]; then
         echo -e "${YELLOW}Installing service file...${NC}"
 
         # Copy service file from installation directory
-        if [ -f "$INSTALL_DIR/$DIR_NAME/raspberry-home-monitor.service" ]; then
-            cp "$INSTALL_DIR/$DIR_NAME/raspberry-home-monitor.service" "$SERVICE_FILE"
+        if [ -f "$INSTALL_DIR/$DIR_NAME/$SERVICE_NAME" ]; then
+            cp "$INSTALL_DIR/$DIR_NAME/$SERVICE_NAME" "$SERVICE_FILE"
             echo -e "${GREEN}✓ Service file installed${NC}"
         else
             echo -e "${RED}Error: Service template not found in release${NC}"
@@ -184,7 +184,6 @@ if [ "$IS_ROOT" = true ]; then
         echo "Please edit the service file to configure:"
         echo "  1. User to run the service as"
         echo "  2. Path to your .env file"
-        echo "  3. Optional plugin arguments"
         echo ""
         echo -e "  ${GREEN}sudo nano $SERVICE_FILE${NC}"
         echo ""
