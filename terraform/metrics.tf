@@ -543,6 +543,27 @@ resource "datadog_logs_metric" "tv_muted" {
   }
 }
 
+# Home Monitor Metrics
+resource "datadog_logs_metric" "home_monitor_uptime" {
+  name = "${local.name}.home_monitor.uptime"
+  filter {
+    query = "service:${var.service_name} @type:home-monitor @uptime:*"
+  }
+  compute {
+    aggregation_type = "distribution"
+    path             = "@uptime"
+  }
+
+  # Apply all common group_by configurations
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+}
+
 # Metric Metadata Configuration for Units
 # see available units at https://docs.datadoghq.com/metrics/units/
 resource "datadog_metric_metadata" "temperature_readings_metadata" {
@@ -775,4 +796,12 @@ resource "datadog_metric_metadata" "tv_muted_metadata" {
   metric      = datadog_logs_metric.tv_muted.name
   type        = "gauge"
   description = "TV muted state (false=not muted, true=muted)"
+}
+
+# Home Monitor Metric Metadata
+resource "datadog_metric_metadata" "home_monitor_uptime_metadata" {
+  metric      = datadog_logs_metric.home_monitor_uptime.name
+  type        = "gauge"
+  unit        = "second"
+  description = "Home monitoring system uptime in seconds"
 }

@@ -9,16 +9,18 @@ import { Resideo } from "./resideo.mts";
 import { Thermobeacon } from "./thermobeacon.mts";
 import { HuaweiRouter } from "./huawei-router.mts";
 import { Transmission } from "./transmission.mts";
+import { HomeMonitor } from "./home-monitor.mts";
 
 export const plugins: PluginConstructor[] = [
   BalayDishwasher as unknown as PluginConstructor, // yeah, I know!
   DHT22,
   FastSpeedTest,
+  HomeMonitor,
+  HuaweiRouter,
   PhilipsHue,
   PhilipsTV,
   PlexMediaServer,
   Resideo,
   Thermobeacon,
-  HuaweiRouter,
   Transmission,
 ];
