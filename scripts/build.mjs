@@ -17,14 +17,20 @@ const args = parseArgs({
 });
 
 const versionSuffix = args.values.dev ? "-dev" : "";
-const gitCommitSha = execSync("git rev-parse HEAD", {encoding: "utf8"}).trim();
-const gitRepositoryUrl = execSync("git config --get remote.origin.url", {encoding: "utf8"}).trim().replace(/^https?:\/\//, "git@");
+const gitCommitSha = execSync("git rev-parse HEAD", {
+  encoding: "utf8",
+}).trim();
+const gitRepositoryUrl = execSync("git config --get remote.origin.url", {
+  encoding: "utf8",
+})
+  .trim()
+  .replace(/^https?:\/\/(.*)$/g, "git@$1.git");
 
 await build({
   entryPoints: ["src/main.mts"],
   outfile: `bin/${packageJson.name}`,
   bundle: true,
-  sourcemap: 'inline',
+  sourcemap: "inline",
   platform: "node",
   target: "node18",
   external: [
