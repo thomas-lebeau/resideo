@@ -1,0 +1,31 @@
+[Unit]
+Description=Raspberry Home Monitor - Home automation monitoring system
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Replace with your user
+User=pi
+# Replace with your .env file path
+EnvironmentFile=/home/pi/.env
+# Binary path
+ExecStart=/usr/local/bin/raspberry-home-monitor
+
+# Restart configuration
+Restart=always
+RestartSec=10
+StartLimitInterval=5min
+StartLimitBurst=5
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=raspberry-home-monitor
+
+[Install]
+WantedBy=multi-user.target

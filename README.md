@@ -18,16 +18,68 @@ A TypeScript-based home automation monitoring system with a plugin architecture 
 Install the latest release with a single command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/scripts/install.sh | sudo bash
 ```
 
 > **Security Note**: Always review installation scripts before running them. You can inspect the script at:
 > https://github.com/thomas-lebeau/resideo/blob/main/scripts/install.sh
 
-This will:
-- Download the latest release binary
-- Install it to `/usr/local/bin` or `~/.local/bin`
-- Make the `raspberry-home-monitor` command available globally
+The installer will:
+- Download and install the latest release binary to `/usr/local/bin`
+- Install systemd service file to `/etc/systemd/system/`
+
+**First-time installation:**
+After running the installer, you need to:
+1. Create your `.env` file with required configuration (see Configuration section below)
+2. Edit the service file to configure your user and .env path:
+   ```bash
+   sudo nano /etc/systemd/system/raspberry-home-monitor.service
+   ```
+3. Enable and start the service:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable raspberry-home-monitor
+   sudo systemctl start raspberry-home-monitor
+   ```
+
+**Updates:**
+When updating an existing installation, the service file is preserved. Just restart the service to apply the update:
+```bash
+sudo systemctl restart raspberry-home-monitor
+```
+
+The service runs continuously and collects metrics every minute automatically.
+
+### Managing the Service
+
+```bash
+# View service status
+sudo systemctl status raspberry-home-monitor
+
+# View logs in real-time
+sudo journalctl -u raspberry-home-monitor -f
+
+# Stop/start/restart service
+sudo systemctl stop raspberry-home-monitor
+sudo systemctl start raspberry-home-monitor
+sudo systemctl restart raspberry-home-monitor
+
+# Disable auto-start on boot
+sudo systemctl disable raspberry-home-monitor
+```
+
+### Customizing the Service
+
+If you need to modify the service configuration after installation:
+
+```bash
+# Edit the service file
+sudo nano /etc/systemd/system/raspberry-home-monitor.service
+
+# Reload systemd and restart
+sudo systemctl daemon-reload
+sudo systemctl restart raspberry-home-monitor
+```
 
 ## Configuration
 
@@ -135,21 +187,19 @@ The application uses a plugin-based architecture:
 2. **Data Collection**: Each plugin collects data from its respective source (APIs, local devices, etc.)
 3. **Data Transformation**: Plugins return data in a standardized format
 4. **Metric Submission**: The main application sends all collected metrics to Datadog
-5. **Scheduling**: Run via cron or systemd timers for continuous monitoring
+5. **Scheduling**: Runs continuously as a systemd service, collecting metrics every minute
 
 Each plugin runs independently, so if one fails, others continue to operate normally.
 
 ## Usage
 
-### Run the application
+The service runs continuously in the background, collecting metrics every minute. To run manually for testing:
 
-Use a cron job to run the application when needed. For example, to run the application every minute except for the fast-speedtest plugin which should be run every 5 minutes:
 ```bash
-*/1 * * * * raspberry-home-monitor --env ~/.path/to/.env --no-plugin fast-speedtest
-*/5 * * * * raspberry-home-monitor --env ~/.path/to/.env --plugin fast-speedtest
+raspberry-home-monitor --env ~/.path/to/.env
 ```
 
-### Options
+### Command-Line Options
 
 - `--env` `-e`: Specify an environment file (default: `.env`). Example: `raspberry-home-monitor --env ~/.path/to/.env`
 - `--plugin` `-p`: Run specific plugin(s) (default: `all`). Can be specified multiple times. Example: `raspberry-home-monitor --plugin resideo --plugin philips-hue`

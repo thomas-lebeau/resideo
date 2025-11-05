@@ -93,9 +93,10 @@ jobs:
         run: |
           mkdir -p release
           cp bin/raspberry-home-monitor release/
+          cp scripts/raspberry-home-monitor.service release/
           chmod +x release/raspberry-home-monitor
           cd release
-          tar -czf ../raspberry-home-monitor-linux-x64.tar.gz raspberry-home-monitor
+          tar -czf ../raspberry-home-monitor-linux-x64.tar.gz raspberry-home-monitor raspberry-home-monitor.service
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -137,10 +138,11 @@ jobs:
         run: |
           mkdir -p release
           cp bin/raspberry-home-monitor release/
+          cp scripts/raspberry-home-monitor.service release/
           chmod +x release/raspberry-home-monitor
           cp -r node_modules release/
           cd release
-          tar -czf ../raspberry-home-monitor-linux-armv7.tar.gz raspberry-home-monitor node_modules
+          tar -czf ../raspberry-home-monitor-linux-armv7.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

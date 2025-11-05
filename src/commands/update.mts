@@ -6,7 +6,7 @@ import semver from "semver";
 import logger from "../utils/Loggers.mts";
 import { execSync } from "node:child_process";
 
-const UPDATE_COMMAND = `curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/scripts/install.sh | bash`;
+const UPDATE_COMMAND = `curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/scripts/install.sh | sudo bash`;
 
 export async function update() {
   const latestVersion = await getLatestVersion();
