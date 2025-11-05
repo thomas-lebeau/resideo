@@ -19,8 +19,10 @@ StartLimitInterval=5min
 StartLimitBurst=5
 
 # Security hardening
-NoNewPrivileges=true
 PrivateTmp=true
+# Grant Bluetooth capabilities (required for BLE scanning)
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
 
 # Logging
 StandardOutput=journal

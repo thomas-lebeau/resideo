@@ -459,19 +459,29 @@ Your plugin will be automatically discovered and executed when the application r
 
 #### Bluetooth Permission Errors (Linux)
 
-**Problem**: `Error: Cannot start scanning, state is unsupported`
+**Problem**: `Error: Cannot start scanning, state is unsupported` when using Bluetooth plugins (ThermoBeacon, etc.)
 
-**Solution**: Grant Node.js the required capabilities:
-```bash
-sudo setcap cap_net_raw+eip $(eval readlink -f `which node`)
-```
+**Solution**: The systemd service file already includes the necessary Bluetooth capabilities (`CAP_NET_RAW` and `CAP_NET_ADMIN`). If you're still experiencing issues:
+
+1. Make sure you're using the latest service file:
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/scripts/raspberry-home-monitor.service -o /tmp/raspberry-home-monitor.service
+   sudo cp /tmp/raspberry-home-monitor.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl restart raspberry-home-monitor
+   ```
+
+2. If running manually (not as a service), grant Node.js the required capabilities:
+   ```bash
+   sudo setcap cap_net_raw+eip $(readlink -f $(which node))
+   ```
 
 #### Plugin Authentication Failures
 
 **Problem**: OAuth plugins (Balay, Plex, etc.) fail with authentication errors
 
 **Solution**: 
-1. Remove stored tokens: `rm -rf ~/.resideo/tokens/`
+1. Remove stored tokens: `raspberry-home-monitor --clear-store`
 2. Run setup: `raspberry-home-monitor --setup`
 3. Follow the authentication prompts
 
