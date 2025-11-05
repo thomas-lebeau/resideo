@@ -258,7 +258,7 @@ export class BalayDishwasher extends AbstractPlugin<
       name: dishwasher.name,
       door_state: status.door_state,
       operation_state: status.operation_state,
-      active_program: program?.data.key,
+      active_program: program?.key,
     };
   }
 
@@ -437,12 +437,8 @@ type HomeConnectStatusResponse = {
 };
 
 type HomeConnectActiveProgramResponse = {
-  data: HomeConnectProgram;
-  name: string;
-};
-
-type HomeConnectProgram = {
   key: (typeof PROGRAMS)[keyof typeof PROGRAMS];
+  // options:
 };
 
 type HomeConnectTokenResponse = {
