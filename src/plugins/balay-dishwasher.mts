@@ -18,7 +18,7 @@ type BalayDishwasherData = {
   active_program?: string;
 };
 
-const CONFIG = ["BALAY_CLIENT_ID", "BALAY_CLIENT_SECRET"] as const;
+const CONFIG = ["BALAY_CLIENT_ID"] as const;
 
 const AUTHENTICATION_ERROR = new Error(
   "Authentication error: Run `raspbberry-home-monitor --setup --plugin balay-dishwasher to authenticate"

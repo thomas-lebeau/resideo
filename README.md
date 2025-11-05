@@ -117,7 +117,6 @@ To get these credentials, you need to pair with your TV first. See the "Philips 
 
 ### Balay Dishwasher Plugin
 - `BALAY_CLIENT_ID`: Your Home Connect API client ID
-- `BALAY_CLIENT_SECRET`: Your Home Connect API client secret
 
 To get these credentials:
 1. Register as a developer at [Home Connect Developer Portal](https://developer.home-connect.com/)
