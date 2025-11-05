@@ -1,6 +1,6 @@
 {
   "name": "raspberry-home-monitor",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Home automation monitoring system for Raspberry Pi",
   "main": "src/main.mts",
   "bin": {
