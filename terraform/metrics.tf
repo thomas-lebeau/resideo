@@ -447,13 +447,13 @@ resource "datadog_logs_metric" "dishwasher_state" {
   }
 
   group_by {
-    path     = "@operation_state"
-    tag_name = "operation_state"
+    path     = "@active_program"
+    tag_name = "active_program"
   }
 
   group_by {
-    path     = "@program_name"
-    tag_name = "program_name"
+    path     = "@half_load"
+    tag_name = "half_load"
   }
 }
 
