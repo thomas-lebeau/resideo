@@ -92,8 +92,8 @@ export abstract class AbstractPlugin<
    * It should be used to setup the plugin.
    * For example, to authenticate with the service, to start the scan, etc.
    */
-  setup(): Promise<void> {
-    throw new Error("setup method not implemented");
+  async setup(): Promise<void> {
+    // No-op by default. Plugins can override this if they need setup logic.
   }
 
   /**
@@ -101,8 +101,8 @@ export abstract class AbstractPlugin<
    * It should be used to stop the plugin.
    * For example, to stop the scan, to close the connection, etc.
    */
-  stop(): Promise<void> {
-    throw new Error("stop method not implemented");
+  async stop(): Promise<void> {
+    // No-op by default. Plugins can override this if they need cleanup logic.
   }
 
   /**
