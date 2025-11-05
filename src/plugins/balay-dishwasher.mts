@@ -24,13 +24,15 @@ const AUTHENTICATION_ERROR = new Error(
   "Authentication error: Run `raspbberry-home-monitor --setup --plugin balay-dishwasher to authenticate"
 );
 
+// hack to make this a singleton
+let instance: BalayDishwasher | undefined;
+
 export class BalayDishwasher extends AbstractPlugin<
   BalayDishwasherData,
   typeof CONFIG,
   Token
 > {
   public static readonly description = "Balay dishwasher via Home Connect API";
-  private static instance: BalayDishwasher | undefined;
 
   private readonly baseUrl = "https://api.home-connect.com";
 
@@ -39,13 +41,14 @@ export class BalayDishwasher extends AbstractPlugin<
   private eventSource: EventSource | undefined;
 
   constructor() {
-    if (BalayDishwasher.instance) {
-      return BalayDishwasher.instance;
+    if (instance) {
+      return instance;
     }
 
     super(CONFIG);
 
-    BalayDishwasher.instance = this;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    instance = this;
   }
 
   /**
