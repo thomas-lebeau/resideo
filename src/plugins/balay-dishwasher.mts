@@ -30,6 +30,8 @@ export class BalayDishwasher extends AbstractPlugin<
   Token
 > {
   public static readonly description = "Balay dishwasher via Home Connect API";
+  private static instance: BalayDishwasher | undefined;
+
   private readonly baseUrl = "https://api.home-connect.com";
 
   private haId: string | undefined;
@@ -37,7 +39,13 @@ export class BalayDishwasher extends AbstractPlugin<
   private eventSource: EventSource | undefined;
 
   constructor() {
+    if (BalayDishwasher.instance) {
+      return BalayDishwasher.instance;
+    }
+
     super(CONFIG);
+
+    BalayDishwasher.instance = this;
   }
 
   /**
@@ -225,6 +233,35 @@ export class BalayDishwasher extends AbstractPlugin<
     return data;
   }
 
+  private async initializeState() {
+    const appliances = await this.get("/api/homeappliances");
+    const dishwasher = appliances.homeappliances.find(
+      (appliance) => appliance.type === "Dishwasher"
+    );
+
+    if (!dishwasher) {
+      throw new Error("No dishwasher appliance found");
+    }
+
+    this.haId = dishwasher.haId;
+
+    const status = this.processStatus(
+      await this.get(`/api/homeappliances/${this.haId}/status`)
+    );
+
+    const program =
+      status.operation_state === OPERATION_STATE.RUN
+        ? await this.get(`/api/homeappliances/${this.haId}/programs/active`)
+        : undefined;
+
+    this.state = {
+      name: dishwasher.name,
+      door_state: status.door_state,
+      operation_state: status.operation_state,
+      active_program: program?.data.key,
+    };
+  }
+
   private async startEventStream() {
     this.eventSource = new EventSource(
       `${this.baseUrl}/api/homeappliances/${this.haId}/events`,
@@ -320,37 +357,12 @@ export class BalayDishwasher extends AbstractPlugin<
 
   async run(): Promise<BalayDishwasherData | undefined> {
     if (!this.state || !this.haId) {
-      const appliances = await this.get("/api/homeappliances");
-      const dishwasher = appliances.homeappliances.find(
-        (appliance) => appliance.type === "Dishwasher"
-      );
-
-      if (!dishwasher) {
-        throw new Error("No dishwasher appliance found");
-      }
-
-      this.haId = dishwasher.haId;
-
-      const status = this.processStatus(
-        await this.get(`/api/homeappliances/${this.haId}/status`)
-      );
-
-      const program =
-        status.operation_state === OPERATION_STATE.RUN
-          ? await this.get(`/api/homeappliances/${this.haId}/programs/active`)
-          : undefined;
-
-      this.state = {
-        name: dishwasher.name,
-        door_state: status.door_state,
-        operation_state: status.operation_state,
-        active_program: program?.data.key,
-      };
+      await this.initializeState();
 
       this.startEventStream();
     }
 
-    return this.processState(this.state);
+    return this.processState(this.state!);
   }
 }
 
