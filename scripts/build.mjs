@@ -24,7 +24,7 @@ await build({
   entryPoints: ["src/main.mts"],
   outfile: `bin/${packageJson.name}`,
   bundle: true,
-  sourcemap: true,
+  sourcemap: 'inline',
   platform: "node",
   target: "node18",
   external: [
