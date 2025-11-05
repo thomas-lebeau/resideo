@@ -1,4 +1,6 @@
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
+import { EventSource } from "eventsource";
+import { toKebabCase } from "../shared/toKebabCase.mts";
 
 type Token = {
   access_token: string;
@@ -12,8 +14,8 @@ type BalayDishwasherData = {
   name: string;
   state: 0 | 1; // 0 = off/inactive, 1 = on/running
   door_state: 0 | 1; // 0 = closed, 1 = open
-  operation_state: string;
-  program_name?: string;
+  half_load?: boolean;
+  active_program?: string;
 };
 
 const CONFIG = ["BALAY_CLIENT_ID", "BALAY_CLIENT_SECRET"] as const;
@@ -29,6 +31,10 @@ export class BalayDishwasher extends AbstractPlugin<
 > {
   public static readonly description = "Balay dishwasher via Home Connect API";
   private readonly baseUrl = "https://api.home-connect.com";
+
+  private haId: string | undefined;
+  private state: DishwasherState | undefined;
+  private eventSource: EventSource | undefined;
 
   constructor() {
     super(CONFIG);
@@ -219,58 +225,147 @@ export class BalayDishwasher extends AbstractPlugin<
     return data;
   }
 
+  private async startEventStream() {
+    this.eventSource = new EventSource(
+      `${this.baseUrl}/api/homeappliances/${this.haId}/events`,
+      {
+        fetch: async (input, init) =>
+          fetch(input, {
+            ...init,
+            headers: {
+              ...init.headers,
+              Authorization: `Bearer ${await this.getValidAccessToken()}`,
+            },
+          }),
+      }
+    );
+
+    this.eventSource.addEventListener("STATUS", (event) => {
+      this.processEvent(JSON.parse(event.data) as HomeConnectEventData);
+    });
+
+    this.eventSource.addEventListener("NOTIFY", (event) => {
+      this.processEvent(JSON.parse(event.data) as HomeConnectEventData);
+    });
+  }
+
+  private processEvent(event: HomeConnectEventData) {
+    if (!this.state) return;
+
+    for (const item of event.items) {
+      switch (item.key) {
+        case STATUS.OPERATION_STATE:
+          this.state.operation_state = item.value;
+          break;
+        case STATUS.DOOR_STATE:
+          this.state.door_state = item.value;
+          break;
+        case STATUS.POWER_STATE:
+          this.state.power_state = item.value;
+          break;
+        case NOTIFICATIONS.HALF_LOAD:
+          this.state.half_load = item.value;
+          break;
+        case NOTIFICATIONS.ACTIVE_PROGRAM:
+          this.state.active_program = item.value;
+          break;
+        default:
+          this.logger.debug("Unknown event", item);
+          break;
+      }
+    }
+
+    this.logger.debug("State", this.processState(this.state));
+  }
+
   private processStatus(
     statusResponse: HomeConnectStatusResponse
-  ): Pick<BalayDishwasherData, "state" | "door_state" | "operation_state"> {
+  ): Pick<DishwasherState, "door_state" | "operation_state"> {
     const statuses = new Map(statusResponse.status.map((s) => [s.key, s]));
 
     return {
-      state:
-        statuses.get(STATUS.OPERATION_STATE)?.value === OPERATION_STATE.RUN
-          ? 1
-          : 0,
-      door_state:
-        statuses.get(STATUS.DOOR_STATE)?.value === DOOR_STATE.OPEN ? 1 : 0,
-      operation_state: statuses.get(STATUS.OPERATION_STATE)!.displayValue,
+      door_state: statuses.get(STATUS.DOOR_STATE)!
+        .value as (typeof DOOR_STATE)[keyof typeof DOOR_STATE],
+      operation_state: statuses.get(STATUS.OPERATION_STATE)!
+        .value as (typeof OPERATION_STATE)[keyof typeof OPERATION_STATE],
     };
+  }
+
+  private processState(
+    state: DishwasherState
+  ): BalayDishwasherData | undefined {
+    const isRunning = state.operation_state === OPERATION_STATE.RUN;
+
+    const data: BalayDishwasherData = {
+      type: "dishwasher",
+      name: state.name,
+      state: isRunning ? STATE.ON : STATE.OFF,
+      door_state: state.door_state === DOOR_STATE.OPEN ? STATE.ON : STATE.OFF,
+    };
+
+    if (isRunning) {
+      data.half_load = !!state.half_load;
+      data.active_program = state.active_program
+        ? getProgramName(state.active_program)
+        : "n/a";
+    }
+
+    return data;
   }
 
   async setup(): Promise<void> {
     await this.authenticateWithDeviceFlow();
   }
 
-  async run(): Promise<BalayDishwasherData | undefined> {
-    const appliances = await this.get("/api/homeappliances");
-    const dishwasher = appliances.homeappliances.find(
-      (appliance) => appliance.type === "Dishwasher"
-    );
-
-    if (!dishwasher) {
-      return undefined;
+  stop() {
+    if (this.eventSource) {
+      this.eventSource.close();
     }
+  }
 
-    const status = this.processStatus(
-      await this.get(`/api/homeappliances/${dishwasher.haId}/status`)
-    );
+  async run(): Promise<BalayDishwasherData | undefined> {
+    if (!this.state || !this.haId) {
+      const appliances = await this.get("/api/homeappliances");
+      const dishwasher = appliances.homeappliances.find(
+        (appliance) => appliance.type === "Dishwasher"
+      );
 
-    const program =
-      status.state === 1 // Dishwasher is running
-        ? await this.get(
-            `/api/homeappliances/${dishwasher.haId}/programs/active`
-          )
-        : undefined;
+      if (!dishwasher) {
+        throw new Error("No dishwasher appliance found");
+      }
 
-    return {
-      type: "dishwasher",
-      name: dishwasher.name,
-      ...status,
-      ...(program && { program_name: program.name }),
-    } satisfies BalayDishwasherData;
+      this.haId = dishwasher.haId;
+
+      const status = this.processStatus(
+        await this.get(`/api/homeappliances/${this.haId}/status`)
+      );
+
+      const program =
+        status.operation_state === OPERATION_STATE.RUN
+          ? await this.get(`/api/homeappliances/${this.haId}/programs/active`)
+          : undefined;
+
+      this.state = {
+        name: dishwasher.name,
+        door_state: status.door_state,
+        operation_state: status.operation_state,
+        active_program: program?.data.key,
+      };
+
+      this.startEventStream();
+    }
+    this.logger.debug("", this.processState(this.state));
+
+    return new Promise((resolve) => {});
   }
 }
 
 function wait(seconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+}
+
+function getProgramName(program: (typeof PROGRAMS)[keyof typeof PROGRAMS]) {
+  return toKebabCase(program.replace("Dishcare.Dishwasher.Program.", ""));
 }
 
 type PostEndpoint =
@@ -329,7 +424,10 @@ type HomeConnectApplianceResponse = {
 };
 
 type HomeConnectStatusResponse = {
-  status: HomeConnectStatus[];
+  status: [
+    HomeConnectStatus<typeof STATUS.DOOR_STATE>,
+    HomeConnectStatus<typeof STATUS.OPERATION_STATE>
+  ];
 };
 
 type HomeConnectActiveProgramResponse = {
@@ -338,7 +436,7 @@ type HomeConnectActiveProgramResponse = {
 };
 
 type HomeConnectProgram = {
-  name: string;
+  key: (typeof PROGRAMS)[keyof typeof PROGRAMS];
 };
 
 type HomeConnectTokenResponse = {
@@ -367,9 +465,37 @@ type HomeConnectAppliance = {
   enumber: string;
 };
 
+type DishwasherState = {
+  name: string;
+  power_state?: (typeof POWER_STATE)[keyof typeof POWER_STATE];
+  door_state: (typeof DOOR_STATE)[keyof typeof DOOR_STATE];
+  operation_state:
+    | (typeof OPERATION_STATE)[keyof typeof OPERATION_STATE]
+    | undefined;
+  active_program: (typeof PROGRAMS)[keyof typeof PROGRAMS] | undefined;
+  half_load?: boolean;
+};
+
+const STATE = {
+  OFF: 0,
+  ON: 1,
+} as const;
+
 const STATUS = {
   DOOR_STATE: "BSH.Common.Status.DoorState",
   OPERATION_STATE: "BSH.Common.Status.OperationState",
+  POWER_STATE: "BSH.Common.Setting.PowerState",
+} as const;
+
+const NOTIFICATIONS = {
+  ACTIVE_PROGRAM: "BSH.Common.Root.ActiveProgram",
+  HALF_LOAD: "Dishcare.Dishwasher.Option.HalfLoad",
+} as const;
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const POWER_STATE = {
+  ON: "BSH.Common.EnumType.PowerState.On",
+  OFF: "BSH.Common.EnumType.PowerState.Off",
 } as const;
 
 const DOOR_STATE = {
@@ -390,23 +516,78 @@ const OPERATION_STATE = {
   ABORTING: "BSH.Common.EnumType.OperationState.Aborting",
 } as const;
 
-type HomeConnectStatus =
-  | {
-      key: (typeof STATUS)["DOOR_STATE"];
-      value: (typeof DOOR_STATE)[keyof typeof DOOR_STATE];
-      name: "Door";
-      displayValue: string;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const PROGRAMS = {
+  PRE_RINSE: "Dishcare.Dishwasher.Program.PreRinse",
+  AUTO_1: "Dishcare.Dishwasher.Program.Auto1",
+  AUTO_2: "Dishcare.Dishwasher.Program.Auto2",
+  AUTO_3: "Dishcare.Dishwasher.Program.Auto3",
+  ECO_50: "Dishcare.Dishwasher.Program.Eco50",
+  QUICK_45: "Dishcare.Dishwasher.Program.Quick45",
+  INTENSIV_70: "Dishcare.Dishwasher.Program.Intensiv70",
+  NORMAL_65: "Dishcare.Dishwasher.Program.Normal65",
+  GLASS_40: "Dishcare.Dishwasher.Program.Glas40",
+  GLASS_CARE: "Dishcare.Dishwasher.Program.GlassCare",
+  NIGHT_WASH: "Dishcare.Dishwasher.Program.NightWash",
+  QUICK_65: "Dishcare.Dishwasher.Program.Quick65",
+  NORMAL_45: "Dishcare.Dishwasher.Program.Normal45",
+  INTENSIV_45: "Dishcare.Dishwasher.Program.Intensiv45",
+  AUTO_HALF_LOAD: "Dishcare.Dishwasher.Program.AutoHalfLoad",
+  INTENSIV_POWER: "Dishcare.Dishwasher.Program.IntensivPower",
+  MAGIC_DAILY: "Dishcare.Dishwasher.Program.MagicDaily",
+  SUPER_60: "Dishcare.Dishwasher.Program.Super60",
+  KURZ_60: "Dishcare.Dishwasher.Program.Kurz60",
+  EXPRESS_SPARKLE_65: "Dishcare.Dishwasher.Program.ExpressSparkle65",
+  MACHINE_CARE: "Dishcare.Dishwasher.Program.MachineCare",
+  STEAM_FRESH: "Dishcare.Dishwasher.Program.SteamFresh",
+  MAXIMUM_CLEANING: "Dishcare.Dishwasher.Program.MaximumCleaning",
+  MIXED_LOAD: "Dishcare.Dishwasher.Program.MixedLoad",
+} as const;
+
+type HomeConnectStatus<T extends (typeof STATUS)[keyof typeof STATUS]> =
+  T extends (typeof STATUS)["DOOR_STATE"]
+    ? {
+        key: T;
+        value: (typeof DOOR_STATE)[keyof typeof DOOR_STATE];
+      }
+    : T extends (typeof STATUS)["OPERATION_STATE"]
+    ? {
+        key: T;
+        value: (typeof OPERATION_STATE)[keyof typeof OPERATION_STATE];
+      }
+    : T extends (typeof STATUS)["POWER_STATE"]
+    ? {
+        key: T;
+        value: (typeof POWER_STATE)[keyof typeof POWER_STATE];
+      }
+    : never;
+
+type HomeConnectNotification<
+  T extends (typeof NOTIFICATIONS)[keyof typeof NOTIFICATIONS]
+> = T extends (typeof NOTIFICATIONS)["HALF_LOAD"]
+  ? {
+      key: T;
+      value: boolean;
     }
-  | {
-      key: (typeof STATUS)["OPERATION_STATE"];
-      value: (typeof OPERATION_STATE)[keyof typeof OPERATION_STATE];
-      name: "Operation";
-      displayValue: string;
-    };
+  : T extends (typeof NOTIFICATIONS)["ACTIVE_PROGRAM"]
+  ? {
+      key: T;
+      value: (typeof PROGRAMS)[keyof typeof PROGRAMS];
+    }
+  : never;
 
 type HomeConnectGetErrorResponse = {
   error: {
     key: string;
     description: string;
   };
+};
+
+type HomeConnectEventData = {
+  items: Array<
+    | HomeConnectStatus<(typeof STATUS)[keyof typeof STATUS]>
+    | HomeConnectNotification<
+        (typeof NOTIFICATIONS)[keyof typeof NOTIFICATIONS]
+      >
+  >;
 };
