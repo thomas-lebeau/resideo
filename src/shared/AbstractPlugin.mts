@@ -43,6 +43,11 @@ export abstract class AbstractPlugin<
     string | number | boolean
   >
 > {
+  /**
+   * The interval in minutes at which the plugin should run
+   */
+  static readonly interval: number = 1;
+
   static get slug(): string {
     return toKebabCase(this.name);
   }
@@ -89,6 +94,15 @@ export abstract class AbstractPlugin<
    */
   setup(): Promise<void> {
     throw new Error("setup method not implemented");
+  }
+
+  /**
+   * Method to be optionally implemented by the plugin.
+   * It should be used to stop the plugin.
+   * For example, to stop the scan, to close the connection, etc.
+   */
+  stop(): Promise<void> {
+    throw new Error("stop method not implemented");
   }
 
   /**

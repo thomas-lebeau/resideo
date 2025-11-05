@@ -16,6 +16,8 @@ export class FastSpeedTest extends AbstractPlugin<
   typeof CONFIG
 > {
   static readonly description = "Internet speed using Fast Speedtest API";
+  static readonly interval = 10;
+
   private readonly speedtest: FastSpeedtest;
 
   constructor() {

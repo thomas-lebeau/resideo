@@ -5,14 +5,61 @@ import "./polyfills.js";
 
 import datadog from "./utils/Datadog.mts";
 import logger from "./utils/Loggers.mts";
-import { getSelectedPlugins, runPlugin } from "./utils/plugins.mts";
+
 import { args } from "./utils/args.mts";
 import { help } from "./commands/help.mts";
 import { version } from "./commands/version.mts";
 import { update } from "./commands/update.mts";
 import { listPlugins } from "./commands/list-plugins.mts";
+import { forEachPlugin } from "./utils/plugins.mts";
+import type { AbstractPlugin } from "./shared/AbstractPlugin.mts";
+
+const ONE_MINUTE = 60_000 as const;
 
 async function main(): Promise<void> {
+  let isShuttingDown = false;
+  let timeout: NodeJS.Timeout;
+  let count = 0;
+
+  async function collectAndSendData() {
+    count++;
+
+    await forEachPlugin(async (plugin) => {
+      const Plugin = plugin.constructor as typeof AbstractPlugin;
+
+      if (count % Plugin.interval !== 0) {
+        return;
+      }
+
+      plugin.logger.info(`🔄 Running plugin ${Plugin.slug}...`);
+
+      const data = await plugin.run();
+
+      if (data) {
+        datadog.send(Plugin.slug, data);
+      }
+    });
+
+    await datadog.flush();
+  }
+
+  async function shutdown() {
+    // Prevent multiple shutdowns
+    if (isShuttingDown) {
+      return;
+    }
+
+    isShuttingDown = true;
+    clearTimeout(timeout);
+
+    await forEachPlugin(async (plugin) => plugin.stop());
+    await datadog.flush();
+
+    logger.info("Shutting down...");
+
+    process.exit(0);
+  }
+
   if (args.values.help) {
     return help();
   }
@@ -29,27 +76,23 @@ async function main(): Promise<void> {
     return await update();
   }
 
-  try {
-    const selectedPlugins = getSelectedPlugins();
-
-    if (selectedPlugins.length === 0) {
-      throw new Error("No plugins found");
-    }
-
-    const promises: Promise<void>[] = [];
-
-    for (const Plugin of selectedPlugins) {
-      promises.push(runPlugin(Plugin));
-    }
-
-    await Promise.all(promises);
-  } catch (error) {
-    logger.error(error as Error);
-    process.exitCode = 1;
-  } finally {
-    await datadog.flush();
-    process.exit(process.exitCode);
+  if (args.values.setup) {
+    return await forEachPlugin(async (plugin) => plugin.setup());
   }
+
+  if (args.values["clear-store"]) {
+    return await forEachPlugin(async (plugin) => plugin.clearStore());
+  }
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+
+  await collectAndSendData();
+
+  timeout = setInterval(() => collectAndSendData(), ONE_MINUTE);
+
+  // This promise never resolves, keeping the process alive
+  await new Promise(() => {});
 }
 
 main();

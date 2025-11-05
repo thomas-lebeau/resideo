@@ -118,10 +118,12 @@ class Datadog {
       return;
     }
 
+    const currentBatch = this.batch.splice(0);
+
     if (args.values.dryRun) {
-      logger.debug("Batch", { batch: this.batch });
+      logger.debug("Batch", { batch: currentBatch });
       logger.info(
-        `Dry run mode, skipping sending ${this.batch.length} logs to Datadog`
+        `Dry run mode, skipping sending ${currentBatch.length} logs to Datadog`
       );
       return;
     }
@@ -136,15 +138,18 @@ class Datadog {
             "Content-Type": "application/json",
             "DD-API-KEY": this.apiKey,
           },
-          body: JSON.stringify(this.batch),
+          body: JSON.stringify(currentBatch),
         }
       );
 
       if (!response.ok) {
+        // Restore the batch in case of error
+        this.batch.unshift(...currentBatch);
+
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      logger.info(`✅ Sent ${this.batch.length} logs to Datadog`);
+      logger.info(`✅ Sent ${currentBatch.length} logs to Datadog`);
       logger.info(`🔗 ${this.getSearchUrl(requestId)}`);
     } catch (error) {
       logger.error(

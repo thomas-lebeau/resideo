@@ -269,13 +269,8 @@ export class BalayDishwasher extends AbstractPlugin<
         case NOTIFICATIONS.ACTIVE_PROGRAM:
           this.state.active_program = item.value;
           break;
-        default:
-          this.logger.debug("Unknown event", item);
-          break;
       }
     }
-
-    this.logger.debug("State", this.processState(this.state));
   }
 
   private processStatus(
@@ -313,11 +308,11 @@ export class BalayDishwasher extends AbstractPlugin<
     return data;
   }
 
-  async setup(): Promise<void> {
+  async setup() {
     await this.authenticateWithDeviceFlow();
   }
 
-  stop() {
+  async stop() {
     if (this.eventSource) {
       this.eventSource.close();
     }
@@ -354,9 +349,8 @@ export class BalayDishwasher extends AbstractPlugin<
 
       this.startEventStream();
     }
-    this.logger.debug("", this.processState(this.state));
 
-    return new Promise((resolve) => {});
+    return this.processState(this.state);
   }
 }
 

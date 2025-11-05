@@ -1,32 +1,6 @@
-import datadog from "./Datadog.mts";
 import { plugins as availablePlugins } from "../plugins/index.mts";
 import { args } from "./args.mts";
-import type { PluginConstructor } from "../shared/AbstractPlugin.mts";
-
-export async function runPlugin(Plugin: PluginConstructor) {
-  try {
-    if (args.values.setup) {
-      Plugin.logger.info(`🔄 Setup ...`);
-      await new Plugin().setup();
-      return;
-    }
-
-    if (args.values["clear-store"]) {
-      Plugin.logger.info(`🧹 Clearing store...`);
-      new Plugin().clearStore();
-      return;
-    }
-
-    Plugin.logger.info(`🔄 Running plugin ${Plugin.slug}...`);
-    const data = await new Plugin().run();
-
-    if (data) {
-      datadog.send(Plugin.slug, data);
-    }
-  } catch (error) {
-    Plugin.logger.error(error as Error);
-  }
-}
+import type { AbstractPlugin } from "../shared/AbstractPlugin.mts";
 
 export function getSelectedPlugins() {
   if (args.values["no-plugin"].length > 0) {
@@ -42,4 +16,24 @@ export function getSelectedPlugins() {
   return availablePlugins.filter((Plugin) =>
     args.values.plugin.includes(Plugin.slug)
   );
+}
+
+export async function forEachPlugin(
+  callback: (plugin: AbstractPlugin) => Promise<void>
+): Promise<void> {
+  const selectedPlugins = getSelectedPlugins();
+
+  if (selectedPlugins.length === 0) {
+    throw new Error("No plugins found");
+  }
+
+  const promises: Promise<void>[] = [];
+
+  for (const Plugin of selectedPlugins) {
+    promises.push(
+      callback(new Plugin()).catch((error) => Plugin.logger.error(error))
+    );
+  }
+
+  await Promise.all(promises);
 }
