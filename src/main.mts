@@ -18,7 +18,6 @@ const ONE_MINUTE = 60_000 as const;
 
 async function main(): Promise<void> {
   let isShuttingDown = false;
-  let timeout: NodeJS.Timeout;
   let count = 0;
 
   async function collectAndSendData() {
@@ -89,7 +88,7 @@ async function main(): Promise<void> {
 
   await collectAndSendData();
 
-  timeout = setInterval(() => collectAndSendData(), ONE_MINUTE);
+  const timeout = setInterval(() => collectAndSendData(), ONE_MINUTE);
 
   // This promise never resolves, keeping the process alive
   await new Promise(() => {});
