@@ -49,11 +49,6 @@ class Datadog {
     host: hostname(),
     service: config.PACKAGE_NAME,
     // Source code integration
-    //
-    // Note:
-    // This only works because we are runing the code from the local git repository.
-    // This is good enough for now but we should evaluate this at build time in the future (in the CI/CD pipeline)
-    //
     // @see https://docs.datadoghq.com/integrations/guide/source-code-integration/?tab=civisibility#configure-telemetry-tagging
     git: {
       commit: {
