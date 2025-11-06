@@ -57,9 +57,9 @@ class Datadog {
       repository_url: config.GIT_REPOSITORY_URL,
     },
   };
-  private readonly intakeUrl =
-    "https://http-intake.logs.datadoghq.eu/api/v2/logs";
-  private readonly searchUrl = `https://app.datadoghq.eu/logs/livetail`;
+  private readonly site = process.env.DD_SITE || "datadoghq.com";
+  private readonly intakeUrl = `https://http-intake.logs.${this.site}/api/v2/logs`;
+  private readonly searchUrl = `https://app.${this.site}/logs/livetail`;
   private readonly apiKey: string;
   private readonly batch: Array<Log> = [];
 
