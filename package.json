@@ -16,6 +16,7 @@
   "dependencies": {
     "@abandonware/noble": "1.9.2-26",
     "conf": "^15.0.2",
+    "dd-trace": "^5.76.0",
     "dotenv": "17.2.3",
     "eventsource": "^4.0.0",
     "fast-speedtest-api": "^0.3.2",

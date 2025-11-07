@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import "source-map-support/register.js";
+import "./utils/tracer.mts";
 
 import datadog from "./utils/Datadog.mts";
 import logger from "./utils/Loggers.mts";
