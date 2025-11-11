@@ -117,7 +117,7 @@ export abstract class AbstractPlugin<
    * Main method to be implemented by the plugin.
    * It should return the data collected by the plugin.
    */
-  abstract run(): Promise<T | Array<T> | undefined>;
+  abstract run(): Promise<T | Array<T | undefined> | undefined>;
 }
 
 export type PluginConstructor = (new () => AbstractPlugin) &

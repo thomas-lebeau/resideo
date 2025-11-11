@@ -22,7 +22,11 @@ export class DHT22 extends AbstractPlugin<Thermometer, typeof CONFIG> {
     const data = sensor.read(SENSOR_TYPE, gpioPin);
 
     // Telemetry to understand why some readings show a temperature very different from the expected range
-    if (!data || !data.temperature || data.temperature < 20) {
+    if (!data || !data.temperature) {
+      return;
+    }
+
+    if (data.temperature < 20) {
       this.logger.warn(
         `anomalous reading for sensor ${name}: ${JSON.stringify(data)}`
       );
@@ -36,7 +40,7 @@ export class DHT22 extends AbstractPlugin<Thermometer, typeof CONFIG> {
     } satisfies Thermometer;
   }
 
-  async run(): Promise<Thermometer[]> {
+  async run() {
     return Object.entries(this.sensors).map(([pin, name]) =>
       this.readSensor(Number(pin), name)
     );
