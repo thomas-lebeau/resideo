@@ -138,19 +138,18 @@ class Datadog {
       );
 
       if (!response.ok) {
-        // Restore the batch in case of error
-        this.batch.unshift(...currentBatch);
-
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       logger.info(`✅ Sent ${currentBatch.length} logs to Datadog`);
       logger.info(`🔗 ${this.getSearchUrl(requestId)}`);
     } catch (error) {
+      // Restore the batch in case of error
+      this.batch.unshift(...currentBatch);
+
       logger.error(
         new Error("Failed to send data to Datadog", { cause: error })
       );
-      throw error;
     }
   }
 }
