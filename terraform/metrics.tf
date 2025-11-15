@@ -216,6 +216,26 @@ resource "datadog_logs_metric" "light_brightness" {
   }
 }
 
+resource "datadog_logs_metric" "light_color_temperature" {
+  name = "${local.name}.light.color_temperature"
+  filter {
+    query = "service:${var.service_name} @type:light @color_temperature:*"
+  }
+  compute {
+    aggregation_type = "distribution"
+    path             = "@color_temperature"
+  }
+
+  # Apply all common group_by configurations
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+}
+
 # Button Events Counter
 resource "datadog_logs_metric" "button_events" {
   name = "${local.name}.button.events"
@@ -625,6 +645,12 @@ resource "datadog_metric_metadata" "light_brightness_metadata" {
   type        = "gauge"
   unit        = "percent"
   description = "Light brightness level"
+}
+
+resource "datadog_metric_metadata" "light_color_temperature_metadata" {
+  metric      = datadog_logs_metric.light_color_temperature.name
+  type        = "gauge"
+  description = "Light color temperature in mirek"
 }
 
 resource "datadog_metric_metadata" "button_events_metadata" {

@@ -24,7 +24,8 @@ export type Light = {
   type: "light";
   name: string;
   state: OnOff;
-  brightness: number;
+  brightness?: number;
+  color_temperature?: number;
 };
 
 export type Other = {
