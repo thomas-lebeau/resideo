@@ -27,13 +27,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@types/node": "24.10.0",
+    "@types/node": "24.10.1",
     "@types/node-dht-sensor": "^0.4.2",
     "@types/semver": "^7.7.1",
-    "esbuild": "^0.25.12",
+    "esbuild": "^0.27.0",
     "eslint": "^9.39.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.3"
+    "typescript-eslint": "^8.46.4"
   },
   "engines": {
     "node": ">=18.20.5"
