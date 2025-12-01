@@ -19,7 +19,7 @@
     "dotenv": "17.2.3",
     "eventsource": "^4.0.0",
     "fast-speedtest-api": "^0.3.2",
-    "glob": "^11.1.0",
+    "glob": "^13.0.0",
     "node-dht-sensor": "^0.4.5",
     "semver": "^7.7.3",
     "source-map-support": "^0.5.21",
