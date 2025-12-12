@@ -17,7 +17,7 @@
     "@abandonware/noble": "1.9.2-26",
     "conf": "^15.0.2",
     "dotenv": "17.2.3",
-    "eventsource": "^4.0.0",
+    "eventsource": "^4.1.0",
     "fast-speedtest-api": "^0.3.2",
     "glob": "^11.1.0",
     "node-dht-sensor": "^0.4.5",
@@ -33,7 +33,7 @@
     "esbuild": "^0.27.0",
     "eslint": "^9.39.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.4"
+    "typescript-eslint": "^8.47.0"
   },
   "engines": {
     "node": ">=18.20.5"
