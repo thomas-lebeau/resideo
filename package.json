@@ -15,13 +15,13 @@
   "license": "MIT",
   "dependencies": {
     "@abandonware/noble": "1.9.2-26",
-    "conf": "^15.0.2",
-    "dotenv": "17.2.3",
+    "conf": "^15.1.0",
+    "dotenv": "17.2.4",
     "eventsource": "^4.1.0",
     "fast-speedtest-api": "^0.3.2",
-    "glob": "^13.0.0",
+    "glob": "^13.0.1",
     "node-dht-sensor": "^0.4.5",
-    "semver": "^7.7.3",
+    "semver": "^7.7.4",
     "source-map-support": "^0.5.21",
     "undici": "^5.29.0"
   },
@@ -30,10 +30,10 @@
     "@types/node": "24.10.1",
     "@types/node-dht-sensor": "^0.4.2",
     "@types/semver": "^7.7.1",
-    "esbuild": "^0.27.0",
+    "esbuild": "^0.27.3",
     "eslint": "^9.39.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.47.0"
+    "typescript-eslint": "^8.54.0"
   },
   "engines": {
     "node": ">=18.20.5"
