@@ -26,14 +26,15 @@
     "undici": "^5.29.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@types/node": "24.10.1",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
     "@types/node-dht-sensor": "^0.4.2",
-    "@types/semver": "^7.7.1",
-    "esbuild": "^0.27.0",
-    "eslint": "^9.39.1",
+    "@types/semver": "^7.8.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.47.0"
+    "typescript-eslint": "^8.72.1"
   },
   "engines": {
     "node": ">=18.20.5"
