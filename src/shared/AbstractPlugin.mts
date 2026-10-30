@@ -36,6 +36,13 @@ export type Other = {
   [key: string]: unknown;
 };
 
+/**
+ * Thrown when a plugin is instantiated without its required environment variables.
+ */
+export class MissingConfigError extends Error {
+  override name = "MissingConfigError";
+}
+
 export abstract class AbstractPlugin<
   T extends Thermometer | Thermostat | Light | Other = Other,
   U extends readonly string[] = string[],
@@ -81,7 +88,7 @@ export abstract class AbstractPlugin<
   constructor(keys: U) {
     for (const key of keys) {
       if (!process.env[key]) {
-        throw new Error(`${key} is not set`);
+        throw new MissingConfigError(`${key} is not set`);
       }
 
       this.config[key as U[number]] = process.env[key];

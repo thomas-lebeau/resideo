@@ -1,6 +1,15 @@
 import { plugins as availablePlugins } from "../plugins/index.mts";
 import { args } from "./args.mts";
-import type { AbstractPlugin } from "../shared/AbstractPlugin.mts";
+import {
+  MissingConfigError,
+  type AbstractPlugin,
+  type PluginConstructor,
+} from "../shared/AbstractPlugin.mts";
+
+/**
+ * Plugins whose configuration is missing. They are reported once, then skipped.
+ */
+const unconfiguredPlugins = new Set<PluginConstructor>();
 
 export function getSelectedPlugins() {
   if (args.values["no-plugin"].length > 0) {
@@ -19,10 +28,9 @@ export function getSelectedPlugins() {
 }
 
 export async function forEachPlugin(
-  callback: (plugin: AbstractPlugin) => Promise<void>
+  callback: (plugin: AbstractPlugin) => Promise<void>,
+  selectedPlugins: PluginConstructor[] = getSelectedPlugins()
 ): Promise<void> {
-  const selectedPlugins = getSelectedPlugins();
-
   if (selectedPlugins.length === 0) {
     throw new Error("No plugins found");
   }
@@ -30,8 +38,20 @@ export async function forEachPlugin(
   const promises: Promise<void>[] = [];
 
   for (const Plugin of selectedPlugins) {
+    if (unconfiguredPlugins.has(Plugin)) {
+      continue;
+    }
+
     promises.push(
-      callback(new Plugin()).catch((error) => Plugin.logger.error(error))
+      Promise.resolve()
+        .then(() => callback(new Plugin()))
+        .catch((error) => {
+          if (error instanceof MissingConfigError) {
+            unconfiguredPlugins.add(Plugin);
+          }
+
+          Plugin.logger.error(error);
+        })
     );
   }
 
