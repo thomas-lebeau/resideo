@@ -1,9 +1,9 @@
 import { afterEach, describe, mock, test } from "node:test";
 import assert from "node:assert/strict";
 
-process.env.ROUTER_HOST = "192.168.0.1";
-process.env.ROUTER_USERNAME = "admin";
-process.env.ROUTER_PASSWORD = "secret";
+process.env.HUAWEI_ROUTER_HOST = "192.168.0.1";
+process.env.HUAWEI_ROUTER_USERNAME = "admin";
+process.env.HUAWEI_ROUTER_PASSWORD = "secret";
 
 const { HuaweiRouter } = await import("./huawei-router.mts");
 
