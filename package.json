@@ -10,7 +10,8 @@
     "build": "node scripts/build.mjs",
     "build:dev": "node scripts/build.mjs --dev",
     "dev": "node src/main.mts",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "DD_API_KEY=test node --import ./src/utils/Datadog.mts --test \"src/**/*.test.mts\""
   },
   "license": "MIT",
   "dependencies": {
