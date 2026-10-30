@@ -26,7 +26,11 @@ type WanConnection = {
   bytes_sent?: number;
 };
 
-const CONFIG = ["ROUTER_HOST", "ROUTER_USERNAME", "ROUTER_PASSWORD"] as const;
+const CONFIG = [
+  "HUAWEI_ROUTER_HOST",
+  "HUAWEI_ROUTER_USERNAME",
+  "HUAWEI_ROUTER_PASSWORD",
+] as const;
 
 /**
  * Monitors Huawei router WAN connection status
@@ -35,9 +39,9 @@ const CONFIG = ["ROUTER_HOST", "ROUTER_USERNAME", "ROUTER_PASSWORD"] as const;
  * connection status by checking WAN connection data.
  *
  * Environment variables:
- * - ROUTER_HOST: Router IP address (e.g., 192.168.0.1)
- * - ROUTER_USERNAME: Router admin username
- * - ROUTER_PASSWORD: Router admin password
+ * - HUAWEI_ROUTER_HOST: Router IP address (e.g., 192.168.0.1)
+ * - HUAWEI_ROUTER_USERNAME: Router admin username
+ * - HUAWEI_ROUTER_PASSWORD: Router admin password
  */
 export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
   static readonly description = "Huawei router WAN connection monitor";
@@ -47,7 +51,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
 
   constructor() {
     super(CONFIG);
-    this.baseUrl = `http://${this.config.ROUTER_HOST}`;
+    this.baseUrl = `http://${this.config.HUAWEI_ROUTER_HOST}`;
   }
 
   /**
@@ -78,12 +82,12 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
     const token = await this.getToken();
 
     // Base64 encode the password (router expects this)
-    const encodedPassword = Buffer.from(this.config.ROUTER_PASSWORD).toString(
-      "base64"
-    );
+    const encodedPassword = Buffer.from(
+      this.config.HUAWEI_ROUTER_PASSWORD
+    ).toString("base64");
 
     const formData = new URLSearchParams({
-      UserName: this.config.ROUTER_USERNAME,
+      UserName: this.config.HUAWEI_ROUTER_USERNAME,
       PassWord: encodedPassword,
       Language: "english",
       "x.X_HW_Token": token,
