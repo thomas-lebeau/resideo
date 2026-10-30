@@ -156,7 +156,7 @@ class Datadog {
 
 export default new Datadog();
 
-function formatLogPayload(
+export function formatLogPayload(
   payload: unknown
 ): Record<string, unknown> | undefined {
   if (payload === undefined || payload === null || payload === "") {
@@ -186,7 +186,7 @@ function formatLogPayload(
   return payload as Record<string, unknown>;
 }
 
-function flattenErrorCauses(error: unknown) {
+export function flattenErrorCauses(error: unknown) {
   if (!isError(error)) {
     return [];
   }
