@@ -115,7 +115,7 @@ class Datadog {
 
     const currentBatch = this.batch.splice(0);
 
-    if (args.values.dryRun) {
+    if (args.values["dry-run"]) {
       logger.debug("Batch", { batch: currentBatch });
       logger.info(
         `Dry run mode, skipping sending ${currentBatch.length} logs to Datadog`

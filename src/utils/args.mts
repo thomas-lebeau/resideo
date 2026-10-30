@@ -51,7 +51,7 @@ export const argsConfig = {
     default: false,
     description: "Clear the plugin store files",
   },
-  dryRun: {
+  "dry-run": {
     type: "boolean",
     short: "d",
     multiple: false,
