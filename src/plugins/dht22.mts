@@ -1,17 +1,11 @@
 import type { Thermometer } from "../shared/AbstractPlugin.mts";
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
+import { lazyImport } from "../shared/lazyImport.mts";
 import type * as Sensor from "node-dht-sensor";
 
 const CONFIG = ["DHT22_SENSORS"] as const;
 
-// node-dht-sensor is a native module shipped next to the binary. Load it lazily
-// so a missing or incompatible build only disables this plugin instead of
-// crashing the whole process at startup.
-let sensorPromise: Promise<typeof Sensor> | undefined;
-function loadSensor() {
-  sensorPromise ??= import("node-dht-sensor").then((module) => module.default);
-  return sensorPromise;
-}
+const loadSensor = lazyImport(() => import("node-dht-sensor"));
 
 const SENSOR_TYPE = 22;
 

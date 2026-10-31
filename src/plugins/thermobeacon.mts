@@ -1,6 +1,7 @@
 import type * as Noble from "@abandonware/noble";
 import type { Thermometer } from "../shared/AbstractPlugin.mts";
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
+import { lazyImport } from "../shared/lazyImport.mts";
 
 type Offset = [Offset: number, ByteLength: number];
 type SubArray = [Start: number, End: number];
@@ -26,16 +27,7 @@ const SERVICE_UUID = "fff0" as const;
 
 const CONFIG = ["THERMOBEACON_DEVICES"] as const;
 
-// noble is a native module shipped next to the binary. Load it lazily so a
-// missing or incompatible build only disables this plugin instead of crashing
-// the whole process at startup.
-let noblePromise: Promise<typeof Noble> | undefined;
-function loadNoble() {
-  noblePromise ??= import("@abandonware/noble").then(
-    (module) => module.default
-  );
-  return noblePromise;
-}
+const loadNoble = lazyImport(() => import("@abandonware/noble"));
 
 export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
   public static readonly description =
