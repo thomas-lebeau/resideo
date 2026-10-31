@@ -10,6 +10,8 @@ A TypeScript-based home automation monitoring system with a plugin architecture 
 - [Collected Metrics](#collected-metrics)
 - [Development](#development)
 - [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [Changelog](#changelog)
 
 ## Installation
 
@@ -182,7 +184,7 @@ Before using the Philips TV plugin, you need to pair with your TV to obtain the 
 
 The application uses a plugin-based architecture:
 
-1. **Plugin Discovery**: Automatically discovers all plugins in the `src/plugins/` directory
+1. **Plugin Registry**: Loads the plugins listed in `src/plugins/index.mts`
 2. **Data Collection**: Each plugin collects data from its respective source (APIs, local devices, etc.)
 3. **Data Transformation**: Plugins return data in a standardized format
 4. **Metric Submission**: The main application sends all collected metrics to Datadog
@@ -257,7 +259,7 @@ The plugin system uses a class-based architecture with `AbstractPlugin` as the b
 
 #### 1. Create Plugin File
 
-Create a new `.mts` file in `src/plugins/` with a descriptive name (e.g., `my-smart-device.mts`).
+Create a new `.mts` file in `src/plugins/` with a descriptive name (e.g., `my-smart-device.mts`), and add the class to the `plugins` array in `src/plugins/index.mts`.
 
 #### 2. Implement the Plugin Class
 
@@ -450,7 +452,7 @@ export default class MySmartDevice extends AbstractPlugin<Other> {
 }
 ```
 
-Your plugin will be automatically discovered and executed when the application runs. The system handles error catching, logging, and data forwarding to Datadog.
+Once registered in `src/plugins/index.mts`, your plugin is executed when the application runs. The system handles error catching, logging, and data forwarding to Datadog.
 
 ## Troubleshooting
 
@@ -483,6 +485,20 @@ Your plugin will be automatically discovered and executed when the application r
 1. Remove stored tokens: `raspberry-home-monitor --clear-store`
 2. Run setup: `raspberry-home-monitor --setup`
 3. Follow the authentication prompts
+
+## Contributing
+
+Contributions are welcome. Before opening a pull request:
+
+1. Run `npm run lint` and `npm test`
+2. Use `<type>: <description>` commit messages (e.g., `fix: handle missing sensor data`), one logical change per commit
+3. Document any new environment variable in the [Configuration](#configuration) section
+
+See [AGENTS.md](AGENTS.md) for development conventions and an overview of the architecture (including the Logger ↔ Datadog circular import).
+
+## Changelog
+
+Release notes are published on [GitHub Releases](https://github.com/thomas-lebeau/resideo/releases).
 
 ## License
 
