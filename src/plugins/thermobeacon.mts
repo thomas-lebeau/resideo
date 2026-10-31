@@ -1,4 +1,4 @@
-import noble, { type Peripheral } from "@abandonware/noble";
+import type * as Noble from "@abandonware/noble";
 import type { Thermometer } from "../shared/AbstractPlugin.mts";
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
 
@@ -26,6 +26,17 @@ const SERVICE_UUID = "fff0" as const;
 
 const CONFIG = ["THERMOBEACON_DEVICES"] as const;
 
+// noble is a native module shipped next to the binary. Load it lazily so a
+// missing or incompatible build only disables this plugin instead of crashing
+// the whole process at startup.
+let noblePromise: Promise<typeof Noble> | undefined;
+function loadNoble() {
+  noblePromise ??= import("@abandonware/noble").then(
+    (module) => module.default
+  );
+  return noblePromise;
+}
+
 export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
   public static readonly description =
     "Thermobeacon WS08 temperature and humidity sensors";
@@ -41,6 +52,8 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
   }
 
   async start() {
+    const noble = await loadNoble();
+
     // Wait for Bluetooth adapter to be powered on
     if (noble._state !== "poweredOn") {
       await new Promise<void>((resolve) => {
@@ -58,6 +71,7 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
 
   async stop() {
     clearTimeout(this.timer);
+    const noble = await loadNoble();
     noble.removeAllListeners();
 
     // Hack to force noble to stop scanning
@@ -101,6 +115,7 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
 
   async run() {
     await this.start();
+    const noble = await loadNoble();
     const data: ThermoBeacon[] = [];
 
     return new Promise<ThermoBeacon[]>((resolve) => {
@@ -109,7 +124,7 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
         resolve(data);
       };
 
-      noble.on("discover", (peripheral: Peripheral) => {
+      noble.on("discover", (peripheral: Noble.Peripheral) => {
         const { address, rssi } = peripheral;
         const { manufacturerData, serviceUuids } = peripheral.advertisement;
 
