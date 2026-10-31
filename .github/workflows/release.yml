@@ -95,8 +95,9 @@ jobs:
           cp bin/raspberry-home-monitor release/
           cp scripts/raspberry-home-monitor.service release/
           chmod +x release/raspberry-home-monitor
+          cp -r node_modules release/
           cd release
-          tar -czf ../raspberry-home-monitor-linux-x64.tar.gz raspberry-home-monitor raspberry-home-monitor.service
+          tar -czf ../raspberry-home-monitor-linux-x64.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -104,9 +105,16 @@ jobs:
           name: raspberry-home-monitor-linux-x64
           path: raspberry-home-monitor-linux-x64.tar.gz
 
-  build-linux-armv7:
+  build-linux-arm:
     needs: version_bump
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: armv7
+            platform: linux/arm/v7
+          - arch: arm64
+            platform: linux/arm64
 
     steps:
       - name: Checkout code
@@ -122,9 +130,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build for ARMv7
+      - name: Build for ${{ matrix.arch }}
         run: |
-          docker run --rm -v $PWD:/app -w /app --platform linux/arm/v7 node:18-buster bash -c "
+          docker run --rm -v $PWD:/app -w /app --platform ${{ matrix.platform }} node:18-buster bash -c "
             sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/sources.list &&
             sed -i 's|security.debian.org|archive.debian.org/debian-security|g' /etc/apt/sources.list &&
             sed -i '/stretch-updates/d' /etc/apt/sources.list &&
@@ -142,17 +150,17 @@ jobs:
           chmod +x release/raspberry-home-monitor
           cp -r node_modules release/
           cd release
-          tar -czf ../raspberry-home-monitor-linux-armv7.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
+          tar -czf ../raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: raspberry-home-monitor-linux-armv7
-          path: raspberry-home-monitor-linux-armv7.tar.gz
+          name: raspberry-home-monitor-linux-${{ matrix.arch }}
+          path: raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz
 
   cleanup_on_failure:
-    needs: [version_bump, build-linux-x64, build-linux-armv7]
-    if: ${{ always() && needs.version_bump.result == 'success' && (needs.build-linux-x64.result == 'failure' || needs.build-linux-armv7.result == 'failure') }}
+    needs: [version_bump, build-linux-x64, build-linux-arm]
+    if: ${{ always() && needs.version_bump.result == 'success' && (needs.build-linux-x64.result == 'failure' || needs.build-linux-arm.result == 'failure') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -176,7 +184,7 @@ jobs:
           git push origin main --force
 
   release:
-    needs: [version_bump, build-linux-x64, build-linux-armv7]
+    needs: [version_bump, build-linux-x64, build-linux-arm]
     if: ${{ success() }}
     runs-on: ubuntu-latest
 
@@ -212,5 +220,6 @@ jobs:
           files: |
             raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz
             raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz
+            raspberry-home-monitor-linux-arm64/raspberry-home-monitor-linux-arm64.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
