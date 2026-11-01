@@ -43,9 +43,8 @@ case "$ARCH" in
         echo -e "${GREEN}✓ Detected: ARM (ARMv7)${NC}"
         ;;
     aarch64|arm64)
-        # Try ARMv7 for 64-bit ARM (like Raspberry Pi 4 running 64-bit OS)
-        ARCHIVE_NAME="${BINARY_NAME}-linux-armv7.tar.gz"
-        echo -e "${GREEN}✓ Detected: ARM64 - will try ARMv7 build${NC}"
+        ARCHIVE_NAME="${BINARY_NAME}-linux-arm64.tar.gz"
+        echo -e "${GREEN}✓ Detected: ARM64${NC}"
         ;;
     *)
         echo -e "${RED}Error: Unsupported architecture: $ARCH${NC}"
@@ -55,6 +54,19 @@ case "$ARCH" in
 esac
 
 DOWNLOAD_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/latest/download/$ARCHIVE_NAME"
+
+# Releases published before the arm64 build existed only ship armv7
+if [[ "$ARCHIVE_NAME" == *-linux-arm64.tar.gz ]]; then
+    HTTP_CODE=$(curl -sIL --retry 3 --connect-timeout 10 -o /dev/null -w '%{http_code}' "$DOWNLOAD_URL" || true)
+    if [ "$HTTP_CODE" = "404" ]; then
+        ARCHIVE_NAME="${BINARY_NAME}-linux-armv7.tar.gz"
+        DOWNLOAD_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/latest/download/$ARCHIVE_NAME"
+        echo -e "${YELLOW}⚠ No ARM64 build in the latest release, falling back to ARMv7${NC}"
+    elif [[ "$HTTP_CODE" != 2* ]]; then
+        echo -e "${RED}Error: Could not check for ARM64 build (HTTP $HTTP_CODE)${NC}"
+        exit 1
+    fi
+fi
 
 # Determine installation directory
 if [ "$IS_ROOT" = true ] || [ -w "/usr/local" ]; then
