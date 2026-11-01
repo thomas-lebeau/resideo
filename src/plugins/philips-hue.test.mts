@@ -31,11 +31,24 @@ const responses: Record<string, unknown[]> = {
       dimming: { brightness: 100 },
       color_temperature: { mirek: 300 },
     },
+    {
+      id_v1: "/lights/4",
+      metadata: { name: "Smart plug" },
+      on: { on: true },
+    },
+    {
+      id_v1: "/lights/5",
+      metadata: { name: "Colour bulb" },
+      on: { on: true },
+      dimming: { brightness: 50 },
+    },
   ],
   "/resource/zigbee_connectivity": [
     { id_v1: "/lights/1", status: "connected" },
     { id_v1: "/lights/2", status: "connected" },
     { id_v1: "/lights/3", status: "connectivity_issue" },
+    { id_v1: "/lights/4", status: "connected" },
+    { id_v1: "/lights/5", status: "connected" },
   ],
   "/resource/button": [
     {
@@ -125,6 +138,10 @@ describe("PhilipsHue", () => {
       },
       // Unreachable lights are reported off
       { type: "light", name: "Garden", state: 0, brightness: 0 },
+      // On/off-only lights report no brightness or colour temperature
+      { type: "light", name: "Smart plug", state: 1 },
+      // Colour-only lights report no colour temperature
+      { type: "light", name: "Colour bulb", state: 1, brightness: 50 },
       // Recent event: reported with its timestamp
       {
         type: "button",
