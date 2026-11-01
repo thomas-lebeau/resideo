@@ -56,10 +56,16 @@ esac
 DOWNLOAD_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/latest/download/$ARCHIVE_NAME"
 
 # Releases published before the arm64 build existed only ship armv7
-if [[ "$ARCHIVE_NAME" == *-linux-arm64.tar.gz ]] && ! curl -fsIL -o /dev/null "$DOWNLOAD_URL"; then
-    ARCHIVE_NAME="${BINARY_NAME}-linux-armv7.tar.gz"
-    DOWNLOAD_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/latest/download/$ARCHIVE_NAME"
-    echo -e "${YELLOW}⚠ No ARM64 build in the latest release, falling back to ARMv7${NC}"
+if [[ "$ARCHIVE_NAME" == *-linux-arm64.tar.gz ]]; then
+    HTTP_CODE=$(curl -sIL --retry 3 --connect-timeout 10 -o /dev/null -w '%{http_code}' "$DOWNLOAD_URL" || true)
+    if [ "$HTTP_CODE" = "404" ]; then
+        ARCHIVE_NAME="${BINARY_NAME}-linux-armv7.tar.gz"
+        DOWNLOAD_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/latest/download/$ARCHIVE_NAME"
+        echo -e "${YELLOW}⚠ No ARM64 build in the latest release, falling back to ARMv7${NC}"
+    elif [[ "$HTTP_CODE" != 2* ]]; then
+        echo -e "${RED}Error: Could not check for ARM64 build (HTTP $HTTP_CODE)${NC}"
+        exit 1
+    fi
 fi
 
 # Determine installation directory
