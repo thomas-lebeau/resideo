@@ -14,6 +14,7 @@ import { forEachPlugin, getUnknownPluginSlugs } from "./utils/plugins.mts";
 import type { AbstractPlugin } from "./shared/AbstractPlugin.mts";
 
 const ONE_MINUTE = 60_000 as const;
+const FLUSH_TIMEOUT = 5_000 as const;
 
 async function main(): Promise<void> {
   let isShuttingDown = false;
@@ -108,6 +109,14 @@ async function main(): Promise<void> {
 
 main().catch(async (error) => {
   logger.error(error);
-  await datadog.flush();
-  process.exit(1);
+
+  try {
+    // Best effort: don't let a stalled request delay the exit
+    await Promise.race([
+      datadog.flush(),
+      new Promise((resolve) => setTimeout(resolve, FLUSH_TIMEOUT)),
+    ]);
+  } finally {
+    process.exit(1);
+  }
 });
