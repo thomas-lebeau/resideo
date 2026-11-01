@@ -9,6 +9,8 @@ const loadSensor = lazyImport(() => import("node-dht-sensor"));
 
 const SENSOR_TYPE = 22;
 
+type SensorReader = Pick<typeof Sensor.promises, "read">;
+
 export class DHT22 extends AbstractPlugin<Thermometer, typeof CONFIG> {
   public static readonly description = "DHT22 temperature and humidity sensor";
 
@@ -20,22 +22,31 @@ export class DHT22 extends AbstractPlugin<Thermometer, typeof CONFIG> {
     this.sensors = JSON.parse(this.config.DHT22_SENSORS);
   }
 
-  private readSensor(
-    sensor: typeof Sensor,
-    gpioPin: number,
-    name: string
-  ) {
-    const data = sensor.read(SENSOR_TYPE, gpioPin);
+  /**
+   * Reads a sensor without blocking the event loop. The promises API rejects
+   * when the sensor can't be read after retries, so invalid readings are
+   * dropped instead of being reported with the last cached values.
+   */
+  async readSensor(sensor: SensorReader, gpioPin: number, name: string) {
+    let data: Sensor.SensorData;
 
-    // Telemetry to understand why some readings show a temperature very different from the expected range
-    if (!data || !data.temperature) {
+    try {
+      data = await sensor.read(SENSOR_TYPE, gpioPin);
+    } catch (error) {
+      this.logger.warn(
+        `failed to read sensor ${name} on GPIO ${gpioPin}: ${error instanceof Error ? error.message : String(error)}`
+      );
       return;
     }
 
-    if (data.temperature < 20) {
+    if (
+      !Number.isFinite(data?.temperature) ||
+      !Number.isFinite(data?.humidity)
+    ) {
       this.logger.warn(
-        `anomalous reading for sensor ${name}: ${JSON.stringify(data)}`
+        `invalid reading for sensor ${name}: ${JSON.stringify(data)}`
       );
+      return;
     }
 
     return {
@@ -49,8 +60,12 @@ export class DHT22 extends AbstractPlugin<Thermometer, typeof CONFIG> {
   async run() {
     const sensor = await loadSensor();
 
-    return Object.entries(this.sensors).map(([pin, name]) =>
-      this.readSensor(sensor, Number(pin), name)
+    const readings = await Promise.all(
+      Object.entries(this.sensors).map(([pin, name]) =>
+        this.readSensor(sensor.promises, Number(pin), name)
+      )
     );
+
+    return readings.filter((reading) => reading !== undefined);
   }
 }
