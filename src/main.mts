@@ -10,10 +10,11 @@ import { help } from "./commands/help.mts";
 import { version } from "./commands/version.mts";
 import { update } from "./commands/update.mts";
 import { listPlugins } from "./commands/list-plugins.mts";
-import { forEachPlugin } from "./utils/plugins.mts";
+import { forEachPlugin, getUnknownPluginSlugs } from "./utils/plugins.mts";
 import type { AbstractPlugin } from "./shared/AbstractPlugin.mts";
 
 const ONE_MINUTE = 60_000 as const;
+const FLUSH_TIMEOUT = 5_000 as const;
 
 async function main(): Promise<void> {
   let isShuttingDown = false;
@@ -74,6 +75,14 @@ async function main(): Promise<void> {
     return await update();
   }
 
+  const unknownPluginSlugs = getUnknownPluginSlugs();
+
+  if (unknownPluginSlugs.length > 0) {
+    logger.warn(
+      `Unknown plugin(s): ${unknownPluginSlugs.join(", ")}, run with --list-plugins to see available plugins`
+    );
+  }
+
   if (args.values.setup) {
     return await forEachPlugin(async (plugin) => plugin.setup());
   }
@@ -82,15 +91,32 @@ async function main(): Promise<void> {
     return await forEachPlugin(async (plugin) => plugin.clearStore());
   }
 
+  datadog.assertCanSend();
+
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
 
   await collectAndSendData();
 
-  const timeout = setInterval(() => collectAndSendData(), ONE_MINUTE);
+  const timeout = setInterval(
+    () => collectAndSendData().catch((error) => logger.error(error)),
+    ONE_MINUTE
+  );
 
   // This promise never resolves, keeping the process alive
   await new Promise(() => {});
 }
 
-main();
+main().catch(async (error) => {
+  logger.error(error);
+
+  try {
+    // Best effort: don't let a stalled request delay the exit
+    await Promise.race([
+      datadog.flush(),
+      new Promise((resolve) => setTimeout(resolve, FLUSH_TIMEOUT)),
+    ]);
+  } finally {
+    process.exit(1);
+  }
+});

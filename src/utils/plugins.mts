@@ -27,12 +27,26 @@ export function getSelectedPlugins() {
   );
 }
 
+/**
+ * Slugs passed to `--plugin` / `--no-plugin` that match no available plugin
+ */
+export function getUnknownPluginSlugs(
+  slugs: string[] = [...args.values.plugin, ...args.values["no-plugin"]],
+  plugins: PluginConstructor[] = availablePlugins
+): string[] {
+  const known = new Set(plugins.map((Plugin) => Plugin.slug));
+
+  return slugs.filter((slug) => slug !== "all" && !known.has(slug));
+}
+
 export async function forEachPlugin(
   callback: (plugin: AbstractPlugin) => Promise<void>,
   selectedPlugins: PluginConstructor[] = getSelectedPlugins()
 ): Promise<void> {
   if (selectedPlugins.length === 0) {
-    throw new Error("No plugins found");
+    throw new Error(
+      "No plugins found, run with --list-plugins to see available plugins"
+    );
   }
 
   const promises: Promise<void>[] = [];
