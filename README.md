@@ -385,6 +385,10 @@ Implement the `setup()` method for one-time initialization (OAuth, pairing, etc.
 type Tokens = { access_token: string; expires_at: number };
 
 export class MySmartDevice extends AbstractPlugin<Other, typeof CONFIG, Tokens> {
+  constructor() {
+    super(CONFIG);
+  }
+
   async setup(): Promise<void> {
     this.logger.info("Starting setup...");
 
@@ -431,7 +435,7 @@ this.logger.error(error); // takes an Error, sent to Datadog with its stack trac
 this.logger.debug("Raw API response", { data });
 ```
 
-`warn` and `error` are also sent to Datadog. `debug` is only shown with `LOG_LEVEL=7`.
+`warn` and `error` are also sent to Datadog. `debug` is only shown with `LOG_LEVEL=7` (set it in `.env`).
 
 #### 8. Testing Your Plugin
 
@@ -444,9 +448,11 @@ npm run dev -- --plugin my-smart-device --dry-run
 # Run setup if needed
 npm run dev -- --setup --plugin my-smart-device
 
-# Run with debug logging
-LOG_LEVEL=7 npm run dev -- --plugin my-smart-device
+# Run with debug logging (set LOG_LEVEL=7 in your .env first)
+npm run dev -- --plugin my-smart-device
 ```
+
+Values from the `.env` file override variables set in the shell, so `LOG_LEVEL=7 npm run dev` has no effect if `.env` already sets `LOG_LEVEL`.
 
 #### 9. Environment Variables
 
