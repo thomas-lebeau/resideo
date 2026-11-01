@@ -1,13 +1,13 @@
 # Home Automation Monitor
 
-A TypeScript-based home automation monitoring system with a plugin architecture that collects data from different sources and sends metrics to [Datadog](https://www.datadoghq.com/) for monitoring and visualization.
+A TypeScript-based home automation monitoring system with a plugin architecture that collects data from different sources and sends it as logs to [Datadog](https://www.datadoghq.com/). Metrics and dashboards are built from these logs with the Terraform configuration in [`terraform/`](terraform/).
 
 ## Table of Contents
 
-- [Features](#features)
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [Collected Metrics](#collected-metrics)
+- [Usage](#usage)
+- [Collected Data](#collected-data)
 - [Development](#development)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
@@ -50,7 +50,7 @@ When updating an existing installation, the service file is preserved. Just rest
 sudo systemctl restart raspberry-home-monitor
 ```
 
-The service runs continuously and collects metrics every minute automatically.
+The service runs continuously and collects data every minute automatically.
 
 ### Managing the Service
 
@@ -87,10 +87,12 @@ sudo systemctl restart raspberry-home-monitor
 
 Create a `.env` file with the following variables:
 
-- `DD_API_KEY`: Your Datadog API key
-- `DD_HOST`: Your Datadog host (defaults to "https://api.datadoghq.eu")
-- `ENV`: Environment name (defaults to "development")
-- `DEBUG`: Set to "true" or "1" to enable console logging (defaults to "false")
+- `DD_API_KEY`: Your Datadog API key (required to send logs; not needed with `--dry-run` or for commands like `--help`, `--setup` or `--clear-store`)
+- `DD_SITE`: Your Datadog site (defaults to `datadoghq.com`, use `datadoghq.eu` for EU)
+- `ENV`: Environment name, sent as the `env` tag (defaults to `dev`)
+- `LOG_LEVEL`: Console log level, as a syslog severity: `3` error, `4` warn, `6` info, `7` debug (defaults to `6`)
+
+A plugin only runs when all of its environment variables are set. If one is missing, the plugin is reported once and skipped.
 
 ### Resideo Plugin
 - `HW_API_KEY`: Your Resideo API key
@@ -124,15 +126,15 @@ To get these credentials:
 1. Register as a developer at [Home Connect Developer Portal](https://developer.home-connect.com/)
 2. Create an application (the redirect URI is not required for device flow)
 3. Connect your Balay dishwasher to the Home Connect app on your phone
-4. Add the client ID and secret to your `.env` file
+4. Add the client ID to your `.env` file as `BALAY_CLIENT_ID`
 
-**Authentication**: The plugin uses OAuth 2.0 device flow authentication. On the first run, it will:
+**Authentication**: The plugin uses OAuth 2.0 device flow authentication. Run `raspberry-home-monitor --setup --plugin balay-dishwasher` once; it will:
 - Display a URL and code for you to authorize the application
 - Wait for you to complete the authorization in your browser
 - Automatically save and manage the access tokens
 - Refresh tokens automatically when they expire
 
-Tokens are securely stored in `~/.resideo/tokens/` and will be automatically refreshed. You don't need to manually manage refresh tokens.
+Tokens are stored in the plugin store, a JSON file in the OS config directory managed by [`conf`](https://github.com/sindresorhus/conf) (e.g. `~/.config/raspberry-home-monitor-nodejs/config.json` on Linux), and are refreshed automatically. You don't need to manually manage refresh tokens.
 
 ### ThermoBeacon Plugin
 - `THERMOBEACON_DEVICES`: JSON object mapping MAC addresses to device names
@@ -150,9 +152,9 @@ The plugin will scan for ThermoBeacon WS08 temperature and humidity sensors via 
 - `HUAWEI_ROUTER_PASSWORD`: Router admin password
 
 ### Transmission Plugin
-- `TRANSMISSION_HOST`: Transmission server host (e.g., `http://192.168.1.100:9091`)
-- `TRANSMISSION_USERNAME`: Transmission username (if authentication is enabled)
-- `TRANSMISSION_PASSWORD`: Transmission password (if authentication is enabled)
+- `TRANSMISSION_HOST`: Transmission server host and port, without the protocol (e.g., `192.168.1.100:9091`)
+- `TRANSMISSION_USERNAME`: Transmission RPC username
+- `TRANSMISSION_PASSWORD`: Transmission RPC password
 
 ### DHT22 Plugin
 - `DHT22_SENSORS`: JSON object mapping GPIO pin numbers to sensor names
@@ -187,14 +189,14 @@ The application uses a plugin-based architecture:
 1. **Plugin Registry**: Loads the plugins listed in `src/plugins/index.mts`
 2. **Data Collection**: Each plugin collects data from its respective source (APIs, local devices, etc.)
 3. **Data Transformation**: Plugins return data in a standardized format
-4. **Metric Submission**: The main application sends all collected metrics to Datadog
-5. **Scheduling**: Runs continuously as a systemd service, collecting metrics every minute
+4. **Log Submission**: The main application sends the collected data to Datadog as logs
+5. **Scheduling**: Runs continuously as a systemd service, running each plugin every minute (or every `interval` minutes, e.g. 10 for the speed test)
 
 Each plugin runs independently, so if one fails, others continue to operate normally.
 
 ## Usage
 
-The service runs continuously in the background, collecting metrics every minute. To run manually for testing:
+The service runs continuously in the background, collecting data every minute. To run manually for testing:
 
 ```bash
 raspberry-home-monitor --env ~/.path/to/.env
@@ -202,19 +204,20 @@ raspberry-home-monitor --env ~/.path/to/.env
 
 ### Command-Line Options
 
-- `--env` `-e`: Specify an environment file (default: `.env`). Example: `raspberry-home-monitor --env ~/.path/to/.env`
+- `--env` `-e`: Specify an environment file (default: `.env`). Can be specified multiple times. Example: `raspberry-home-monitor --env ~/.path/to/.env`
 - `--plugin` `-p`: Run specific plugin(s) (default: `all`). Can be specified multiple times. Example: `raspberry-home-monitor --plugin resideo --plugin philips-hue`
 - `--list-plugins` `-l`: List available plugins
-- `--no-plugin`: Exclude specific plugin(s). Can be specified multiple times. Example: `raspberry-home-monitor --no-plugin fast-speedtest`
+- `--no-plugin` `-x`: Exclude specific plugin(s). Can be specified multiple times. Example: `raspberry-home-monitor --no-plugin fast-speed-test`
 - `--dry-run` `-d`: Run in dry-run mode (no data will be sent to Datadog)
 - `--update` `-u`: Update the application
 - `--setup` `-s`: Setup the plugins authentication tokens
+- `--clear-store` `-S`: Clear the plugin store (stored authentication tokens, etc.)
 - `--help` `-h`: Display help information
 - `--version` `-v`: Display version information
 
-## Collected Metrics
+## Collected Data
 
-| Plugin                | Description               | Metrics Collected                      |
+| Plugin                | Description               | Data Collected                         |
 | --------------------- | ------------------------- | -------------------------------------- |
 | **Resideo/Honeywell** | Monitor thermostat data   | Temperature, humidity, system status   |
 | **Philips Hue**       | Track smart lighting      | Light status, brightness, color        |
@@ -268,15 +271,17 @@ Extend the `AbstractPlugin` class and implement the required methods:
 ```typescript
 import { AbstractPlugin, type Other } from "../shared/AbstractPlugin.mts";
 
-export default class MySmartDevice extends AbstractPlugin<Other> {
+// Required environment variables. The plugin is skipped if one is missing.
+const CONFIG = ["MY_DEVICE_API_KEY", "MY_DEVICE_HOST"] as const;
+
+export class MySmartDevice extends AbstractPlugin<Other, typeof CONFIG> {
   static readonly description = "Monitor my smart device";
 
   constructor() {
-    // Pass required environment variable keys to parent constructor
-    super(["MY_DEVICE_API_KEY", "MY_DEVICE_HOST"] as const);
+    super(CONFIG);
   }
 
-  async run(): Promise<Other | Array<Other> | undefined> {
+  async run(): Promise<Other | undefined> {
     try {
       // Access configuration from this.config
       const { MY_DEVICE_API_KEY, MY_DEVICE_HOST } = this.config;
@@ -297,7 +302,7 @@ export default class MySmartDevice extends AbstractPlugin<Other> {
         battery_level: data.battery,
       };
     } catch (error) {
-      this.logger.error("Failed to collect data", error);
+      this.logger.error(error as Error);
       return undefined;
     }
   }
@@ -312,7 +317,7 @@ The plugin system supports four predefined types with standardized schemas:
 ```typescript
 import { AbstractPlugin, type Thermometer } from "../shared/AbstractPlugin.mts";
 
-export default class MyThermometer extends AbstractPlugin<Thermometer> {
+export class MyThermometer extends AbstractPlugin<Thermometer> {
   async run(): Promise<Thermometer | undefined> {
     return {
       type: "thermometer",
@@ -331,7 +336,7 @@ return {
   type: "thermostat",
   name: "Main Thermostat",
   state: 1,              // 0 = off, 1 = on
-  operation_mode: 1,     // 0 = cooling, 1 = heating
+  operation_mode: 1,     // 0 = equipment off, 1 = heating
   target: 21,            // Target temperature in °C
 };
 ```
@@ -374,55 +379,65 @@ async run(): Promise<Array<Thermometer> | undefined> {
 
 #### 5. Optional Setup Method
 
-Implement the `setup()` method for one-time initialization (OAuth, pairing, etc.). The plugin provides a built-in key-value store for persisting data like OAuth tokens.
+Implement the `setup()` method for one-time initialization (OAuth, pairing, etc.). Each plugin has its own persistent store (`this.store`) for data like OAuth tokens. It holds a single object per plugin: `set(value)` replaces it, `get()` returns it (or `undefined`), and `clear()` removes it. These methods are synchronous. Declare the shape of the stored object with the third type parameter of `AbstractPlugin`.
 
 ```typescript
-async setup(): Promise<void> {
-  this.logger.info("Starting setup...");
-  
-  // Perform OAuth flow, device pairing, etc.
-  const authCode = await this.performOAuthFlow();
-  await this.store.set("auth_code", authCode);
-  
-  this.logger.info("Setup complete!");
-}
+type Tokens = { access_token: string; expires_at: number };
 
-async run(): Promise<Other | undefined> {
+export class MySmartDevice extends AbstractPlugin<Other, typeof CONFIG, Tokens> {
+  constructor() {
+    super(CONFIG);
+  }
+
+  async setup(): Promise<void> {
+    this.logger.info("Starting setup...");
+
+    // Perform OAuth flow, device pairing, etc.
+    const tokens = await this.performOAuthFlow();
+    this.store.set(tokens);
+
+    this.logger.info("Setup complete!");
+  }
+
+  async run(): Promise<Other | undefined> {
     // Retrieve stored tokens
-    const authCode = await this.store.get("authCode");
-    
-    if (!authCode) {
+    const tokens = this.store.get();
+
+    if (!tokens) {
       this.logger.warn("No access token found, run --setup first");
       return undefined;
     }
-    
+
     // Use the token
-    const data = await this.fetchData(authCode);
+    const data = await this.fetchData(tokens.access_token);
     return { type: "my-device", name: "Device", state: data.state };
   }
+}
 ```
 
 Users can run your setup with: `raspberry-home-monitor --setup --plugin my-smart-device`
 
-#### 7. Plugin Naming Conventions
+#### 6. Plugin Naming Conventions
 
 - **Class names**: Use PascalCase (e.g., `MySmartDevice`)
 - **File names**: Use kebab-case (e.g., `my-smart-device.mts`)
 - **Plugin slug**: Automatically generated from class name (e.g., `MySmartDevice` → `my-smart-device`)
 - **Type names**: Use lowercase with hyphens (e.g., `"my-device"`)
 
-#### 8. Logging
+#### 7. Logging
 
 Use the built-in logger for consistent output:
 
 ```typescript
 this.logger.info("Collecting data...");
-this.logger.warn("Rate limit approaching");
-this.logger.error("Connection failed", error);
-this.logger.debug("Raw API response", data);
+this.logger.warn("Rate limit approaching", { remaining: 10 });
+this.logger.error(error); // takes an Error, sent to Datadog with its stack trace
+this.logger.debug("Raw API response", { data });
 ```
 
-#### 9. Testing Your Plugin
+`warn` and `error` are also sent to Datadog. `debug` is only shown with `LOG_LEVEL=7` (set it in `.env`).
+
+#### 8. Testing Your Plugin
 
 Test your plugin locally before deploying:
 
@@ -433,21 +448,23 @@ npm run dev -- --plugin my-smart-device --dry-run
 # Run setup if needed
 npm run dev -- --setup --plugin my-smart-device
 
-# Run with debug logging
-DEBUG=true npm run dev -- --plugin my-smart-device
+# Run with debug logging (set LOG_LEVEL=7 in your .env first)
+npm run dev -- --plugin my-smart-device
 ```
 
-#### 10. Environment Variables
+Values from the `.env` file override variables set in the shell, so `LOG_LEVEL=7 npm run dev` has no effect if `.env` already sets `LOG_LEVEL`.
+
+#### 9. Environment Variables
 
 Add any required environment variables to your `.env` file and document them in this README under the Configuration section.
 
-#### 11. Export Requirements
+#### 10. Export Requirements
 
-Don't forget to add a static `description` property for the plugin listing:
+Export the class as a named export, add it to the `plugins` array in `src/plugins/index.mts`, and add a static `description` property for the plugin listing:
 
 ```typescript
-export default class MySmartDevice extends AbstractPlugin<Other> {
-  static readonly description = "Monitor my smart device status and metrics";
+export class MySmartDevice extends AbstractPlugin<Other, typeof CONFIG> {
+  static readonly description = "Monitor my smart device status";
   // ... rest of implementation
 }
 ```
@@ -479,11 +496,11 @@ Once registered in `src/plugins/index.mts`, your plugin is executed when the app
 
 #### Plugin Authentication Failures
 
-**Problem**: OAuth plugins (Balay, Plex, etc.) fail with authentication errors
+**Problem**: OAuth plugins (e.g. Balay) fail with authentication errors
 
 **Solution**: 
-1. Remove stored tokens: `raspberry-home-monitor --clear-store`
-2. Run setup: `raspberry-home-monitor --setup`
+1. Remove stored tokens: `raspberry-home-monitor --clear-store --plugin balay-dishwasher`
+2. Run setup: `raspberry-home-monitor --setup --plugin balay-dishwasher`
 3. Follow the authentication prompts
 
 ## Contributing
