@@ -78,7 +78,7 @@ export class Datadog {
   private readonly site = process.env.DD_SITE || "datadoghq.com";
   private readonly intakeUrl = `https://http-intake.logs.${this.site}/api/v2/logs`;
   private readonly searchUrl = `https://app.${this.site}/logs/livetail`;
-  private readonly apiKey: string;
+  private readonly apiKey = process.env.DD_API_KEY;
   private readonly batch: Array<Log> = [];
   private readonly maxQueueSize: number;
   private readonly maxBatchEntries: number;
@@ -90,14 +90,19 @@ export class Datadog {
     maxBatchEntries = MAX_BATCH_ENTRIES,
     maxBatchBytes = MAX_BATCH_BYTES,
   }: DatadogOptions = {}) {
-    if (!process.env.DD_API_KEY) {
-      throw new Error("DD_API_KEY is not set");
-    }
-
-    this.apiKey = process.env.DD_API_KEY;
     this.maxQueueSize = maxQueueSize;
     this.maxBatchEntries = maxBatchEntries;
     this.maxBatchBytes = maxBatchBytes;
+  }
+
+  /**
+   * Throw when logs can't be sent. The key is only checked when sending, so
+   * commands that don't send anything (`--help`, `--version`...) work without it.
+   */
+  assertCanSend() {
+    if (!args.values["dry-run"] && !this.apiKey) {
+      throw new Error("DD_API_KEY is not set");
+    }
   }
 
   get size() {
@@ -216,6 +221,14 @@ export class Datadog {
       logger.debug("Batch", { batch: pending });
       logger.info(
         `Dry run mode, skipping sending ${pending.length} logs to Datadog`
+      );
+      return;
+    }
+
+    if (!this.apiKey) {
+      this.requeue(pending);
+      logger.warn(
+        `DD_API_KEY is not set, keeping ${pending.length} logs in queue`
       );
       return;
     }

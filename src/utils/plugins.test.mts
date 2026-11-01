@@ -5,7 +5,7 @@ import {
   AbstractPlugin,
   type PluginConstructor,
 } from "../shared/AbstractPlugin.mts";
-import { forEachPlugin } from "./plugins.mts";
+import { forEachPlugin, getUnknownPluginSlugs } from "./plugins.mts";
 
 class ConfiguredPlugin extends AbstractPlugin {
   static readonly description = "Configured plugin";
@@ -69,5 +69,19 @@ describe("forEachPlugin", () => {
     }
 
     assert.equal(errorSpy.mock.callCount(), 2);
+  });
+});
+
+describe("getUnknownPluginSlugs", () => {
+  test("returns slugs matching no plugin, ignoring all", () => {
+    const plugins = [ConfiguredPlugin] as unknown as PluginConstructor[];
+
+    assert.deepEqual(
+      getUnknownPluginSlugs(
+        ["all", ConfiguredPlugin.slug, "resido", "hue"],
+        plugins
+      ),
+      ["resido", "hue"]
+    );
   });
 });

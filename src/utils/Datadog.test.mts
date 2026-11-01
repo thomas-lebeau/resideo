@@ -228,3 +228,39 @@ describe("Datadog.flush", () => {
     );
   });
 });
+
+describe("Datadog without DD_API_KEY", () => {
+  let apiKey: string | undefined;
+
+  beforeEach(() => {
+    apiKey = process.env.DD_API_KEY;
+    delete process.env.DD_API_KEY;
+    mock.method(console, "info", () => {});
+    mock.method(console, "warn", () => {});
+    mock.method(console, "error", () => {});
+  });
+
+  afterEach(() => {
+    process.env.DD_API_KEY = apiKey;
+    mock.restoreAll();
+  });
+
+  test("can be constructed, but refuses to send", () => {
+    const datadog = new Datadog();
+
+    assert.throws(() => datadog.assertCanSend(), /DD_API_KEY is not set/);
+  });
+
+  test("keeps logs in the queue instead of sending them", async () => {
+    const fetchMock = mock.method(globalThis, "fetch", async () => {
+      return new Response(null, { status: 202 });
+    });
+    const datadog = new Datadog();
+    datadog.send("test", ["a", "b"]);
+
+    await datadog.flush();
+
+    assert.equal(datadog.size, 2);
+    assert.equal(fetchMock.mock.callCount(), 0);
+  });
+});
