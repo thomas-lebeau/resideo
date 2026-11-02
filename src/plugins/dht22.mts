@@ -59,13 +59,19 @@ export class DHT22 extends AbstractPlugin<Thermometer, typeof CONFIG> {
 
   async run() {
     const sensor = await loadSensor();
+    const readings: Thermometer[] = [];
 
-    const readings = await Promise.all(
-      Object.entries(this.sensors).map(([pin, name]) =>
-        this.readSensor(sensor.promises, Number(pin), name)
-      )
-    );
+    // Read one sensor at a time: the native reads are bit-banged GPIO and are
+    // serialized by node-dht-sensor anyway, so parallel reads would only park
+    // libuv threadpool workers on its mutex.
+    for (const [pin, name] of Object.entries(this.sensors)) {
+      const reading = await this.readSensor(sensor.promises, Number(pin), name);
 
-    return readings.filter((reading) => reading !== undefined);
+      if (reading) {
+        readings.push(reading);
+      }
+    }
+
+    return readings;
   }
 }
