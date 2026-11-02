@@ -1,4 +1,5 @@
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
+import { HTTP_TIMEOUT } from "../shared/timeout.mts";
 
 type TransmissionData = {
   type: "transmission";
@@ -73,6 +74,7 @@ export class Transmission extends AbstractPlugin<
         body: JSON.stringify({
           method: endpoint,
         }),
+        signal: AbortSignal.timeout(HTTP_TIMEOUT),
       }
     );
 

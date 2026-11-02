@@ -1,5 +1,5 @@
 import type { Other } from "../shared/index.mts";
-import { AbstractPlugin, agent } from "../shared/index.mts";
+import { AbstractPlugin, agent, HTTP_TIMEOUT } from "../shared/index.mts";
 import { createHash } from "node:crypto";
 
 type PhilipsTVDevice = Other & {
@@ -112,6 +112,7 @@ export class PhilipsTV extends AbstractPlugin<PhilipsTVDevice, typeof CONFIG> {
       headers: {
         Accept: "application/json",
       },
+      signal: AbortSignal.timeout(HTTP_TIMEOUT),
       // @ts-expect-error - dispatcher is not defined in the fetch API types
       dispatcher: agent,
     });
@@ -127,6 +128,7 @@ export class PhilipsTV extends AbstractPlugin<PhilipsTVDevice, typeof CONFIG> {
           Authorization: authHeader,
           Accept: "application/json",
         },
+        signal: AbortSignal.timeout(HTTP_TIMEOUT),
         // @ts-expect-error - dispatcher is not defined in the fetch API types
         dispatcher: agent,
       });

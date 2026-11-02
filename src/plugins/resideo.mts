@@ -1,5 +1,6 @@
 import type { Thermometer, Thermostat } from "../shared/AbstractPlugin.mts";
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
+import { HTTP_TIMEOUT } from "../shared/timeout.mts";
 
 type ResideoTokenResponse = {
   access_token: string;
@@ -67,6 +68,7 @@ export class Resideo extends AbstractPlugin<
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: "grant_type=client_credentials",
+      signal: AbortSignal.timeout(HTTP_TIMEOUT),
     });
 
     if (!response.ok) {
@@ -92,6 +94,7 @@ export class Resideo extends AbstractPlugin<
           Authorization: `Bearer ${accessToken}`,
           UserRefID: this.config.HW_USER_REF_ID,
         },
+        signal: AbortSignal.timeout(HTTP_TIMEOUT),
       }
     );
 
