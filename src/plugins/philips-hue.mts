@@ -1,5 +1,5 @@
 import type { Light } from "../shared/index.mts";
-import { AbstractPlugin, agent } from "../shared/index.mts";
+import { AbstractPlugin, agent, HTTP_TIMEOUT } from "../shared/index.mts";
 
 type AbstractButton = {
   type: "button";
@@ -119,6 +119,7 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
       headers: {
         "Hue-Application-Key": this.config.HUE_USERNAME,
       },
+      signal: AbortSignal.timeout(HTTP_TIMEOUT),
       // @ts-expect-error - dispatcher is not defined in the fetch API types
       dispatcher: agent,
     });

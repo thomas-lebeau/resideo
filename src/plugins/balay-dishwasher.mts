@@ -1,6 +1,7 @@
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
 import { EventSource } from "eventsource";
 import { toKebabCase } from "../shared/toKebabCase.mts";
+import { HTTP_TIMEOUT } from "../shared/timeout.mts";
 
 type Token = {
   access_token: string;
@@ -193,6 +194,7 @@ export class BalayDishwasher extends AbstractPlugin<
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams(data).toString(),
+      signal: AbortSignal.timeout(HTTP_TIMEOUT),
     });
 
     if (!response.ok) {
@@ -224,6 +226,7 @@ export class BalayDishwasher extends AbstractPlugin<
         Authorization: `Bearer ${await this.getValidAccessToken()}`,
         Accept: "application/vnd.bsh.sdk.v1+json",
       },
+      signal: AbortSignal.timeout(HTTP_TIMEOUT),
     });
 
     if (!response.ok) {
@@ -269,6 +272,7 @@ export class BalayDishwasher extends AbstractPlugin<
     this.eventSource = new EventSource(
       `${this.baseUrl}/api/homeappliances/${this.haId}/events`,
       {
+        // No HTTP_TIMEOUT: this is a long-lived stream, EventSource reconnects on its own
         fetch: async (input, init) =>
           fetch(input, {
             ...init,

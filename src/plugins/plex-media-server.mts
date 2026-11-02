@@ -1,4 +1,4 @@
-import { agent, AbstractPlugin } from "../shared/index.mts";
+import { agent, AbstractPlugin, HTTP_TIMEOUT } from "../shared/index.mts";
 
 type Library = MovieLibrary | ShowLibrary;
 
@@ -45,6 +45,7 @@ export class PlexMediaServer extends AbstractPlugin<Library, typeof CONFIG> {
           Accept: "application/json",
           "X-Plex-Token": this.config.PLEX_TOKEN,
         },
+        signal: AbortSignal.timeout(HTTP_TIMEOUT),
         // @ts-expect-error - dispatcher is not defined in the fetch API types
         dispatcher: agent,
       }

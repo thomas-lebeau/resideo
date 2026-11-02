@@ -170,6 +170,30 @@ describe("Datadog.flush", () => {
     assert.equal(datadog.size, 3);
   });
 
+  test("aborts stalled requests and keeps their logs", async (t) => {
+    // The request below only settles when aborted. This timer also keeps the
+    // event loop alive, as an open socket would: AbortSignal.timeout() doesn't
+    const failsafe = setTimeout(() => assert.fail("not aborted"), 1_000);
+    t.after(() => clearTimeout(failsafe));
+
+    mock.method(
+      globalThis,
+      "fetch",
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () =>
+            reject(init.signal?.reason)
+          );
+        })
+    );
+    const datadog = new Datadog({ requestTimeout: 10 });
+    datadog.send("test", messages(3));
+
+    await datadog.flush();
+
+    assert.equal(datadog.size, 3);
+  });
+
   for (const status of [408, 429, 500]) {
     test(`retries on HTTP ${status}`, async () => {
       const datadog = new Datadog();
