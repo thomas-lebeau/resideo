@@ -234,6 +234,8 @@ raspberry-home-monitor --env ~/.path/to/.env
 
 ### Manual Installation (Development)
 
+Development needs Node.js `^22.18.0 || >=23.6.0` (the `engines` field), so the `.mts` sources run with Node's built-in type stripping. The pinned version is in `.nvmrc` (and `volta` in `package.json`): run `nvm use` or let Volta pick it up. The release binary is different: `npm run build` bundles for Node 18, and the armv7/arm64 releases are built on Node 18.
+
 1. Clone the repository:
    ```bash
    git clone <repository-url>
