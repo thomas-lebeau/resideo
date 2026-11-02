@@ -279,7 +279,7 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
     }
 
     // Events older than the retention were forgotten: ignore them
-    const oldest = Math.max(...seen.values()) - REPORT_RETENTION;
+    const oldest = Math.max(...Array.from(seen.values())) - REPORT_RETENTION;
     const newReports: ButtonReport[] = [];
 
     for (const report of reports.sort(byUpdated)) {
@@ -295,12 +295,12 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
       seen.set(reportKey(polledReport), reportTime(polledReport));
     }
 
-    const newest = Math.max(...seen.values());
-    for (const [key, time] of seen) {
+    const newest = Math.max(...Array.from(seen.values()));
+    seen.forEach((time, key) => {
       if (time < newest - REPORT_RETENTION) {
         seen.delete(key);
       }
-    }
+    });
 
     return newReports;
   }
