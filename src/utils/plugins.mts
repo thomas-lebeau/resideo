@@ -11,6 +11,39 @@ import {
  */
 const unconfiguredPlugins = new Set<PluginConstructor>();
 
+/**
+ * Plugins whose last run hasn't finished yet.
+ */
+const runningPlugins = new Set<PluginConstructor>();
+
+/**
+ * Calls `callback` unless the previous call for the same plugin is still in
+ * flight, in which case it is skipped with a warning. Ticks fire every minute
+ * regardless, so this keeps a slow plugin (hung host, speed test...) from
+ * piling up concurrent runs, e.g. overlapping BLE scans.
+ */
+export async function runExclusively(
+  plugin: AbstractPlugin,
+  callback: () => Promise<void>
+): Promise<void> {
+  const Plugin = plugin.constructor as PluginConstructor;
+
+  if (runningPlugins.has(Plugin)) {
+    plugin.logger.warn(
+      `⏳ Previous run of ${Plugin.slug} is still in progress, skipping`
+    );
+    return;
+  }
+
+  runningPlugins.add(Plugin);
+
+  try {
+    await callback();
+  } finally {
+    runningPlugins.delete(Plugin);
+  }
+}
+
 export function getSelectedPlugins() {
   if (args.values["no-plugin"].length > 0) {
     return availablePlugins.filter(

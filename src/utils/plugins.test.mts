@@ -5,7 +5,11 @@ import {
   AbstractPlugin,
   type PluginConstructor,
 } from "../shared/AbstractPlugin.mts";
-import { forEachPlugin, getUnknownPluginSlugs } from "./plugins.mts";
+import {
+  forEachPlugin,
+  getUnknownPluginSlugs,
+  runExclusively,
+} from "./plugins.mts";
 
 class ConfiguredPlugin extends AbstractPlugin {
   static readonly description = "Configured plugin";
@@ -69,6 +73,55 @@ describe("forEachPlugin", () => {
     }
 
     assert.equal(errorSpy.mock.callCount(), 2);
+  });
+});
+
+describe("runExclusively", () => {
+  test("skips a plugin while its previous run is in flight", async (t) => {
+    const warnSpy = mock.method(console, "warn", () => {});
+    t.after(() => warnSpy.mock.restore());
+
+    const { promise: hung, resolve: release } = Promise.withResolvers<void>();
+    let runs = 0;
+
+    const first = runExclusively(new ConfiguredPlugin(), async () => {
+      runs++;
+      await hung;
+    });
+    // A new instance per tick, as forEachPlugin does
+    await runExclusively(new ConfiguredPlugin(), async () => {
+      runs++;
+    });
+
+    assert.equal(runs, 1);
+    assert.equal(warnSpy.mock.callCount(), 1);
+    assert.match(
+      String(warnSpy.mock.calls[0]?.arguments[0]),
+      /still in progress/
+    );
+
+    release();
+    await first;
+    await runExclusively(new ConfiguredPlugin(), async () => {
+      runs++;
+    });
+
+    assert.equal(runs, 2);
+  });
+
+  test("runs again after a failed run", async () => {
+    await assert.rejects(
+      runExclusively(new ConfiguredPlugin(), async () => {
+        throw new Error("boom");
+      })
+    );
+
+    let ran = false;
+    await runExclusively(new ConfiguredPlugin(), async () => {
+      ran = true;
+    });
+
+    assert.ok(ran);
   });
 });
 
