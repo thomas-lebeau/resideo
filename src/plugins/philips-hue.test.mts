@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, mock, test } from "node:test";
 import assert from "node:assert/strict";
+import { MockAgent } from "undici";
+import { insecureAgent } from "../shared/index.mts";
 
 process.env.HUE_HOST = "hue.local";
 process.env.HUE_USERNAME = "hue-user";
@@ -86,25 +88,32 @@ const responses: Record<string, unknown[]> = {
 };
 
 describe("PhilipsHue", () => {
+  let mockAgent: MockAgent;
+
   beforeEach(() => {
     mock.timers.enable({ apis: ["Date"], now: NOW });
+    mockAgent = new MockAgent();
+    mockAgent.disableNetConnect();
+    // Route the plugin's requests through the mock instead of the network
+    mock.method(insecureAgent, "dispatch", mockAgent.dispatch.bind(mockAgent));
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     mock.timers.reset();
     mock.restoreAll();
+    await mockAgent.close();
   });
 
   test("run reports lights and buttons from the bridge", async () => {
-    const fetchMock = mock.method(
-      globalThis,
-      "fetch",
-      async (input: string | URL) => {
-        const { pathname } = new URL(input);
-        const data = responses[pathname.replace("/clip/v2", "")];
-        return Response.json({ errors: [], data });
-      }
-    );
+    const bridge = mockAgent.get("https://hue.local");
+    for (const [path, data] of Object.entries(responses)) {
+      bridge
+        .intercept({
+          path: `/clip/v2${path}`,
+          headers: { "Hue-Application-Key": "hue-user" },
+        })
+        .reply(200, { errors: [], data });
+    }
 
     const data = await new PhilipsHue().run();
 
@@ -144,21 +153,16 @@ describe("PhilipsHue", () => {
       // Buttons without a device name are dropped
     ]);
 
-    assert.equal(fetchMock.mock.callCount(), 5);
-    const [url, init] = fetchMock.mock.calls[0].arguments as unknown as [
-      string,
-      { headers: Record<string, string> },
-    ];
-    assert.equal(url, "https://hue.local/clip/v2/resource/light");
-    assert.equal(init.headers["Hue-Application-Key"], "hue-user");
+    // Every endpoint was requested once, with the application key
+    mockAgent.assertNoPendingInterceptors();
   });
 
   test("run throws on HTTP errors", async () => {
-    mock.method(
-      globalThis,
-      "fetch",
-      async () => new Response("Forbidden", { status: 403 })
-    );
+    mockAgent
+      .get("https://hue.local")
+      .intercept({ path: /^\/clip\/v2\// })
+      .reply(403, "Forbidden")
+      .persist();
 
     await assert.rejects(new PhilipsHue().run(), /HTTP error! status: 403/);
   });

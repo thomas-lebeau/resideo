@@ -1,5 +1,5 @@
 import type { Light } from "../shared/index.mts";
-import { AbstractPlugin, agent } from "../shared/index.mts";
+import { AbstractPlugin, insecureFetch } from "../shared/index.mts";
 
 type AbstractButton = {
   type: "button";
@@ -115,12 +115,10 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
   }
 
   private async fetch<T extends Endpoint>(endpoint: T): Promise<Response<T>> {
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+    const response = await insecureFetch(`${this.baseUrl}${endpoint}`, {
       headers: {
         "Hue-Application-Key": this.config.HUE_USERNAME,
       },
-      // @ts-expect-error - dispatcher is not defined in the fetch API types
-      dispatcher: agent,
     });
 
     if (!response.ok) {

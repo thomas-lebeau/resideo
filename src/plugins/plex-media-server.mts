@@ -1,4 +1,4 @@
-import { agent, AbstractPlugin } from "../shared/index.mts";
+import { AbstractPlugin, insecureFetch } from "../shared/index.mts";
 
 type Library = MovieLibrary | ShowLibrary;
 
@@ -37,7 +37,7 @@ export class PlexMediaServer extends AbstractPlugin<Library, typeof CONFIG> {
   ): Promise<PlexResponse<T>> {
     const paramsString = new URLSearchParams(params).toString();
 
-    const response = await fetch(
+    const response = await insecureFetch(
       `https://${this.config.PLEX_HOST}${endpoint}?${paramsString}`,
       {
         method: "GET",
@@ -45,8 +45,6 @@ export class PlexMediaServer extends AbstractPlugin<Library, typeof CONFIG> {
           Accept: "application/json",
           "X-Plex-Token": this.config.PLEX_TOKEN,
         },
-        // @ts-expect-error - dispatcher is not defined in the fetch API types
-        dispatcher: agent,
       }
     );
 

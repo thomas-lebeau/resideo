@@ -1,5 +1,5 @@
 import type { Other } from "../shared/index.mts";
-import { AbstractPlugin, agent } from "../shared/index.mts";
+import { AbstractPlugin, insecureFetch } from "../shared/index.mts";
 import { createHash } from "node:crypto";
 
 type PhilipsTVDevice = Other & {
@@ -61,7 +61,7 @@ export class PhilipsTV extends AbstractPlugin<PhilipsTVDevice, typeof CONFIG> {
   private createDigestAuth(
     method: string,
     path: string,
-    response401: Response
+    response401: Pick<Response, "headers">
   ): string {
     const wwwAuth = response401.headers.get("www-authenticate");
     if (!wwwAuth) {
@@ -107,13 +107,11 @@ export class PhilipsTV extends AbstractPlugin<PhilipsTVDevice, typeof CONFIG> {
     const path = `/6${endpoint}`;
 
     // First attempt without auth to get the challenge
-    const response = await fetch(url, {
+    const response = await insecureFetch(url, {
       method: "GET",
       headers: {
         Accept: "application/json",
       },
-      // @ts-expect-error - dispatcher is not defined in the fetch API types
-      dispatcher: agent,
     });
 
     if (response.status === 401) {
@@ -121,14 +119,12 @@ export class PhilipsTV extends AbstractPlugin<PhilipsTVDevice, typeof CONFIG> {
       const authHeader = this.createDigestAuth("GET", path, response);
 
       // Retry with authentication
-      const authResponse = await fetch(url, {
+      const authResponse = await insecureFetch(url, {
         method: "GET",
         headers: {
           Authorization: authHeader,
           Accept: "application/json",
         },
-        // @ts-expect-error - dispatcher is not defined in the fetch API types
-        dispatcher: agent,
       });
 
       if (!authResponse.ok) {
