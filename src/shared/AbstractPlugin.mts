@@ -43,6 +43,12 @@ export class MissingConfigError extends Error {
   override name = "MissingConfigError";
 }
 
+/**
+ * Plugin classes whose last `run()` hasn't settled yet. Keyed by class, not
+ * instance, because a new instance is created on every tick.
+ */
+const runningPlugins = new Set<typeof AbstractPlugin>();
+
 export abstract class AbstractPlugin<
   T extends Thermometer | Thermostat | Light | Other = Other,
   U extends readonly string[] = string[],
@@ -93,6 +99,38 @@ export abstract class AbstractPlugin<
 
       this.config[key as U[number]] = process.env[key];
     }
+
+    this.run = this.runExclusively(this.run);
+  }
+
+  /**
+   * Wraps the plugin's `run()` so that a call made while the previous one is
+   * still in flight is skipped with a warning (and resolves `undefined`).
+   * Ticks fire every minute regardless, so this keeps a slow plugin (hung
+   * host, speed test...) from piling up concurrent runs, e.g. overlapping BLE
+   * scans.
+   */
+  private runExclusively(run: this["run"]): this["run"] {
+    const Plugin = this.constructor as typeof AbstractPlugin;
+
+    return async () => {
+      if (runningPlugins.has(Plugin)) {
+        this.logger.warn(
+          `⏳ Previous run of ${Plugin.slug} is still in progress, skipping`
+        );
+        return undefined;
+      }
+
+      runningPlugins.add(Plugin);
+
+      try {
+        this.logger.info(`🔄 Running plugin ${Plugin.slug}...`);
+
+        return await run.call(this);
+      } finally {
+        runningPlugins.delete(Plugin);
+      }
+    };
   }
 
   /**
@@ -124,6 +162,7 @@ export abstract class AbstractPlugin<
   /**
    * Main method to be implemented by the plugin.
    * It should return the data collected by the plugin.
+   * Calls never overlap: while a run is in flight, further calls are skipped.
    */
   abstract run(): Promise<T | Array<T | undefined> | undefined>;
 }
