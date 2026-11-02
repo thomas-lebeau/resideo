@@ -79,6 +79,15 @@ export class Logger {
   error(error: Error) {
     this.log("error", error.message, error);
   }
+
+  /**
+   * Prints a message meant for a person at the terminal, such as interactive
+   * setup instructions. It is always printed to stdout, unprefixed and
+   * regardless of the log level, and is never sent to Datadog.
+   */
+  prompt(message: string): void {
+    console.log(message);
+  }
 }
 
 export default new Logger();
