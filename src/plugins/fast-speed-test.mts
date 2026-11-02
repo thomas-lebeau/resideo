@@ -1,6 +1,5 @@
 import FastSpeedtest from "fast-speedtest-api";
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
-import { hostname } from "node:os";
 
 type SpeedTestData = {
   type: "speedtest";
@@ -33,7 +32,7 @@ export class FastSpeedTest extends AbstractPlugin<
 
     return {
       type: "speedtest",
-      name: hostname(),
+      name: "Internet",
       speed,
     } satisfies SpeedTestData;
   }
