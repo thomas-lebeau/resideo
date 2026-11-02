@@ -1,3 +1,4 @@
+import { EventSource } from "eventsource";
 import type { Light } from "../shared/index.mts";
 import { AbstractPlugin, agent } from "../shared/index.mts";
 
@@ -59,15 +60,33 @@ type ButtonEvent =
   | "double_short_release"
   | "long_press";
 
+type ButtonReport = {
+  updated: string;
+  event: ButtonEvent;
+};
+
 type ButtonResponse = Array<{
+  id: string;
   id_v1: string;
   button: {
     last_event: ButtonEvent;
-    button_report: {
-      updated: string;
-      event: ButtonEvent;
-    };
+    button_report?: ButtonReport;
   };
+}>;
+
+/**
+ * Message of the `/eventstream/clip/v2` event stream: each container lists
+ * the resources that changed
+ */
+type EventStreamMessage = Array<{
+  type: "add" | "update" | "delete" | "error";
+  data: Array<{
+    id: string;
+    type: string;
+    button?: {
+      button_report?: ButtonReport;
+    };
+  }>;
 }>;
 
 type DeviceResponse = Array<{
@@ -104,14 +123,32 @@ const STATE = {
 const CONFIG = ["HUE_USERNAME", "HUE_HOST"] as const;
 const ONE_MINUTE = 60_000 as const;
 
+let instance: PhilipsHue | undefined;
+
 export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
   static readonly description = "Philips Hue lights and buttons";
-  private readonly baseUrl: string;
+
+  private eventSource: EventSource | undefined;
+  /** Button reports received from the event stream since the last run, by button id */
+  private pendingReports = new Map<string, ButtonReport[]>();
+  /** Time (bridge clock) of the last event reported, by button id */
+  private readonly lastReported = new Map<string, number>();
 
   constructor() {
+    // A new plugin is created on every run: reuse the instance to keep the
+    // event stream and the reported events across runs
+    if (instance) {
+      return instance;
+    }
+
     super(CONFIG);
 
-    this.baseUrl = `https://${this.config.HUE_HOST}/clip/v2`;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    instance = this;
+  }
+
+  private get baseUrl(): string {
+    return `https://${this.config.HUE_HOST}/clip/v2`;
   }
 
   private async fetch<T extends Endpoint>(endpoint: T): Promise<Response<T>> {
@@ -154,12 +191,103 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
     });
   }
 
+  private startEventStream() {
+    this.eventSource = new EventSource(
+      `https://${this.config.HUE_HOST}/eventstream/clip/v2`,
+      {
+        fetch: (input, init) =>
+          fetch(input, {
+            ...init,
+            headers: {
+              ...init.headers,
+              "Hue-Application-Key": this.config.HUE_USERNAME,
+            },
+            // @ts-expect-error - dispatcher is not defined in the fetch API types
+            dispatcher: agent,
+          }),
+      }
+    );
+
+    this.eventSource.onmessage = (event) =>
+      this.processEventStreamMessage(event.data);
+
+    // The stream reconnects by itself, and `run` restarts it if it gave up
+    this.eventSource.onerror = (event) =>
+      this.logger.debug(`Event stream error: ${event.message}`);
+  }
+
+  private processEventStreamMessage(message: string) {
+    let containers: EventStreamMessage;
+
+    try {
+      containers = JSON.parse(message) as EventStreamMessage;
+    } catch {
+      this.logger.warn(`Ignoring invalid event stream message: ${message}`);
+      return;
+    }
+
+    for (const container of containers) {
+      if (container.type !== "update") {
+        continue;
+      }
+
+      for (const resource of container.data) {
+        const report =
+          resource.type === "button" ? resource.button?.button_report : undefined;
+
+        if (report) {
+          const reports = this.pendingReports.get(resource.id) ?? [];
+          reports.push(report);
+          this.pendingReports.set(resource.id, reports);
+        }
+      }
+    }
+  }
+
+  /**
+   * Events of the button that were not reported yet, oldest first: the ones
+   * received from the event stream, plus the last one polled from the bridge
+   * in case the stream missed it
+   */
+  private takeNewReports(
+    button: ButtonResponse[number],
+    streamedReports: ButtonReport[]
+  ): ButtonReport[] {
+    const reports = [...streamedReports];
+
+    if (button.button.button_report) {
+      reports.push(button.button.button_report);
+    }
+
+    // The first time a button is seen, only report its last event if it is recent
+    let lastReported =
+      this.lastReported.get(button.id) ?? Date.now() - ONE_MINUTE;
+    const newReports: ButtonReport[] = [];
+
+    for (const report of reports.sort(byUpdated)) {
+      const updated = new Date(report.updated).getTime();
+
+      if (updated > lastReported) {
+        newReports.push(report);
+        lastReported = updated;
+      }
+    }
+
+    this.lastReported.set(button.id, lastReported);
+
+    return newReports;
+  }
+
   private processButtonResponse(
     buttonResponse: Response<"/resource/button">,
     deviceResponse: Response<"/resource/device">,
     devicePowerResponse: Response<"/resource/device_power">
-  ): Array<Button | undefined> {
-    return buttonResponse.map((button) => {
+  ): Button[] {
+    // Take the streamed reports: those of unknown buttons are dropped
+    const pendingReports = this.pendingReports;
+    this.pendingReports = new Map();
+
+    return buttonResponse.flatMap((button): Button[] => {
       const device = deviceResponse.find(
         (device) => device.id_v1 === button.id_v1
       );
@@ -168,39 +296,60 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
       );
 
       const { battery_level, battery_state } = devicePower?.power_state ?? {};
-      const { event, updated } = button.button.button_report ?? {};
+      const reports = this.takeNewReports(
+        button,
+        pendingReports.get(button.id) ?? []
+      );
       const name = device?.metadata.name;
 
       if (!name) {
-        return;
+        return [];
       }
 
-      if (elapsed(updated) < ONE_MINUTE) {
-        // Report last event if it has been updated in the last minute
-        return {
-          type: "button",
-          name,
-          event,
-          battery_state: battery_state ?? "n/a",
-          ...(battery_level ? { battery_level } : {}),
-          // Use the last event timestamp
-          timestamp: new Date(updated).getTime(),
-        } satisfies ButtonWithEvent;
+      if (reports.length > 0) {
+        // Report every event since the last run
+        return reports.map(
+          ({ event, updated }) =>
+            ({
+              type: "button",
+              name,
+              event,
+              battery_state: battery_state ?? "n/a",
+              ...(battery_level ? { battery_level } : {}),
+              // Use the event timestamp
+              timestamp: new Date(updated).getTime(),
+            }) satisfies ButtonWithEvent
+        );
       } else if (battery_level && battery_state) {
-        // Report only battery level if last event has not been updated in the last minute
-        return {
-          type: "button",
-          name,
-          battery_state,
-          battery_level,
-        } satisfies ButtonWithoutEvent;
+        // Report only battery level if there is no new event
+        return [
+          {
+            type: "button",
+            name,
+            battery_state,
+            battery_level,
+          } satisfies ButtonWithoutEvent,
+        ];
       }
 
-      return;
+      return [];
     });
   }
 
+  async stop() {
+    this.eventSource?.close();
+    this.eventSource = undefined;
+    instance = undefined;
+  }
+
   async run() {
+    if (
+      !this.eventSource ||
+      this.eventSource.readyState === EventSource.CLOSED
+    ) {
+      this.startEventStream();
+    }
+
     const [
       lightResponse,
       connectivityResponse,
@@ -226,6 +375,6 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
   }
 }
 
-function elapsed(updated: string): number {
-  return Date.now() - new Date(updated).getTime();
+function byUpdated(a: ButtonReport, b: ButtonReport): number {
+  return new Date(a.updated).getTime() - new Date(b.updated).getTime();
 }
