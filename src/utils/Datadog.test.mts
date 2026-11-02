@@ -92,14 +92,18 @@ describe("Datadog.flush", () => {
   beforeEach(() => {
     requests = [];
     statuses = [];
-    mock.method(globalThis, "fetch", async (_url: string, init: RequestInit) => {
-      requests.push(JSON.parse(init.body as string));
-      const status = statuses.shift() ?? 202;
-      if (status instanceof Error) {
-        throw status;
+    mock.method(
+      globalThis,
+      "fetch",
+      async (_url: string, init: RequestInit) => {
+        requests.push(JSON.parse(init.body as string));
+        const status = statuses.shift() ?? 202;
+        if (status instanceof Error) {
+          throw status;
+        }
+        return new Response(null, { status });
       }
-      return new Response(null, { status });
-    });
+    );
     // Keep the test output clean
     mock.method(console, "info", () => {});
     mock.method(console, "warn", () => {});

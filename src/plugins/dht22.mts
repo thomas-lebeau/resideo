@@ -20,11 +20,7 @@ export class DHT22 extends AbstractPlugin<Thermometer, typeof CONFIG> {
     this.sensors = JSON.parse(this.config.DHT22_SENSORS);
   }
 
-  private readSensor(
-    sensor: typeof Sensor,
-    gpioPin: number,
-    name: string
-  ) {
+  private readSensor(sensor: typeof Sensor, gpioPin: number, name: string) {
     const data = sensor.read(SENSOR_TYPE, gpioPin);
 
     // Telemetry to understand why some readings show a temperature very different from the expected range

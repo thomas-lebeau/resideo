@@ -15,10 +15,10 @@ type Endpoint = "/powerstate" | "/audio/volume" | "/ambilight/mode";
 type PhilipsTVResponse<T extends Endpoint> = T extends "/powerstate"
   ? PowerStateResponse
   : T extends "/audio/volume"
-  ? VolumeResponse
-  : T extends "/ambilight/mode"
-  ? AmbilightModeResponse
-  : never;
+    ? VolumeResponse
+    : T extends "/ambilight/mode"
+      ? AmbilightModeResponse
+      : never;
 
 type PowerStateResponse = {
   powerstate: "On" | "Standby" | "StandbyKeep";

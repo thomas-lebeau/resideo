@@ -164,11 +164,11 @@ type PlexLibrarySectionAllResponse = {
 type PlexResponse<T extends PlexEndpoint> = T extends "/identity"
   ? PlexIdentityResponse
   : T extends "/activities"
-  ? PlexActivitiesResponse
-  : T extends "/status/sessions"
-  ? PlexSessionResponse
-  : T extends "/library/sections"
-  ? PlexLibrarySectionsResponse
-  : T extends `/library/sections/${number}/all`
-  ? PlexLibrarySectionAllResponse
-  : unknown;
+    ? PlexActivitiesResponse
+    : T extends "/status/sessions"
+      ? PlexSessionResponse
+      : T extends "/library/sections"
+        ? PlexLibrarySectionsResponse
+        : T extends `/library/sections/${number}/all`
+          ? PlexLibrarySectionAllResponse
+          : unknown;

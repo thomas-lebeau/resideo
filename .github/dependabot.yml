@@ -9,7 +9,7 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
-    cooldown: 
+    cooldown:
       default-days: 7
     groups:
       dependencies:
