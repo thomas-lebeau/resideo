@@ -207,4 +207,46 @@ describe("HuaweiRouter", () => {
       2
     );
   });
+
+  test("run logs in again when the router answers with the login page", async () => {
+    const fetchMock = mockRouter(
+      new Response("<html><title>Login</title></html>"),
+      new Response(wanListPage([INTERNET_UP]))
+    );
+
+    const data = await new HuaweiRouter().run();
+
+    assert.equal(data?.state, 1);
+    assert.equal(
+      fetchMock.mock.calls.filter((call) =>
+        String(call.arguments[0]).endsWith("/login.cgi")
+      ).length,
+      2
+    );
+  });
+
+  test("run throws instead of logging in forever when still unauthorized", async () => {
+    const fetchMock = mockRouter(
+      new Response(null, { status: 403 }),
+      new Response(null, { status: 403 }),
+      new Response(null, { status: 403 })
+    );
+
+    await assert.rejects(new HuaweiRouter().run(), /after logging in again: 403/);
+    assert.equal(
+      fetchMock.mock.calls.filter((call) =>
+        String(call.arguments[0]).endsWith("/wan_list.asp")
+      ).length,
+      2
+    );
+  });
+
+  test("run throws when the login page keeps coming back", async () => {
+    mockRouter(
+      new Response("<html><title>Login</title></html>"),
+      new Response("<html><title>Login</title></html>")
+    );
+
+    await assert.rejects(new HuaweiRouter().run(), /no IPWanList/);
+  });
 });

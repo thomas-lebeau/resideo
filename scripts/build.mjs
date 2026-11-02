@@ -32,6 +32,9 @@ await build({
   bundle: true,
   sourcemap: "inline",
   platform: "node",
+  // The bundle targets an older Node than `engines` (which is for running the
+  // .mts sources): the armv7/arm64 releases are built in a `node:18-buster`
+  // container and must run on Node 18. Keep this script runnable on Node 18 too.
   target: "node18",
   external: [
     // Native modules must be external (can't be bundled)
