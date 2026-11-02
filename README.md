@@ -521,4 +521,4 @@ Release notes are published on [GitHub Releases](https://github.com/thomas-lebea
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) for details.
