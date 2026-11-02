@@ -85,51 +85,85 @@ echo -e "${BLUE}  Step 1: Installing Binary${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-if [ ! -d "$INSTALL_DIR/$DIR_NAME" ]; then
-    mkdir -p "$INSTALL_DIR/$DIR_NAME"
-fi
+TARGET_DIR="$INSTALL_DIR/$DIR_NAME"
+TEMP_FILE=""
+CHECKSUM_FILE=""
+STAGING_DIR=""
+BACKUP_DIR=""
 
-# Download archive
+cleanup() {
+    # Put the previous install back if we stopped between the two renames
+    if [ -n "$BACKUP_DIR" ] && [ -d "$BACKUP_DIR" ] && [ ! -e "$TARGET_DIR" ]; then
+        mv "$BACKUP_DIR" "$TARGET_DIR"
+    fi
+    rm -f "$TEMP_FILE" "$CHECKSUM_FILE"
+    rm -rf "$STAGING_DIR" "$BACKUP_DIR"
+}
+trap cleanup EXIT
+
 TEMP_FILE=$(mktemp)
-TEMP_DIR=$(mktemp -d)
+CHECKSUM_FILE=$(mktemp)
+# Extract next to the target (same filesystem) so the swap below is a rename
+STAGING_DIR=$(mktemp -d "$INSTALL_DIR/.$DIR_NAME.XXXXXX")
+BACKUP_DIR="$STAGING_DIR.old"
+
+# Download archive (-f: fail on HTTP errors instead of saving the error page)
 echo -e "${YELLOW}Downloading $ARCHIVE_NAME...${NC}"
-if curl -L -o "$TEMP_FILE" "$DOWNLOAD_URL"; then
+if curl -fL -o "$TEMP_FILE" "$DOWNLOAD_URL"; then
     echo -e "${GREEN}✓ Download complete${NC}"
 else
     echo -e "${RED}Error: Failed to download archive${NC}"
-    rm -f "$TEMP_FILE"
-    rm -rf "$TEMP_DIR"
+    exit 1
+fi
+
+# Verify checksum (releases published before checksums existed don't have one)
+echo -e "${YELLOW}Verifying checksum...${NC}"
+HTTP_CODE=$(curl -sSL --retry 3 --connect-timeout 10 -o "$CHECKSUM_FILE" -w '%{http_code}' "$DOWNLOAD_URL.sha256" || true)
+if [ "$HTTP_CODE" = "404" ]; then
+    echo -e "${YELLOW}⚠ No checksum published for this release, skipping verification${NC}"
+elif [[ "$HTTP_CODE" == 2* ]]; then
+    read -r EXPECTED_SHA256 _ < "$CHECKSUM_FILE" || true
+    ACTUAL_SHA256=$(sha256sum "$TEMP_FILE")
+    ACTUAL_SHA256="${ACTUAL_SHA256%% *}"
+    if [[ ! "$EXPECTED_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+        echo -e "${RED}Error: Invalid checksum file for $ARCHIVE_NAME${NC}"
+        exit 1
+    elif [ "$EXPECTED_SHA256" != "$ACTUAL_SHA256" ]; then
+        echo -e "${RED}Error: Checksum mismatch for $ARCHIVE_NAME${NC}"
+        echo "  Expected: $EXPECTED_SHA256"
+        echo "  Actual:   $ACTUAL_SHA256"
+        exit 1
+    fi
+    echo -e "${GREEN}✓ Checksum verified${NC}"
+else
+    echo -e "${RED}Error: Could not download checksum (HTTP $HTTP_CODE)${NC}"
     exit 1
 fi
 
 # Extract archive
 echo -e "${YELLOW}Extracting archive...${NC}"
-if tar -xzf "$TEMP_FILE" -C "$TEMP_DIR"; then
+if tar -xzf "$TEMP_FILE" -C "$STAGING_DIR" && [ -f "$STAGING_DIR/$BINARY_NAME" ]; then
     echo -e "${GREEN}✓ Extraction complete${NC}"
 else
     echo -e "${RED}Error: Failed to extract archive${NC}"
-    rm -f "$TEMP_FILE"
-    rm -rf "$TEMP_DIR"
+    exit 1
+fi
+chmod 755 "$STAGING_DIR"
+chmod +x "$STAGING_DIR/$BINARY_NAME"
+
+# Swap the new install in, keeping the old one until the new one is in place
+echo -e "${YELLOW}Installing to $TARGET_DIR...${NC}"
+if [ -e "$TARGET_DIR" ]; then
+    mv "$TARGET_DIR" "$BACKUP_DIR"
+fi
+if ! mv "$STAGING_DIR" "$TARGET_DIR"; then
+    echo -e "${RED}Error: Failed to install to $TARGET_DIR${NC}"
     exit 1
 fi
 
-# Install binary and dependencies
-echo -e "${YELLOW}Installing to $INSTALL_DIR/$DIR_NAME...${NC}"
-# Remove old installation if it exists
-rm -rf "$INSTALL_DIR/$DIR_NAME"
-mkdir -p "$INSTALL_DIR/$DIR_NAME"
-
-# Copy everything (binary + node_modules if present)
-cp -r "$TEMP_DIR/"* "$INSTALL_DIR/$DIR_NAME/"
-chmod +x "$INSTALL_DIR/$DIR_NAME/$BINARY_NAME"
-
 # Create symlink to binary
 mkdir -p "$INSTALL_DIR/bin"
-ln -sf "$INSTALL_DIR/$DIR_NAME/$BINARY_NAME" "$INSTALL_DIR/bin/$BINARY_NAME"
-
-# Cleanup
-rm -f "$TEMP_FILE"
-rm -rf "$TEMP_DIR"
+ln -sf "$TARGET_DIR/$BINARY_NAME" "$INSTALL_DIR/bin/$BINARY_NAME"
 
 echo -e "${GREEN}✓ Binary installed successfully${NC}"
 BINARY_PATH="$INSTALL_DIR/bin/$BINARY_NAME"
