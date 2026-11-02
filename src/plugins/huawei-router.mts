@@ -32,6 +32,8 @@ const CONFIG = [
   "HUAWEI_ROUTER_PASSWORD",
 ] as const;
 
+const IP_WAN_LIST_PATTERN = /var IPWanList = new Array\(([\s\S]*?)\);/;
+
 /**
  * Monitors Huawei router WAN connection status
  *
@@ -120,9 +122,10 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
   }
 
   /**
-   * Fetches WAN connection list from router
+   * Fetches WAN connection list from router, logging in again once if the
+   * session is rejected or expired
    */
-  private async getWanList(): Promise<string> {
+  private async getWanList(retried = false): Promise<string> {
     if (!this.sessionCookie) {
       await this.login();
     }
@@ -137,20 +140,31 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
       }
     );
 
-    if (!response.ok) {
-      // Try to re-authenticate if unauthorized
-      if (response.status === 401 || response.status === 403) {
-        this.sessionCookie = null;
-        await this.login();
-        return this.getWanList();
-      }
+    const unauthorized = response.status === 401 || response.status === 403;
 
+    if (!response.ok && !unauthorized) {
       throw new Error(
         `Failed to get WAN list: ${response.status} ${response.statusText}`
       );
     }
 
-    return response.text();
+    // An expired session is answered with 401/403, or with a 200 login page
+    const jsCode = await response.text();
+
+    if (unauthorized || !IP_WAN_LIST_PATTERN.test(jsCode)) {
+      if (retried) {
+        throw new Error(
+          unauthorized
+            ? `Failed to get WAN list after logging in again: ${response.status} ${response.statusText}`
+            : "Failed to get WAN list after logging in again: no IPWanList in the response"
+        );
+      }
+
+      this.sessionCookie = null;
+      return this.getWanList(true);
+    }
+
+    return jsCode;
   }
 
   /**
@@ -160,7 +174,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
     const connections: RawWanConnection[] = [];
 
     // Extract IPWanList array
-    const ipWanMatch = jsCode.match(/var IPWanList = new Array\(([\s\S]*?)\);/);
+    const ipWanMatch = jsCode.match(IP_WAN_LIST_PATTERN);
     if (!ipWanMatch) {
       return connections;
     }
