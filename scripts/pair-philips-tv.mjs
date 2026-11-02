@@ -10,11 +10,15 @@
  *   node scripts/pair-philips-tv.mjs --host 192.168.1.101
  */
 
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { createInterface } from "node:readline";
 import { Agent } from "undici";
 
-// Secret key used for HMAC signature (from Philips API)
+// Shared key used to sign the pairing grant request (Philips JointSpace API v6).
+// This is not a secret of this project: it is a public, well-known key that is
+// the same for every Philips TV client and ships in open-source clients such as
+// pylips and ha-philipsjs. The per-device credentials (device ID and auth key)
+// are what must be kept private, and they are never stored in this script.
 const SECRET_KEY =
   "ZmVay1EQVFOaZhwQ4Kv81ypLAZNczV9sG4KkseXWn1NEk6cXmPKO/MCa9sryslvLCFMnNe4Z4CPXzToowvhHvA==";
 
@@ -30,36 +34,13 @@ function generateDeviceId() {
 }
 
 function createSignature(secretKey, toSign) {
-  const key = Buffer.from(secretKey, "base64");
-
-  // Create HMAC manually
-  const blockSize = 64;
-  const keyBuffer = Buffer.alloc(blockSize);
-
-  if (key.length > blockSize) {
-    const hashedKey = createHash("sha1").update(key).digest();
-    hashedKey.copy(keyBuffer);
-  } else {
-    key.copy(keyBuffer);
-  }
-
-  const opad = Buffer.alloc(blockSize);
-  const ipad = Buffer.alloc(blockSize);
-
-  for (let i = 0; i < blockSize; i++) {
-    opad[i] = keyBuffer[i] ^ 0x5c;
-    ipad[i] = keyBuffer[i] ^ 0x36;
-  }
-
-  const innerHash = createHash("sha1")
-    .update(Buffer.concat([ipad, toSign]))
-    .digest();
-
-  const outerHash = createHash("sha1")
-    .update(Buffer.concat([opad, innerHash]))
+  const hmac = createHmac("sha1", Buffer.from(secretKey, "base64"))
+    .update(toSign)
     .digest("hex");
 
-  return Buffer.from(outerHash).toString("base64");
+  // The TV expects the base64 encoding of the hex digest string, not of the
+  // raw digest bytes.
+  return Buffer.from(hmac).toString("base64");
 }
 
 function getDeviceSpec(config) {
