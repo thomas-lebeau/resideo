@@ -5,7 +5,11 @@ import {
   AbstractPlugin,
   type PluginConstructor,
 } from "../shared/AbstractPlugin.mts";
-import { forEachPlugin, getUnknownPluginSlugs } from "./plugins.mts";
+import {
+  forEachPlugin,
+  getSelectedPlugins,
+  getUnknownPluginSlugs,
+} from "./plugins.mts";
 
 class ConfiguredPlugin extends AbstractPlugin {
   static readonly description = "Configured plugin";
@@ -69,6 +73,43 @@ describe("forEachPlugin", () => {
     }
 
     assert.equal(errorSpy.mock.callCount(), 2);
+  });
+});
+
+describe("getSelectedPlugins", () => {
+  const plugins = [
+    ConfiguredPlugin,
+    UnconfiguredPlugin,
+  ] as unknown as PluginConstructor[];
+  const configured = ConfiguredPlugin.slug;
+  const unconfigured = UnconfiguredPlugin.slug;
+
+  test("selects all plugins by default", () => {
+    assert.deepEqual(getSelectedPlugins(["all"], [], plugins), plugins);
+    assert.deepEqual(getSelectedPlugins([], [], plugins), plugins);
+  });
+
+  test("selects only the included plugins", () => {
+    assert.deepEqual(getSelectedPlugins([configured], [], plugins), [
+      ConfiguredPlugin,
+    ]);
+  });
+
+  test("removes the excluded plugins from all", () => {
+    assert.deepEqual(getSelectedPlugins(["all"], [configured], plugins), [
+      UnconfiguredPlugin,
+    ]);
+  });
+
+  test("applies the include filter, then the exclude filter", () => {
+    assert.deepEqual(
+      getSelectedPlugins([configured, unconfigured], [unconfigured], plugins),
+      [ConfiguredPlugin]
+    );
+    assert.deepEqual(
+      getSelectedPlugins([configured], [configured], plugins),
+      []
+    );
   });
 });
 

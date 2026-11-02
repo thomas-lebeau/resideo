@@ -11,19 +11,21 @@ import {
  */
 const unconfiguredPlugins = new Set<PluginConstructor>();
 
-export function getSelectedPlugins() {
-  if (args.values["no-plugin"].length > 0) {
-    return availablePlugins.filter(
-      (Plugin) => !args.values["no-plugin"].includes(Plugin.slug)
-    );
-  }
+/**
+ * Plugins selected by `--plugin` (include, `all` by default), minus those
+ * excluded by `--no-plugin`
+ */
+export function getSelectedPlugins(
+  included: string[] = args.values.plugin,
+  excluded: string[] = args.values["no-plugin"],
+  plugins: PluginConstructor[] = availablePlugins
+): PluginConstructor[] {
+  const includeAll = included.length === 0 || included.includes("all");
 
-  if (args.values.plugin.length === 0 || args.values.plugin.includes("all")) {
-    return availablePlugins;
-  }
-
-  return availablePlugins.filter((Plugin) =>
-    args.values.plugin.includes(Plugin.slug)
+  return plugins.filter(
+    (Plugin) =>
+      (includeAll || included.includes(Plugin.slug)) &&
+      !excluded.includes(Plugin.slug)
   );
 }
 

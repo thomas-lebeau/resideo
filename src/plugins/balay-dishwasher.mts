@@ -116,18 +116,16 @@ export class BalayDishwasher extends AbstractPlugin<
   private async authenticateWithDeviceFlow() {
     const deviceCodeInfo = await this.initiateDeviceFlow();
 
-    /* eslint-disable no-console */
-    // Output authentication instructions (allowed in this specific case for user interaction)
-    console.log("\n=== Home Connect Authorization Required ===");
-    console.log(`1. Visit: ${deviceCodeInfo.verification_uri}`);
-    console.log(`2. Enter code: ${deviceCodeInfo.user_code}`);
+    this.logger.prompt("\n=== Home Connect Authorization Required ===");
+    this.logger.prompt(`1. Visit: ${deviceCodeInfo.verification_uri}`);
+    this.logger.prompt(`2. Enter code: ${deviceCodeInfo.user_code}`);
 
     if (deviceCodeInfo.verification_uri_complete) {
-      console.log(
+      this.logger.prompt(
         `\nOr visit this URL directly: ${deviceCodeInfo.verification_uri_complete}`
       );
     }
-    console.log("\nWaiting for authorization...");
+    this.logger.prompt("\nWaiting for authorization...");
 
     const tokenResponse = await this.pollForToken(deviceCodeInfo);
 
@@ -138,8 +136,7 @@ export class BalayDishwasher extends AbstractPlugin<
       token_type: tokenResponse.token_type,
     };
 
-    console.log("Authentication successful");
-    /* eslint-enable no-console */
+    this.logger.prompt("Authentication successful");
 
     this.store.set(token);
   }
