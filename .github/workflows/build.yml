@@ -1,0 +1,118 @@
+name: Build
+
+# Builds and smoke-tests the release archives for every supported platform.
+# Shared by `ci.yml` (on every push and pull request) and `release.yml`, so CI
+# builds exactly what a release ships.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to build (defaults to the commit that triggered the workflow)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux-x64:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.8.0"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build binary
+        run: |
+          npm run build
+
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          cp bin/raspberry-home-monitor release/
+          cp scripts/raspberry-home-monitor.service release/
+          chmod +x release/raspberry-home-monitor
+          cp -r node_modules release/
+          cd release
+          tar -czf ../raspberry-home-monitor-linux-x64.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
+
+      - name: Smoke test release archive
+        run: bash scripts/smoke-test.sh raspberry-home-monitor-linux-x64.tar.gz
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: raspberry-home-monitor-linux-x64
+          path: raspberry-home-monitor-linux-x64.tar.gz
+
+  build-linux-arm:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: armv7
+            platform: linux/arm/v7
+          - arch: arm64
+            platform: linux/arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build for ${{ matrix.arch }}
+        run: |
+          docker run --rm -v $PWD:/app -w /app --platform ${{ matrix.platform }} node:18-buster bash -c "
+            sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/sources.list &&
+            sed -i 's|security.debian.org|archive.debian.org/debian-security|g' /etc/apt/sources.list &&
+            sed -i '/stretch-updates/d' /etc/apt/sources.list &&
+            apt update &&
+            apt install -y bluetooth bluez libbluetooth-dev libudev-dev build-essential python3 make g++ git &&
+            git config --global --add safe.directory /app &&
+            npm ci --build-from-source &&
+            npm run build
+          "
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          cp bin/raspberry-home-monitor release/
+          cp scripts/raspberry-home-monitor.service release/
+          chmod +x release/raspberry-home-monitor
+          cp -r node_modules release/
+          cd release
+          tar -czf ../raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
+
+      - name: Smoke test release archive
+        # Same image and platform as the build, so the archive runs on the
+        # target architecture and Node version.
+        run: |
+          docker run --rm -v $PWD:/app -w /app --platform ${{ matrix.platform }} node:18-buster \
+            bash scripts/smoke-test.sh raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: raspberry-home-monitor-linux-${{ matrix.arch }}
+          path: raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz
