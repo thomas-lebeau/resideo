@@ -207,7 +207,7 @@ raspberry-home-monitor --env ~/.path/to/.env
 - `--env` `-e`: Specify an environment file (default: `.env`). Can be specified multiple times. Example: `raspberry-home-monitor --env ~/.path/to/.env`
 - `--plugin` `-p`: Run specific plugin(s) (default: `all`). Can be specified multiple times. Example: `raspberry-home-monitor --plugin resideo --plugin philips-hue`
 - `--list-plugins` `-l`: List available plugins
-- `--no-plugin` `-x`: Exclude specific plugin(s). Can be specified multiple times. Example: `raspberry-home-monitor --no-plugin fast-speed-test`
+- `--no-plugin` `-x`: Exclude specific plugin(s). Can be specified multiple times. Example: `raspberry-home-monitor --no-plugin fast-speed-test`. Applied after `--plugin`, so a plugin passed to both is excluded.
 - `--dry-run` `-d`: Run in dry-run mode (no data will be sent to Datadog)
 - `--update` `-u`: Update the application
 - `--setup` `-s`: Setup the plugins authentication tokens
