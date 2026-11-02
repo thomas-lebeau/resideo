@@ -103,6 +103,7 @@ trap cleanup EXIT
 
 TEMP_FILE=$(mktemp)
 CHECKSUM_FILE=$(mktemp)
+mkdir -p "$INSTALL_DIR"
 # Extract next to the target (same filesystem) so the swap below is a rename
 STAGING_DIR=$(mktemp -d "$INSTALL_DIR/.$DIR_NAME.XXXXXX")
 BACKUP_DIR="$STAGING_DIR.old"
@@ -118,8 +119,12 @@ fi
 
 # Verify checksum (releases published before checksums existed don't have one)
 echo -e "${YELLOW}Verifying checksum...${NC}"
-HTTP_CODE=$(curl -sSL --retry 3 --connect-timeout 10 -o "$CHECKSUM_FILE" -w '%{http_code}' "$DOWNLOAD_URL.sha256" || true)
-if [ "$HTTP_CODE" = "404" ]; then
+CURL_STATUS=0
+HTTP_CODE=$(curl -sSL --retry 3 --connect-timeout 10 -o "$CHECKSUM_FILE" -w '%{http_code}' "$DOWNLOAD_URL.sha256") || CURL_STATUS=$?
+if [ "$CURL_STATUS" -ne 0 ]; then
+    echo -e "${RED}Error: Could not download checksum (curl exit code $CURL_STATUS)${NC}"
+    exit 1
+elif [ "$HTTP_CODE" = "404" ]; then
     echo -e "${YELLOW}⚠ No checksum published for this release, skipping verification${NC}"
 elif [[ "$HTTP_CODE" == 2* ]]; then
     read -r EXPECTED_SHA256 _ < "$CHECKSUM_FILE" || true
@@ -142,7 +147,8 @@ fi
 
 # Extract archive
 echo -e "${YELLOW}Extracting archive...${NC}"
-if tar -xzf "$TEMP_FILE" -C "$STAGING_DIR" && [ -f "$STAGING_DIR/$BINARY_NAME" ]; then
+# --no-same-owner: files belong to the installing user, not to the UID/GID stored in the archive
+if tar -xzf "$TEMP_FILE" -C "$STAGING_DIR" --no-same-owner && [ -f "$STAGING_DIR/$BINARY_NAME" ]; then
     echo -e "${GREEN}✓ Extraction complete${NC}"
 else
     echo -e "${RED}Error: Failed to extract archive${NC}"
