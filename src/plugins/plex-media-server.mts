@@ -1,6 +1,6 @@
 import { agent, AbstractPlugin, HTTP_TIMEOUT } from "../shared/index.mts";
 
-type Library = MovieLibrary | ShowLibrary;
+type Library = MovieLibrary | ShowLibrary | MusicLibrary | PhotoLibrary;
 
 type AbstractLibrary = {
   name: string;
@@ -17,14 +17,52 @@ type ShowLibrary = AbstractLibrary & {
   episodeCount: number;
 };
 
+type MusicLibrary = AbstractLibrary & {
+  type: typeof TYPE.Music;
+  albumCount: number;
+  trackCount: number;
+};
+
+type PhotoLibrary = AbstractLibrary & {
+  type: typeof TYPE.Photo;
+};
+
+type Sessions = {
+  type: typeof TYPE.Sessions;
+  name: string;
+  plexVersion: string;
+  active_streams: number;
+  transcode_count: number;
+};
+
 const TYPE = {
   Movie: "movie-library",
   Show: "show-library",
+  Music: "music-library",
+  Photo: "photo-library",
+  Sessions: "plex-sessions",
 } as const;
+
+/**
+ * Plex metadata type ids, used to count the items of a given type in a library section.
+ */
+const METADATA_TYPE = {
+  Episode: 4,
+  Album: 9,
+  Track: 10,
+} as const;
+
+/**
+ * Plex library section types this plugin reports on.
+ */
+const LIBRARY_SECTION_TYPES = ["movie", "show", "artist", "photo"] as const;
 
 const CONFIG = ["PLEX_HOST", "PLEX_TOKEN"] as const;
 
-export class PlexMediaServer extends AbstractPlugin<Library, typeof CONFIG> {
+export class PlexMediaServer extends AbstractPlugin<
+  Library | Sessions,
+  typeof CONFIG
+> {
   static readonly description = "Plex Media Server library";
 
   constructor() {
@@ -60,49 +98,100 @@ export class PlexMediaServer extends AbstractPlugin<Library, typeof CONFIG> {
     return json.MediaContainer;
   }
 
-  private getMediaSectionCount(
+  private async getMediaSectionCount(
     key: number,
     params: Record<string, number> = {}
   ) {
-    return this.fetch(`/library/sections/${key}/all`, {
+    const { totalSize } = await this.fetch(`/library/sections/${key}/all`, {
       ...params,
       "X-Plex-Container-Size": "0",
       "X-Plex-Container-Start": "0",
     });
+
+    return totalSize;
+  }
+
+  private async getLibrary(
+    section: PlexLibrarySection,
+    plexVersion: string
+  ): Promise<Library | undefined> {
+    // The API can return section types this plugin doesn't know about
+    if (!(LIBRARY_SECTION_TYPES as readonly string[]).includes(section.type)) {
+      this.logger.debug(
+        `Skipping library "${section.title}" of unsupported type "${section.type}"`
+      );
+      return undefined;
+    }
+
+    const library: AbstractLibrary = {
+      plexVersion,
+      name: section.title,
+      count: await this.getMediaSectionCount(section.key),
+    };
+
+    switch (section.type) {
+      case "movie":
+        return { ...library, type: TYPE.Movie };
+
+      case "show":
+        return {
+          ...library,
+          type: TYPE.Show,
+          episodeCount: await this.getMediaSectionCount(section.key, {
+            type: METADATA_TYPE.Episode,
+          }),
+        };
+
+      case "artist":
+        return {
+          ...library,
+          type: TYPE.Music,
+          albumCount: await this.getMediaSectionCount(section.key, {
+            type: METADATA_TYPE.Album,
+          }),
+          trackCount: await this.getMediaSectionCount(section.key, {
+            type: METADATA_TYPE.Track,
+          }),
+        };
+
+      case "photo":
+        return { ...library, type: TYPE.Photo };
+    }
+  }
+
+  private async getSessions(plexVersion: string): Promise<Sessions> {
+    const { Metadata: sessions = [] } = await this.fetch("/status/sessions");
+
+    return {
+      type: TYPE.Sessions,
+      name: "Plex Media Server",
+      plexVersion,
+      active_streams: sessions.length,
+      transcode_count: sessions.filter(
+        ({ TranscodeSession }) =>
+          TranscodeSession?.videoDecision === "transcode" ||
+          TranscodeSession?.audioDecision === "transcode"
+      ).length,
+    };
   }
 
   async run() {
-    const identity = await this.fetch("/identity");
+    const { version } = await this.fetch("/identity");
     const librarySections = await this.fetch("/library/sections");
 
-    const libraries: Library[] = [];
+    const results: Array<Library | Sessions> = [];
 
     for (const section of librarySections.Directory) {
-      const library: AbstractLibrary = {
-        plexVersion: identity.version,
-        name: section.title,
-        count: (await this.getMediaSectionCount(section.key)).totalSize,
-      };
+      const library = await this.getLibrary(section, version);
 
-      if (section.type === "movie") {
-        libraries.push({
-          ...library,
-          type: TYPE.Movie,
-        });
-      } else {
-        const { totalSize } = await this.getMediaSectionCount(section.key, {
-          type: 4,
-        });
-
-        libraries.push({
-          ...library,
-          type: TYPE.Show,
-          episodeCount: totalSize,
-        });
+      if (library) {
+        results.push(library);
       }
     }
 
-    return libraries;
+    results.push(await this.getSessions(version));
+
+    return results;
   }
 }
 
@@ -130,9 +219,11 @@ type PlexActivitiesResponse = {
 };
 
 type PlexSessionResponse = {
-  Metadata: Array<{
+  size: number;
+  // Omitted when nothing is playing
+  Metadata?: Array<{
     Player: {
-      state: "playing" | "paused" | "stopped";
+      state: "playing" | "paused" | "stopped" | "buffering";
       machineIdentifier: string;
       platform: string;
     };
@@ -140,22 +231,27 @@ type PlexSessionResponse = {
       id: string;
       title: string;
     };
-    TranscodeSession: {
+    // Omitted when the stream is played directly, without transcoding
+    TranscodeSession?: {
       audioDecision: "copy" | "transcode";
       videoDecision: "copy" | "transcode";
     };
     title: string;
-    type: "movie" | "show";
+    type: "movie" | "episode" | "track" | "photo" | "clip";
   }>;
+};
+
+type PlexLibrarySectionType = (typeof LIBRARY_SECTION_TYPES)[number];
+
+type PlexLibrarySection = {
+  key: number;
+  title: string;
+  type: PlexLibrarySectionType;
 };
 
 type PlexLibrarySectionsResponse = {
   size: number;
-  Directory: Array<{
-    key: number;
-    title: string;
-    type: "movie" | "show";
-  }>;
+  Directory: Array<PlexLibrarySection>;
 };
 
 type PlexLibrarySectionAllResponse = {

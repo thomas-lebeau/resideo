@@ -55,7 +55,8 @@ export class Transmission extends AbstractPlugin<
   }
 
   async fetch<T extends Endpoint>(
-    endpoint: T
+    endpoint: T,
+    retried = false
   ): Promise<TransmissionResponse<T>> {
     const response = await fetch(
       `http://${this.config.TRANSMISSION_HOST}/transmission/rpc`,
@@ -77,10 +78,11 @@ export class Transmission extends AbstractPlugin<
       }
     );
 
-    if (response.status === 409) {
+    // 409 means the session id is missing or expired: retry once with the new one
+    if (response.status === 409 && !retried) {
       this.sessionId =
         response.headers.get("X-Transmission-Session-Id") ?? undefined;
-      return this.fetch<T>(endpoint);
+      return this.fetch<T>(endpoint, true);
     }
 
     if (!response.ok) {
