@@ -232,7 +232,10 @@ describe("HuaweiRouter", () => {
       new Response(null, { status: 403 })
     );
 
-    await assert.rejects(new HuaweiRouter().run(), /after logging in again: 403/);
+    await assert.rejects(
+      new HuaweiRouter().run(),
+      /after logging in again: 403/
+    );
     assert.equal(
       fetchMock.mock.calls.filter((call) =>
         String(call.arguments[0]).endsWith("/wan_list.asp")
