@@ -280,6 +280,70 @@ describe("PhilipsHue", () => {
     ]);
   });
 
+  test("run reports streamed events delivered after a newer polled event", async () => {
+    mockBridge();
+
+    await new PhilipsHue().run();
+
+    // The bridge already returns the release when the stream had not delivered
+    // the press yet: the release is reported from polling
+    setButtonReport("button-1", "short_release", NOW + 1_200);
+    mock.timers.setTime(NOW + 60_000);
+    assert.deepEqual(buttonLogs(await new PhilipsHue().run()), [
+      { ...HALLWAY, event: "short_release", timestamp: NOW + 1_200 },
+      OFFICE_BATTERY,
+    ]);
+
+    // The press and the release are then delivered by the stream
+    const plugin = new PhilipsHue() as unknown as Internals;
+    plugin.processEventStreamMessage(
+      eventStreamMessage({ id: "button-1", event: "initial_press", time: NOW + 1_000 })
+    );
+    plugin.processEventStreamMessage(
+      eventStreamMessage({ id: "button-1", event: "short_release", time: NOW + 1_200 })
+    );
+
+    mock.timers.setTime(NOW + 120_000);
+    assert.deepEqual(buttonLogs(await new PhilipsHue().run()), [
+      { ...HALLWAY, event: "initial_press", timestamp: NOW + 1_000 },
+      OFFICE_BATTERY,
+    ]);
+  });
+
+  test("run reports new bridge events when the local clock is ahead of the bridge", async () => {
+    mockBridge();
+
+    // The local clock is 10 minutes ahead: the last event looks stale
+    mock.timers.setTime(NOW + 600_000);
+    assert.deepEqual(buttonLogs(await new PhilipsHue().run()), [
+      HALLWAY,
+      OFFICE_BATTERY,
+    ]);
+
+    // A new event, older than a minute by the local clock
+    setButtonReport("button-1", "initial_press", NOW + 5_000);
+    mock.timers.setTime(NOW + 660_000);
+    assert.deepEqual(buttonLogs(await new PhilipsHue().run()), [
+      { ...HALLWAY, event: "initial_press", timestamp: NOW + 5_000 },
+      OFFICE_BATTERY,
+    ]);
+  });
+
+  test("run reports a streamed event of a new button even if the local clock is ahead", async () => {
+    mockBridge();
+
+    mock.timers.setTime(NOW + 600_000);
+    const plugin = new PhilipsHue() as unknown as Internals;
+    plugin.processEventStreamMessage(
+      eventStreamMessage({ id: "button-1", event: "short_release", time: NOW - 10_000 })
+    );
+
+    assert.deepEqual(buttonLogs(await new PhilipsHue().run()), [
+      { ...HALLWAY, event: "short_release", timestamp: NOW - 10_000 },
+      OFFICE_BATTERY,
+    ]);
+  });
+
   test("processEventStreamMessage ignores other resources and invalid messages", async () => {
     mockBridge();
 

@@ -122,6 +122,8 @@ const STATE = {
 
 const CONFIG = ["HUE_USERNAME", "HUE_HOST"] as const;
 const ONE_MINUTE = 60_000 as const;
+/** How long (bridge clock) an event is remembered after a newer one, to deduplicate it */
+const REPORT_RETENTION = 10 * ONE_MINUTE;
 
 let instance: PhilipsHue | undefined;
 
@@ -131,8 +133,11 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
   private eventSource: EventSource | undefined;
   /** Button reports received from the event stream since the last run, by button id */
   private pendingReports = new Map<string, ButtonReport[]>();
-  /** Time (bridge clock) of the last event reported, by button id */
-  private readonly lastReported = new Map<string, number>();
+  /**
+   * Events already reported (or deliberately skipped), by button id: the time
+   * (bridge clock) of each event, by `reportKey`
+   */
+  private readonly seenReports = new Map<string, Map<string, number>>();
 
   constructor() {
     // A new plugin is created on every run: reuse the instance to keep the
@@ -247,33 +252,55 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
   /**
    * Events of the button that were not reported yet, oldest first: the ones
    * received from the event stream, plus the last one polled from the bridge
-   * in case the stream missed it
+   * in case the stream missed it.
+   *
+   * Events are deduplicated by identity rather than by a time watermark, so a
+   * streamed event delivered after a newer polled one is still reported, and
+   * the local clock is never compared with the bridge's after the first run.
    */
   private takeNewReports(
     button: ButtonResponse[number],
     streamedReports: ButtonReport[]
   ): ButtonReport[] {
+    const polledReport = button.button.button_report;
+    const firstSeen = !this.seenReports.has(button.id);
+    const seen = this.seenReports.get(button.id) ?? new Map<string, number>();
+    this.seenReports.set(button.id, seen);
+
     const reports = [...streamedReports];
 
-    if (button.button.button_report) {
-      reports.push(button.button.button_report);
+    // The first time a button is seen, its last event may be long gone: only
+    // report it if it is recent. It is remembered below either way.
+    if (
+      polledReport &&
+      (!firstSeen || reportTime(polledReport) > Date.now() - ONE_MINUTE)
+    ) {
+      reports.push(polledReport);
     }
 
-    // The first time a button is seen, only report its last event if it is recent
-    let lastReported =
-      this.lastReported.get(button.id) ?? Date.now() - ONE_MINUTE;
+    // Events older than the retention were forgotten: ignore them
+    const oldest = Math.max(...seen.values()) - REPORT_RETENTION;
     const newReports: ButtonReport[] = [];
 
     for (const report of reports.sort(byUpdated)) {
-      const updated = new Date(report.updated).getTime();
+      const key = reportKey(report);
 
-      if (updated > lastReported) {
+      if (reportTime(report) >= oldest && !seen.has(key)) {
+        seen.set(key, reportTime(report));
         newReports.push(report);
-        lastReported = updated;
       }
     }
 
-    this.lastReported.set(button.id, lastReported);
+    if (polledReport) {
+      seen.set(reportKey(polledReport), reportTime(polledReport));
+    }
+
+    const newest = Math.max(...seen.values());
+    for (const [key, time] of seen) {
+      if (time < newest - REPORT_RETENTION) {
+        seen.delete(key);
+      }
+    }
 
     return newReports;
   }
@@ -375,6 +402,14 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
   }
 }
 
+function reportTime(report: ButtonReport): number {
+  return new Date(report.updated).getTime();
+}
+
+function reportKey(report: ButtonReport): string {
+  return `${report.updated}|${report.event}`;
+}
+
 function byUpdated(a: ButtonReport, b: ButtonReport): number {
-  return new Date(a.updated).getTime() - new Date(b.updated).getTime();
+  return reportTime(a) - reportTime(b);
 }
