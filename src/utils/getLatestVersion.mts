@@ -37,5 +37,11 @@ export async function getLatestVersion(): Promise<string> {
 }
 
 function isReleaseTag(tag: unknown): tag is string {
-  return typeof tag === "string" && tag === `v${semver.valid(tag)}`;
+  if (typeof tag !== "string") {
+    return false;
+  }
+
+  const version = semver.valid(tag);
+
+  return version !== null && tag === `v${version}`;
 }

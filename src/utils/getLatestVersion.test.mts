@@ -40,6 +40,7 @@ describe("getLatestVersion", () => {
     "",
     "3.2.3",
     "latest",
+    "vnull",
     "v3.2",
     " v3.2.3",
     "v3.2.3; rm -rf /",
