@@ -80,7 +80,12 @@ describe("PlexMediaServer", () => {
     const data = await new PlexMediaServer().run();
 
     assert.deepEqual(data.slice(0, -1), [
-      { plexVersion: "1.2.3", name: "Movies", count: 10, type: "movie-library" },
+      {
+        plexVersion: "1.2.3",
+        name: "Movies",
+        count: 10,
+        type: "movie-library",
+      },
       {
         plexVersion: "1.2.3",
         name: "TV Shows",
@@ -96,13 +101,21 @@ describe("PlexMediaServer", () => {
         albumCount: 300,
         trackCount: 3000,
       },
-      { plexVersion: "1.2.3", name: "Photos", count: 40, type: "photo-library" },
+      {
+        plexVersion: "1.2.3",
+        name: "Photos",
+        count: 40,
+        type: "photo-library",
+      },
     ]);
   });
 
   test("run skips libraries of an unknown type", async () => {
     mockPlex({
-      sections: [...SECTIONS.slice(0, 1), { key: 5, title: "Other", type: "x" }],
+      sections: [
+        ...SECTIONS.slice(0, 1),
+        { key: 5, title: "Other", type: "x" },
+      ],
     });
 
     const data = await new PlexMediaServer().run();

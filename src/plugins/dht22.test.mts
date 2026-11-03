@@ -14,7 +14,10 @@ describe("DHT22", () => {
   plugin.logger.warn = () => {};
 
   test("readSensor returns the reading", async () => {
-    const sensor = fakeSensor(async () => ({ temperature: 21.5, humidity: 40 }));
+    const sensor = fakeSensor(async () => ({
+      temperature: 21.5,
+      humidity: 40,
+    }));
 
     assert.deepEqual(await plugin.readSensor(sensor, 4, "Bedroom"), {
       name: "Bedroom",

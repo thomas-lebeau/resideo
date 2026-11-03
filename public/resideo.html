@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <style>
   input:invalid {
     border: 1px solid red;
@@ -9,22 +9,30 @@
   <form id="form">
     <label>
       apikey:
-      <input id="apikey" oninput="save(this)" autocomplete="off" required>
+      <input id="apikey" oninput="save(this)" autocomplete="off" required />
     </label>
     <label>
       secret:
-      <input id="secret" type="password" oninput="save(this)" autocomplete="off" required>
+      <input
+        id="secret"
+        type="password"
+        oninput="save(this)"
+        autocomplete="off"
+        required
+      />
     </label>
     <label>
       token:
-      <input id="token" readonly>
+      <input id="token" readonly />
     </label>
     <label>
       code:
-      <input id="code" readonly>
+      <input id="code" readonly />
     </label>
 
-    <button type="button" id="btnLogin" onclick="login()" disabled>login with resideo</button>
+    <button type="button" id="btnLogin" onclick="login()" disabled>
+      login with resideo
+    </button>
     <output id="error"></output>
   </form>
 
@@ -33,46 +41,53 @@
     // the page URL (browser history, Referer, server logs) nor sent to Resideo
     // except for the apikey, which is the OAuth client_id.
     const save = (input) => {
-      sessionStorage.setItem(input.id, input.value)
-      render()
-    }
+      sessionStorage.setItem(input.id, input.value);
+      render();
+    };
 
     const render = () => {
-      token.value = apikey.value && secret.value ? btoa(`${apikey.value}:${secret.value}`) : ''
-      btnLogin.disabled = !(apikey.value && secret.value) || Boolean(code.value)
-    }
+      token.value =
+        apikey.value && secret.value
+          ? btoa(`${apikey.value}:${secret.value}`)
+          : "";
+      btnLogin.disabled =
+        !(apikey.value && secret.value) || Boolean(code.value);
+    };
 
     const login = () => {
-      const state = crypto.randomUUID()
-      sessionStorage.setItem('state', state)
+      const state = crypto.randomUUID();
+      sessionStorage.setItem("state", state);
 
-      const url = new URL('https://api.honeywellhome.com/oauth2/authorize')
-      url.searchParams.set('response_type', 'code')
-      url.searchParams.set('client_id', apikey.value)
-      url.searchParams.set('redirect_uri', window.location.origin + window.location.pathname)
-      url.searchParams.set('state', state)
+      const url = new URL("https://api.honeywellhome.com/oauth2/authorize");
+      url.searchParams.set("response_type", "code");
+      url.searchParams.set("client_id", apikey.value);
+      url.searchParams.set(
+        "redirect_uri",
+        window.location.origin + window.location.pathname
+      );
+      url.searchParams.set("state", state);
 
-      window.location.href = url
-    }
+      window.location.href = url;
+    };
 
     // handle response from login
-    const params = new URL(window.location.href).searchParams
-    if (params.has('code') || params.has('state')) {
-      const expectedState = sessionStorage.getItem('state')
-      sessionStorage.removeItem('state')
+    const params = new URL(window.location.href).searchParams;
+    if (params.has("code") || params.has("state")) {
+      const expectedState = sessionStorage.getItem("state");
+      sessionStorage.removeItem("state");
 
-      if (expectedState && params.get('state') === expectedState) {
-        code.value = params.get('code')
+      if (expectedState && params.get("state") === expectedState) {
+        code.value = params.get("code");
       } else {
-        error.value = 'Invalid OAuth state, please login again.'
+        error.value = "Invalid OAuth state, please login again.";
       }
 
       // keep the authorization code out of the browser history
-      history.replaceState(null, '', window.location.pathname)
+      history.replaceState(null, "", window.location.pathname);
     }
 
-    apikey.value = sessionStorage.getItem('apikey') ?? ''
-    secret.value = sessionStorage.getItem('secret') ?? ''
-    render()
+    apikey.value = sessionStorage.getItem("apikey") ?? "";
+    secret.value = sessionStorage.getItem("secret") ?? "";
+    render();
   </script>
 </body>

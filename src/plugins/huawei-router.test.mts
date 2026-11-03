@@ -35,7 +35,10 @@ function escape(value: string) {
 }
 
 function wanIp(fields: Partial<Record<number, string>>) {
-  const args = Array.from({ length: 57 }, (_, i) => `"${escape(fields[i] ?? "")}"`);
+  const args = Array.from(
+    { length: 57 },
+    (_, i) => `"${escape(fields[i] ?? "")}"`
+  );
   return `new WanIP(${args.join(",")})`;
 }
 
@@ -44,7 +47,8 @@ function wanStats(domain: string, bytesSent: string, bytesReceived: string) {
 }
 
 const VOIP = wanIp({
-  [WAN_IP.DOMAIN]: "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.3.WANIPConnection.1",
+  [WAN_IP.DOMAIN]:
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.3.WANIPConnection.1",
   [WAN_IP.STATUS]: "Connecting",
   [WAN_IP.LAST_CONN_ERR]: "ERROR_NO_CARRIER",
   [WAN_IP.NAME]: "3_VOIP_R_VID_30",
@@ -53,7 +57,8 @@ const VOIP = wanIp({
 });
 
 const INTERNET_UP = wanIp({
-  [WAN_IP.DOMAIN]: "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANIPConnection.1",
+  [WAN_IP.DOMAIN]:
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANIPConnection.1",
   [WAN_IP.STATUS]: "Connected",
   [WAN_IP.LAST_CONN_ERR]: "ERROR_NONE",
   [WAN_IP.NAME]: "2_INTERNET_R_VID_10",
@@ -64,7 +69,8 @@ const INTERNET_UP = wanIp({
 });
 
 const INTERNET_DOWN = wanIp({
-  [WAN_IP.DOMAIN]: "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANIPConnection.1",
+  [WAN_IP.DOMAIN]:
+    "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANIPConnection.1",
   [WAN_IP.STATUS]: "Connecting",
   [WAN_IP.LAST_CONN_ERR]: "ERROR_NO_CARRIER",
   [WAN_IP.NAME]: "2_INTERNET_R_VID_10",
@@ -117,7 +123,10 @@ describe("HuaweiRouter", () => {
   test("cleanString strips quotes and decodes hex escapes", () => {
     const plugin = new HuaweiRouter() as unknown as Internals;
 
-    assert.equal(plugin.cleanString(`"5\\x2e154\\x2e8\\x2e114"`), "5.154.8.114");
+    assert.equal(
+      plugin.cleanString(`"5\\x2e154\\x2e8\\x2e114"`),
+      "5.154.8.114"
+    );
     assert.equal(plugin.cleanString(`'2\\x5fINTERNET'`), "2_INTERNET");
     assert.equal(plugin.cleanString(`"a\\x2cb\\x3ac"`), "a,b:c");
   });
@@ -223,7 +232,10 @@ describe("HuaweiRouter", () => {
       new Response(null, { status: 403 })
     );
 
-    await assert.rejects(new HuaweiRouter().run(), /after logging in again: 403/);
+    await assert.rejects(
+      new HuaweiRouter().run(),
+      /after logging in again: 403/
+    );
     assert.equal(
       fetchMock.mock.calls.filter((call) =>
         String(call.arguments[0]).endsWith("/wan_list.asp")

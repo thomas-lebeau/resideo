@@ -55,9 +55,15 @@ describe("BalayDishwasher", () => {
       items: [
         { key: OPERATION_STATE, value: RUN },
         { key: DOOR_STATE, value: DOOR_OPEN },
-        { key: "BSH.Common.Setting.PowerState", value: "BSH.Common.EnumType.PowerState.On" },
+        {
+          key: "BSH.Common.Setting.PowerState",
+          value: "BSH.Common.EnumType.PowerState.On",
+        },
         { key: "Dishcare.Dishwasher.Option.HalfLoad", value: true },
-        { key: "BSH.Common.Root.ActiveProgram", value: "Dishcare.Dishwasher.Program.Eco50" },
+        {
+          key: "BSH.Common.Root.ActiveProgram",
+          value: "Dishcare.Dishwasher.Program.Eco50",
+        },
         { key: "BSH.Common.Event.Unknown", value: "ignored" },
       ],
     });

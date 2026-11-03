@@ -89,14 +89,14 @@ type Endpoint =
 type Response<T extends Endpoint> = T extends "/resource/light"
   ? LightResponse
   : T extends "/resource/device_power"
-  ? DevicePowerResponse
-  : T extends "/resource/button"
-  ? ButtonResponse
-  : T extends "/resource/device"
-  ? DeviceResponse
-  : T extends "/resource/zigbee_connectivity"
-  ? ZigbeeConnectivityResponse
-  : unknown;
+    ? DevicePowerResponse
+    : T extends "/resource/button"
+      ? ButtonResponse
+      : T extends "/resource/device"
+        ? DeviceResponse
+        : T extends "/resource/zigbee_connectivity"
+          ? ZigbeeConnectivityResponse
+          : unknown;
 
 const STATE = {
   Off: 0,

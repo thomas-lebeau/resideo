@@ -375,8 +375,7 @@ function getProgramName(program: (typeof PROGRAMS)[keyof typeof PROGRAMS]) {
 }
 
 type PostEndpoint =
-  | "/security/oauth/device_authorization"
-  | "/security/oauth/token";
+  "/security/oauth/device_authorization" | "/security/oauth/token";
 
 type PostPollTokenData = {
   grant_type: "urn:ietf:params:oauth:grant-type:device_code";
@@ -396,21 +395,21 @@ type PostData<T extends PostEndpoint> =
         client_id: string;
       }
     : T extends "/security/oauth/token"
-    ? PostPollTokenData | PostRefreshTokenData
-    : never;
+      ? PostPollTokenData | PostRefreshTokenData
+      : never;
 
 type PostResponse<
   T extends PostEndpoint,
-  U extends PostData<T>
+  U extends PostData<T>,
 > = T extends "/security/oauth/device_authorization"
   ? HomeConnectDeviceCodeResponse
   : T extends "/security/oauth/token"
-  ? U extends PostPollTokenData
-    ? "authorization_pending" | "slow_down" | HomeConnectTokenResponse
-    : U extends PostRefreshTokenData
-    ? HomeConnectTokenResponse
-    : never
-  : never;
+    ? U extends PostPollTokenData
+      ? "authorization_pending" | "slow_down" | HomeConnectTokenResponse
+      : U extends PostRefreshTokenData
+        ? HomeConnectTokenResponse
+        : never
+    : never;
 
 type GetEndpoint =
   | "/api/homeappliances"
@@ -420,10 +419,10 @@ type GetEndpoint =
 type GetResponse<T extends GetEndpoint> = T extends "/api/homeappliances"
   ? HomeConnectApplianceResponse
   : T extends `/api/homeappliances/${string}/status`
-  ? HomeConnectStatusResponse
-  : T extends `/api/homeappliances/${string}/programs/active`
-  ? HomeConnectActiveProgramResponse
-  : never;
+    ? HomeConnectStatusResponse
+    : T extends `/api/homeappliances/${string}/programs/active`
+      ? HomeConnectActiveProgramResponse
+      : never;
 
 type HomeConnectApplianceResponse = {
   homeappliances: HomeConnectAppliance[];
@@ -432,7 +431,7 @@ type HomeConnectApplianceResponse = {
 type HomeConnectStatusResponse = {
   status: [
     HomeConnectStatus<typeof STATUS.DOOR_STATE>,
-    HomeConnectStatus<typeof STATUS.OPERATION_STATE>
+    HomeConnectStatus<typeof STATUS.OPERATION_STATE>,
   ];
 };
 
@@ -472,8 +471,7 @@ type DishwasherState = {
   power_state?: (typeof POWER_STATE)[keyof typeof POWER_STATE];
   door_state: (typeof DOOR_STATE)[keyof typeof DOOR_STATE];
   operation_state:
-    | (typeof OPERATION_STATE)[keyof typeof OPERATION_STATE]
-    | undefined;
+    (typeof OPERATION_STATE)[keyof typeof OPERATION_STATE] | undefined;
   active_program: (typeof PROGRAMS)[keyof typeof PROGRAMS] | undefined;
   half_load?: boolean;
 };
@@ -553,30 +551,30 @@ type HomeConnectStatus<T extends (typeof STATUS)[keyof typeof STATUS]> =
         value: (typeof DOOR_STATE)[keyof typeof DOOR_STATE];
       }
     : T extends (typeof STATUS)["OPERATION_STATE"]
-    ? {
-        key: T;
-        value: (typeof OPERATION_STATE)[keyof typeof OPERATION_STATE];
-      }
-    : T extends (typeof STATUS)["POWER_STATE"]
-    ? {
-        key: T;
-        value: (typeof POWER_STATE)[keyof typeof POWER_STATE];
-      }
-    : never;
+      ? {
+          key: T;
+          value: (typeof OPERATION_STATE)[keyof typeof OPERATION_STATE];
+        }
+      : T extends (typeof STATUS)["POWER_STATE"]
+        ? {
+            key: T;
+            value: (typeof POWER_STATE)[keyof typeof POWER_STATE];
+          }
+        : never;
 
 type HomeConnectNotification<
-  T extends (typeof NOTIFICATIONS)[keyof typeof NOTIFICATIONS]
+  T extends (typeof NOTIFICATIONS)[keyof typeof NOTIFICATIONS],
 > = T extends (typeof NOTIFICATIONS)["HALF_LOAD"]
   ? {
       key: T;
       value: boolean;
     }
   : T extends (typeof NOTIFICATIONS)["ACTIVE_PROGRAM"]
-  ? {
-      key: T;
-      value: (typeof PROGRAMS)[keyof typeof PROGRAMS];
-    }
-  : never;
+    ? {
+        key: T;
+        value: (typeof PROGRAMS)[keyof typeof PROGRAMS];
+      }
+    : never;
 
 type HomeConnectGetErrorResponse = {
   error: {

@@ -14,57 +14,67 @@ This Terraform configuration creates log-based metrics in Datadog from the logs 
 This configuration creates the following metrics from your logs:
 
 ### Environmental Metrics
-- `raspberry_home_monitor.temperature` - Temperature readings from thermometers 
+
+- `raspberry_home_monitor.temperature` - Temperature readings from thermometers
 - `raspberry_home_monitor.humidity` - Humidity readings from thermometers
 
-
 ### Thermostat Metrics
+
 - `raspberry_home_monitor.thermostat.state` - Thermostat on/off state
 - `raspberry_home_monitor.thermostat.target_temperature` - Target temperature settings
 - `raspberry_home_monitor.thermostat.operation_mode` - Current oeration mode
 
 ### Device Health Metrics
+
 - `raspberry_home_monitor.battery_level` - Battery levels from ThermoBeacon sensors and Philips Hue buttons
 - `raspberry_home_monitor.internet_speed` - Internet speed test results
 
 ### Philips Hue Metrics
+
 - `raspberry_home_monitor.light.state` - Light on/off states
 - `raspberry_home_monitor.light.brightness` - Light brightness levels
 - `raspberry_home_monitor.button.events` - Button press events from Hue buttons
 
 ### Plex Media Center Metrics
+
 - `raspberry_home_monitor.plex_movies` - Movie library counts
-- `raspberry_home_monitor.plex_shows` - TV show library counts  
+- `raspberry_home_monitor.plex_shows` - TV show library counts
 - `raspberry_home_monitor.plex_episodes` - Episode counts
 
 ### System Health
+
 - `raspberry_home_monitor.errors` - Error rate by plugin
 
 ## Setup Instructions
 
 1. **Clone or navigate to the terraform directory:**
+
    ```bash
    cd terraform/
    ```
 
 2. **Copy and configure variables:**
+
    ```bash
    cp terraform.tfvars.example terraform.tfvars
    ```
-   
+
    Edit `terraform.tfvars` with your actual Datadog credentials:
+
    ```hcl
    datadog_api_key = "your-actual-api-key"
-   datadog_app_key = "your-actual-app-key" 
+   datadog_app_key = "your-actual-app-key"
    datadog_api_url = "https://api.datadoghq.eu"  # or .com for US
    ```
 
 3. **Initialize Terraform:**
+
    ```bash
    terraform init
    ```
 
 4. **Review the plan:**
+
    ```bash
    terraform plan
    ```
@@ -94,9 +104,10 @@ After applying the Terraform configuration, you can:
 ## Cleanup
 
 To remove all metrics:
+
 ```bash
 terraform destroy
 ```
 
-> [!WARNING] 
+> [!WARNING]
 > This will delete all the metrics and their historical data!
