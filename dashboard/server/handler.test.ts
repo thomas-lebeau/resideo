@@ -25,6 +25,7 @@ describe("handleQuery", () => {
     const body = (await response.json()) as SectionResponse;
 
     expect(fetchSpy).not.toHaveBeenCalled();
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body).toMatchObject({ section: "climate", range: "1h", mock: true, from: NOW - 3_600_000, to: NOW });
     const temperatures = body.series.filter((s) => s.queryId === "temperature");
     expect(temperatures.map((s) => s.group.name)).toEqual(["Living Room", "Bedroom", "Server Room"]);
@@ -75,6 +76,8 @@ describe("handleQuery", () => {
     expect(attributes.formulas).toHaveLength(SECTIONS.climate.queries.length);
 
     expect(body.mock).toBe(false);
+    // Real data is cached at the edge so the public endpoint can't fan out to Datadog.
+    expect(response.headers.get("Cache-Control")).toBe("public, s-maxage=60, stale-while-revalidate=60");
     expect(body.series).toEqual([
       { queryId: "temperature", group: { name: "Bedroom" }, points: [[1000, 20.5], [2000, null]], last: 20.5 },
       { queryId: "thermostat_target", group: {}, points: [[1000, 19], [2000, 19.5]], last: 19.5 },
@@ -86,6 +89,7 @@ describe("handleQuery", () => {
     const response = await handleQuery(get("section=health"), KEYS, { fetch: fetchSpy, now: NOW });
 
     expect(response.status).toBe(502);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toEqual({ error: "Datadog API responded 403: Forbidden" });
   });
 

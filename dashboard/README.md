@@ -61,26 +61,36 @@ browser ──GET /api/query?section=climate&range=1h──▶ server/handler.ts
 
 ## Deploying (Vercel)
 
-The [`Dashboard` workflow](../.github/workflows/dashboard.yml) runs the typecheck and tests on every
-change to `dashboard/`. When `dashboard/` changes on `main`, or when the workflow is run manually,
-it deploys to Vercel production with the pinned Vercel CLI from `devDependencies`:
-`vercel pull` → `vercel build --prod` → `vercel deploy --prebuilt --prod`. Pull requests are tested
-but not deployed.
+The [`Dashboard` workflow](../.github/workflows/dashboard.yml) checks every change to `dashboard/`:
+typecheck, tests, production build, and a smoke test of the built Vercel function
+(`npm run smoke:function`, which imports it and calls `GET` in mock mode).
+
+When `dashboard/` changes on `main`, or when the workflow is run manually, it deploys to Vercel
+production with the pinned Vercel CLI from `devDependencies`: `vercel pull` → `vercel build --prod`
+→ smoke test → `vercel deploy --prebuilt --prod`. Pull requests are tested but not deployed. A run
+whose dashboard revision is no longer the latest on `main` (for example an old run re-run) skips
+the deploy, so it can't roll production back.
 
 On Vercel, every file in `api/` becomes a function, so `api/query.ts` only adapts the handler in
-`server/`. `vercel.json` turns off Vercel's own Git deployments so only the workflow deploys.
-`tsconfig.json` sets `rewriteRelativeImportExtensions`, because the function is compiled with it
-and Node can't resolve the `.ts` import extensions at runtime otherwise.
+`server/`. `tsconfig.json` sets `rewriteRelativeImportExtensions`, because the function is compiled
+with it and Node can't resolve the `.ts` import extensions at runtime otherwise. Real Datadog
+responses are cached by Vercel's CDN for 60 s (`s-maxage=60, stale-while-revalidate=60`), so the
+public endpoint makes about one Datadog query per minute per section and range, whatever the
+traffic.
 
 ### One-time setup
 
 1. **Create and link the project.** Run this from this folder, and keep the project's Root Directory
-   as `.`:
+   as `.` (the CLI runs from `dashboard/`):
 
    ```sh
    npm run vercel -- login
    npm run vercel -- link
    ```
+
+   If you created the project by importing the repository in the Vercel dashboard, also
+   **disconnect it from Git** (Settings → Git → Disconnect). Otherwise Vercel builds every push
+   from the repository root alongside this workflow, and those builds fail.
 
 2. **Set the Datadog env vars** for Production: `DD_API_KEY`, `DD_APP_KEY` (ideally an app key
    scoped to `timeseries_query` only), `DD_SITE` and, optionally, `DD_QUERY_SCOPE`. Use the Vercel

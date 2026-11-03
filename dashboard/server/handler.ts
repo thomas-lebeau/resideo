@@ -25,6 +25,15 @@ export interface HandlerOptions {
 
 const DATADOG_TIMEOUT_MS = 10_000;
 
+/**
+ * Real data is cached by the CDN (Vercel's edge, per section+range URL) for a minute, the
+ * metrics' resolution, and served stale for another minute while it refreshes. However much the
+ * public endpoint is called, Datadog sees about one query per minute per URL. Mock data and errors
+ * are never cached.
+ */
+export const CACHE_REAL_DATA = "public, s-maxage=60, stale-while-revalidate=60";
+const NO_STORE = "no-store";
+
 export async function handleQuery(
   request: Request,
   env: Env,
@@ -50,7 +59,7 @@ export async function handleQuery(
 
   try {
     const series = await queryDatadog(queries, { from, to, intervalMs, env, fetchImpl });
-    return json({ ...base, mock: false, series } satisfies SectionResponse);
+    return json({ ...base, mock: false, series } satisfies SectionResponse, 200, CACHE_REAL_DATA);
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : String(error) }, 502);
   }
@@ -134,9 +143,9 @@ function bucketTimes(from: number, to: number, intervalMs: number): number[] {
   return times;
 }
 
-function json(body: unknown, status = 200): Response {
+function json(body: unknown, status = 200, cacheControl = NO_STORE): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: { "Content-Type": "application/json", "Cache-Control": cacheControl },
   });
 }

@@ -21,6 +21,9 @@ defaults:
   run:
     working-directory: dashboard
 
+env:
+  VERCEL_TELEMETRY_DISABLED: "1"
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -47,6 +50,21 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Build
+        run: npm run build
+
+      # Builds the real Vercel output offline (no token: a placeholder project link
+      # is enough for `vercel build`), then imports and calls the emitted function.
+      # This catches output-only breakage, e.g. `.ts` imports left in emitted JS.
+      - name: Build the Vercel output
+        run: |
+          mkdir -p .vercel
+          echo '{"projectId":"prj_ci","orgId":"team_ci","settings":{"framework":"vite"}}' > .vercel/project.json
+          npm run vercel -- build
+
+      - name: Smoke test the built function
+        run: npm run smoke:function
+
   deploy:
     needs: test
     # Production only: pushes to main, or a manual run on main. PRs are tested, not deployed.
@@ -63,8 +81,30 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Concurrency only serializes runs: an older run (e.g. a re-run) could still deploy
+      # after a newer one and roll production back. Deploy only if this run's last
+      # dashboard change is still the latest one on main (unrelated commits on main
+      # don't trigger this workflow, so compare dashboard history, not the tip).
+      - name: Check this is the latest dashboard revision
+        id: latest
+        working-directory: .
+        run: |
+          git fetch --quiet origin main
+          paths=(dashboard .github/workflows/dashboard.yml)
+          mine=$(git log -1 --format=%H HEAD -- "${paths[@]}")
+          latest=$(git log -1 --format=%H origin/main -- "${paths[@]}")
+          if [ "$mine" = "$latest" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping deploy: main has a newer dashboard revision (${latest:0:7}) than this run (${mine:0:7})."
+          fi
 
       - name: Setup Node.js
+        if: steps.latest.outputs.deploy == 'true'
         uses: actions/setup-node@v7
         with:
           node-version: "24.8.0"
@@ -73,14 +113,22 @@ jobs:
 
       # Installs the pinned Vercel CLI from devDependencies.
       - name: Install dependencies
+        if: steps.latest.outputs.deploy == 'true'
         run: npm ci
 
       - name: Pull Vercel project settings and production env
+        if: steps.latest.outputs.deploy == 'true'
         run: npm run vercel -- pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build
+        if: steps.latest.outputs.deploy == 'true'
         run: npm run vercel -- build --prod --token="$VERCEL_TOKEN"
+
+      - name: Smoke test the built function
+        if: steps.latest.outputs.deploy == 'true'
+        run: npm run smoke:function
 
       # The production URL is printed in this step's log.
       - name: Deploy
+        if: steps.latest.outputs.deploy == 'true'
         run: npm run vercel -- deploy --prebuilt --prod --token="$VERCEL_TOKEN"

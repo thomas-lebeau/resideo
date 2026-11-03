@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "vercel": "vercel"
+    "vercel": "vercel",
+    "smoke:function": "node scripts/smoke-function.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
