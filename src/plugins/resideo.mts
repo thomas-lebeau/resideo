@@ -4,8 +4,20 @@ import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
 type ResideoTokenResponse = {
   access_token: string;
   token_type: string;
-  expires_in: number;
+  // Lifetime in seconds. The API returns it as a string, e.g. "1799".
+  expires_in: string | number;
 };
+
+type Token = {
+  access_token: string;
+  expires_at: number;
+};
+
+/**
+ * Request a new token this long before the cached one expires, so a request
+ * never goes out with a token that expires on the way.
+ */
+const TOKEN_EXPIRY_MARGIN_MS = 60_000;
 
 type ResideoDeviceResponse = {
   name: string;
@@ -53,9 +65,20 @@ export class Resideo extends AbstractPlugin<
   }
 
   /**
-   * Gets OAuth access token from Resideo API
+   * Returns the cached OAuth access token, or requests a new one from the
+   * Resideo API when there is none or it is about to expire.
    */
   private async getAccessToken(): Promise<string> {
+    const { access_token, expires_at } = this.store.get() ?? {};
+
+    if (
+      typeof access_token === "string" &&
+      typeof expires_at === "number" &&
+      expires_at - TOKEN_EXPIRY_MARGIN_MS > Date.now()
+    ) {
+      return access_token;
+    }
+
     const basicAuth = Buffer.from(
       `${this.config.HW_API_KEY}:${this.config.HW_API_SECRET}`
     ).toString("base64");
@@ -74,6 +97,16 @@ export class Resideo extends AbstractPlugin<
     }
 
     const data = (await response.json()) as ResideoTokenResponse;
+    const expiresIn = Number(data.expires_in);
+
+    if (Number.isFinite(expiresIn)) {
+      const token: Token = {
+        access_token: data.access_token,
+        expires_at: Date.now() + expiresIn * 1000,
+      };
+      this.store.set(token);
+    }
+
     return data.access_token;
   }
 
@@ -94,6 +127,11 @@ export class Resideo extends AbstractPlugin<
         },
       }
     );
+
+    if (response.status === 401) {
+      // The cached token was revoked or expired early: request a new one on the next run
+      this.store.clear();
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
