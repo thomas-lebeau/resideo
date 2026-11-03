@@ -80,10 +80,11 @@ export abstract class AbstractPlugin<
 
   /**
    * Logger for the plugin.
-   * It is initialized with the name of the plugin.
-   * It is used to log messages from the plugin.
+   * It is named after the plugin slug, so its logs get the same `plugin` tag
+   * as the data the plugin sends.
    */
-  public readonly logger: Logger = new Logger(this.constructor.name);
+  public readonly logger: Logger = (this.constructor as typeof AbstractPlugin)
+    .logger;
 
   constructor(keys: U) {
     for (const key of keys) {
