@@ -2,16 +2,20 @@ name: Dashboard
 
 # Tests the web dashboard on pull requests and pushes to main that change it, and
 # deploys it to Vercel (production) when it changes on main. Setup: see dashboard/README.md.
+# Keep both path filters in sync with `paths` in .github/scripts/dashboard-is-latest.sh:
+# a deploy skipped as outdated relies on the newer commit having started its own run.
 on:
   push:
     branches: [main]
     paths:
       - "dashboard/**"
       - ".github/workflows/dashboard.yml"
+      - ".github/scripts/dashboard-is-latest.sh"
   pull_request:
     paths:
       - "dashboard/**"
       - ".github/workflows/dashboard.yml"
+      - ".github/scripts/dashboard-is-latest.sh"
   workflow_dispatch:
 
 permissions:

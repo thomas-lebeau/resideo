@@ -5,6 +5,7 @@
 # Needs full history (actions/checkout with fetch-depth: 0).
 set -euo pipefail
 
+# Keep in sync with the path filters in .github/workflows/dashboard.yml.
 paths=(dashboard .github/workflows/dashboard.yml .github/scripts/dashboard-is-latest.sh)
 git fetch --quiet origin main
 mine=$(git log -1 --format=%H HEAD -- "${paths[@]}")
