@@ -9,8 +9,9 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
-    cooldown: 
+    cooldown:
       default-days: 7
+    # Minor and patch updates are grouped; major updates get their own PR.
     groups:
       dependencies:
         patterns:
@@ -18,3 +19,31 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # The Raspberry Pi runs Node 18: these majors require a newer Node
+      - dependency-name: "conf"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eventsource"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "undici"
+        update-types: ["version-update:semver-major"]
+      # node-gyp 10+ drops Python 3.7 used by the armv7 build image
+      - dependency-name: "node-gyp"
+        update-types: ["version-update:semver-major"]
+      # typescript-eslint does not support TypeScript 6+ yet
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # Keep in sync with the Node version used in development and CI
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - "*"
