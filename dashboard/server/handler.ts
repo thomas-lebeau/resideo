@@ -41,11 +41,19 @@ export async function handleQuery(
 ): Promise<Response> {
   if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
 
-  const params = new URL(request.url).searchParams;
-  const section = params.get("section");
-  const range = params.get("range") ?? "1h";
+  const url = new URL(request.url);
+  const section = url.searchParams.get("section");
+  const range = url.searchParams.get("range") ?? "1h";
   if (!isSectionId(section)) return json({ error: `Unknown section: ${section}` }, 400);
   if (!isRangeId(range)) return json({ error: `Unknown range: ${range}` }, 400);
+
+  // The CDN cache key is the full URL, so extra, duplicate or reordered parameters would each be a
+  // cache miss and a fresh Datadog query. Only answer the exact form the app sends; redirect
+  // everything else to it, without touching Datadog.
+  const canonical = `?section=${section}&range=${range}`;
+  if (url.search !== canonical) {
+    return new Response(null, { status: 308, headers: { Location: `${url.pathname}${canonical}`, "Cache-Control": NO_STORE } });
+  }
 
   const { durationMs, intervalMs } = RANGES[range];
   const to = now;

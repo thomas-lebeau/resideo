@@ -61,22 +61,27 @@ browser ──GET /api/query?section=climate&range=1h──▶ server/handler.ts
 
 ## Deploying (Vercel)
 
-The [`Dashboard` workflow](../.github/workflows/dashboard.yml) checks every change to `dashboard/`:
-typecheck, tests, production build, and a smoke test of the built Vercel function
-(`npm run smoke:function`, which imports it and calls `GET` in mock mode).
+The [`Dashboard` workflow](../.github/workflows/dashboard.yml) runs on pull requests and pushes to
+`main` that change `dashboard/` (the same triggers as the main CI): typecheck, tests, production
+build, and a smoke test of the built Vercel function (`npm run smoke:function`, which imports it
+and calls `GET` in mock mode).
 
 When `dashboard/` changes on `main`, or when the workflow is run manually, it deploys to Vercel
 production with the pinned Vercel CLI from `devDependencies`: `vercel pull` → `vercel build --prod`
 → smoke test → `vercel deploy --prebuilt --prod`. Pull requests are tested but not deployed. A run
-whose dashboard revision is no longer the latest on `main` (for example an old run re-run) skips
-the deploy, so it can't roll production back.
+whose dashboard revision is no longer the latest on `main` (for example a re-run of an old commit)
+doesn't deploy. It is checked before joining the deploy queue and again just before deploying
+(`.github/scripts/dashboard-is-latest.sh`), so it can't roll production back or displace a newer
+pending deploy.
 
 On Vercel, every file in `api/` becomes a function, so `api/query.ts` only adapts the handler in
 `server/`. `tsconfig.json` sets `rewriteRelativeImportExtensions`, because the function is compiled
 with it and Node can't resolve the `.ts` import extensions at runtime otherwise. Real Datadog
 responses are cached by Vercel's CDN for 60 s (`s-maxage=60, stale-while-revalidate=60`), so the
 public endpoint makes about one Datadog query per minute per section and range, whatever the
-traffic.
+traffic. Only the exact `?section=…&range=…` form is answered; any other query string (extra,
+duplicate or reordered parameters) is redirected to it, so junk parameters can't create new cache
+keys and bypass that bound.
 
 ### One-time setup
 

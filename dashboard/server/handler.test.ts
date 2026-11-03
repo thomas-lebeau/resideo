@@ -14,6 +14,16 @@ describe("handleQuery", () => {
     expect((await handleQuery(get("section=climate&range=1y"), {})).status).toBe(400);
   });
 
+  it("redirects non-canonical query strings without querying Datadog", async () => {
+    const fetchSpy = vi.fn<typeof fetch>();
+    for (const query of ["section=climate&range=1h&nonce=1", "range=1h&section=climate", "section=climate", "section=climate&section=climate&range=1h"]) {
+      const response = await handleQuery(get(query), KEYS, { fetch: fetchSpy, now: NOW });
+      expect(response.status, query).toBe(308);
+      expect(response.headers.get("Location"), query).toBe("/api/query?section=climate&range=1h");
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("rejects non-GET requests", async () => {
     const request = new Request("http://localhost/api/query?section=climate", { method: "POST" });
     expect((await handleQuery(request, {})).status).toBe(405);
@@ -86,7 +96,7 @@ describe("handleQuery", () => {
 
   it("returns 502 with Datadog's error message when the API fails", async () => {
     const fetchSpy = vi.fn<typeof fetch>(async () => Response.json({ errors: ["Forbidden"] }, { status: 403 }));
-    const response = await handleQuery(get("section=health"), KEYS, { fetch: fetchSpy, now: NOW });
+    const response = await handleQuery(get("section=health&range=1h"), KEYS, { fetch: fetchSpy, now: NOW });
 
     expect(response.status).toBe(502);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -95,7 +105,7 @@ describe("handleQuery", () => {
 
   it("still reports an error status when the error body isn't JSON", async () => {
     const fetchSpy = vi.fn<typeof fetch>(async () => new Response("<html>Bad gateway</html>", { status: 503 }));
-    const response = await handleQuery(get("section=health"), KEYS, { fetch: fetchSpy, now: NOW });
+    const response = await handleQuery(get("section=health&range=1h"), KEYS, { fetch: fetchSpy, now: NOW });
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "Datadog API responded 503" });
@@ -103,7 +113,7 @@ describe("handleQuery", () => {
 
   it("returns 502 instead of empty data when a successful response body can't be read", async () => {
     const fetchSpy = vi.fn<typeof fetch>(async () => new Response("{ truncated", { status: 200 }));
-    const response = await handleQuery(get("section=health"), KEYS, { fetch: fetchSpy, now: NOW });
+    const response = await handleQuery(get("section=health&range=1h"), KEYS, { fetch: fetchSpy, now: NOW });
 
     expect(response.status).toBe(502);
     expect(await response.json()).toHaveProperty("error");

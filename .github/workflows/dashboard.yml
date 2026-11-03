@@ -1,7 +1,7 @@
 name: Dashboard
 
-# Tests the web dashboard on every change to it, and deploys it to Vercel
-# (production) when it changes on main. Setup: see dashboard/README.md.
+# Tests the web dashboard on pull requests and pushes to main that change it, and
+# deploys it to Vercel (production) when it changes on main. Setup: see dashboard/README.md.
 on:
   push:
     branches: [main]
@@ -27,8 +27,11 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # PRs share a group so a new push cancels the outdated run. Other runs get their own
+    # group: GitHub keeps only one pending run per group, so a shared group on main could
+    # let a re-run cancel the newest pending test.
     concurrency:
-      group: dashboard-test-${{ github.ref }}
+      group: dashboard-test-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Checkout code
@@ -65,10 +68,29 @@ jobs:
       - name: Smoke test the built function
         run: npm run smoke:function
 
-  deploy:
-    needs: test
+  # Decides whether this run may deploy, before it joins the deploy queue: an outdated
+  # run (e.g. a re-run of an old commit) is skipped here, so it can neither roll
+  # production back nor take the queue's single pending slot from a newer deploy.
+  latest:
     # Production only: pushes to main, or a manual run on main. PRs are tested, not deployed.
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.check.outputs.deploy }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check this is the latest dashboard revision
+        id: check
+        working-directory: .
+        run: .github/scripts/dashboard-is-latest.sh
+
+  deploy:
+    needs: [test, latest]
+    if: needs.latest.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     # Never cancel a production deploy half-way; queue the next one instead.
     concurrency:
@@ -84,27 +106,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Concurrency only serializes runs: an older run (e.g. a re-run) could still deploy
-      # after a newer one and roll production back. Deploy only if this run's last
-      # dashboard change is still the latest one on main (unrelated commits on main
-      # don't trigger this workflow, so compare dashboard history, not the tip).
-      - name: Check this is the latest dashboard revision
-        id: latest
-        working-directory: .
-        run: |
-          git fetch --quiet origin main
-          paths=(dashboard .github/workflows/dashboard.yml)
-          mine=$(git log -1 --format=%H HEAD -- "${paths[@]}")
-          latest=$(git log -1 --format=%H origin/main -- "${paths[@]}")
-          if [ "$mine" = "$latest" ]; then
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping deploy: main has a newer dashboard revision (${latest:0:7}) than this run (${mine:0:7})."
-          fi
-
       - name: Setup Node.js
-        if: steps.latest.outputs.deploy == 'true'
         uses: actions/setup-node@v7
         with:
           node-version: "24.8.0"
@@ -113,22 +115,25 @@ jobs:
 
       # Installs the pinned Vercel CLI from devDependencies.
       - name: Install dependencies
-        if: steps.latest.outputs.deploy == 'true'
         run: npm ci
 
       - name: Pull Vercel project settings and production env
-        if: steps.latest.outputs.deploy == 'true'
         run: npm run vercel -- pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build
-        if: steps.latest.outputs.deploy == 'true'
         run: npm run vercel -- build --prod --token="$VERCEL_TOKEN"
 
       - name: Smoke test the built function
-        if: steps.latest.outputs.deploy == 'true'
         run: npm run smoke:function
+
+      # main may have moved on while this run was testing or queued: check again right
+      # before deploying, so an older revision never replaces a newer one.
+      - name: Re-check this is still the latest dashboard revision
+        id: recheck
+        working-directory: .
+        run: .github/scripts/dashboard-is-latest.sh
 
       # The production URL is printed in this step's log.
       - name: Deploy
-        if: steps.latest.outputs.deploy == 'true'
+        if: steps.recheck.outputs.deploy == 'true'
         run: npm run vercel -- deploy --prebuilt --prod --token="$VERCEL_TOKEN"
