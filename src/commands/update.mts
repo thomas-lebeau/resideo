@@ -6,7 +6,14 @@ import semver from "semver";
 import logger from "../utils/Loggers.mts";
 import { execSync } from "node:child_process";
 
-const UPDATE_COMMAND = `curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/scripts/install.sh | sudo bash`;
+/**
+ * Runs the installer from the release tag rather than `main`, so the script
+ * matches the release being installed. `tag` must be validated by
+ * `getLatestVersion()`, as it is interpolated into a shell command.
+ */
+export function getUpdateCommand(tag: string): string {
+  return `curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/${tag}/scripts/install.sh | sudo bash`;
+}
 
 export async function update() {
   const latestVersion = await getLatestVersion();
@@ -16,11 +23,14 @@ export async function update() {
     );
     return;
   }
+
+  const updateCommand = getUpdateCommand(latestVersion);
+
   logger.info(`
 New version available: ${latestVersion}
 
 To update the application, run the following command:
-${UPDATE_COMMAND}
+${updateCommand}
 
 `);
 
@@ -44,7 +54,7 @@ ${UPDATE_COMMAND}
   }
 
   try {
-    execSync(UPDATE_COMMAND, { stdio: "inherit" });
+    execSync(updateCommand, { stdio: "inherit" });
   } catch (error) {
     logger.error(error as Error);
     return;
