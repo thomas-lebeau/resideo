@@ -2,8 +2,8 @@ import react from "@vitejs/plugin-react";
 import type { ServerResponse } from "node:http";
 import type { Connect, Plugin } from "vite";
 import { defineConfig, loadEnv } from "vite";
-import type { Env } from "./api/query.ts";
-import { handleQuery } from "./api/query.ts";
+import type { Env } from "./server/handler.ts";
+import { handleQuery } from "./server/handler.ts";
 
 /**
  * Serves the portable API handler at /api/query during `vite dev` and `vite preview`.
