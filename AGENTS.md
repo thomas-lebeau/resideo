@@ -9,6 +9,7 @@
    - `logger.info()`: General informational messages about normal operations
    - `logger.warn()`: Warning messages for recoverable issues (always sent to Datadog)
    - `logger.error()`: Error objects only - sends full stack trace to Datadog
+   - `logger.prompt()`: Output for a person at the terminal, such as interactive `--setup` instructions. Always printed, unprefixed, and never sent to Datadog. Use it instead of `console`, which is forbidden by the `no-console` lint rule in `src/`.
 
 3. **Debugging Feedback Loop**: When debugging:
    - Add `logger.debug()` calls with relevant state/data
@@ -16,7 +17,7 @@
 
 4. **File Extensions**: All TypeScript files use `.mts` extension (ES modules). Node.js runs them natively without compilation.
 
-5. **Code Quality**: Run `npm run lint` after changes to catch issues before committing.
+5. **Code Quality**: Run `npm run lint`, `npm run typecheck` and `npm test` after changes to catch issues before committing. The `ci` workflow runs them on every push and pull request, along with the release build and smoke test for every platform (`build` workflow, shared with `release`).
 
 6. **Commit Messages**: Keep commit messages concise and one-liner if possible. Use the format: `<type>: <description>` (e.g., `fix: resolve build error in armv7 workflow`). Don't mix unrelated changes in a single commit - create separate commits for each logical change.
 

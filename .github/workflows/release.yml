@@ -64,111 +64,16 @@ jobs:
           git push origin main
           git push origin ${{ steps.version.outputs.tag }}
 
-  build-linux-x64:
+  build:
     needs: version_bump
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.8.0"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build binary
-        run: |
-          npm run build
-
-      - name: Create release archive
-        run: |
-          mkdir -p release
-          cp bin/raspberry-home-monitor release/
-          cp scripts/raspberry-home-monitor.service release/
-          chmod +x release/raspberry-home-monitor
-          cp -r node_modules release/
-          cd release
-          tar -czf ../raspberry-home-monitor-linux-x64.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
-          cd ..
-          sha256sum raspberry-home-monitor-linux-x64.tar.gz > raspberry-home-monitor-linux-x64.tar.gz.sha256
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: raspberry-home-monitor-linux-x64
-          path: |
-            raspberry-home-monitor-linux-x64.tar.gz
-            raspberry-home-monitor-linux-x64.tar.gz.sha256
-
-  build-linux-arm:
-    needs: version_bump
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - arch: armv7
-            platform: linux/arm/v7
-          - arch: arm64
-            platform: linux/arm64
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build for ${{ matrix.arch }}
-        run: |
-          docker run --rm -v $PWD:/app -w /app --platform ${{ matrix.platform }} node:18-buster bash -c "
-            sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/sources.list &&
-            sed -i 's|security.debian.org|archive.debian.org/debian-security|g' /etc/apt/sources.list &&
-            sed -i '/stretch-updates/d' /etc/apt/sources.list &&
-            apt update &&
-            apt install -y bluetooth bluez libbluetooth-dev libudev-dev build-essential python3 make g++ git &&
-            git config --global --add safe.directory /app &&
-            npm ci --build-from-source &&
-            npm run build
-          "
-      - name: Create release archive
-        run: |
-          mkdir -p release
-          cp bin/raspberry-home-monitor release/
-          cp scripts/raspberry-home-monitor.service release/
-          chmod +x release/raspberry-home-monitor
-          cp -r node_modules release/
-          cd release
-          tar -czf ../raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
-          cd ..
-          sha256sum raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz > raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz.sha256
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: raspberry-home-monitor-linux-${{ matrix.arch }}
-          path: |
-            raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz
-            raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz.sha256
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: main
+      upload: true
 
   cleanup_on_failure:
-    needs: [version_bump, build-linux-x64, build-linux-arm]
-    if: ${{ always() && needs.version_bump.result == 'success' && (needs.build-linux-x64.result == 'failure' || needs.build-linux-arm.result == 'failure') }}
+    needs: [version_bump, build]
+    if: ${{ always() && needs.version_bump.result == 'success' && needs.build.result == 'failure' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -192,7 +97,7 @@ jobs:
           git push origin main --force
 
   release:
-    needs: [version_bump, build-linux-x64, build-linux-arm]
+    needs: [version_bump, build]
     if: ${{ success() }}
     runs-on: ubuntu-latest
 

@@ -29,42 +29,71 @@ const CONFIG = ["THERMOBEACON_DEVICES"] as const;
 
 const loadNoble = lazyImport(() => import("@abandonware/noble"));
 
+type NobleModule = typeof Noble;
+type DiscoverListener = (peripheral: Noble.Peripheral) => void;
+
 export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
   public static readonly description =
     "Thermobeacon WS08 temperature and humidity sensors";
 
   public readonly names = ["ThermoBeacon"];
   private timer: NodeJS.Timeout | undefined;
+  private onDiscover: DiscoverListener | undefined;
   private readonly devices: Record<string, string>;
+  private readonly loadNoble: () => Promise<NobleModule>;
 
-  constructor() {
+  /**
+   * @param load - loads the noble module, overridable in tests
+   */
+  constructor(load: () => Promise<NobleModule> = loadNoble) {
     super(CONFIG);
 
     this.devices = JSON.parse(this.config.THERMOBEACON_DEVICES);
+    this.loadNoble = load;
   }
 
   async start() {
-    const noble = await loadNoble();
+    const noble = await this.loadNoble();
 
     // Wait for Bluetooth adapter to be powered on
     if (noble._state !== "poweredOn") {
-      await new Promise<void>((resolve) => {
-        setTimeout(() => resolve(), TIMEOUT);
+      await new Promise<void>((resolve, reject) => {
+        const cleanup = () => {
+          clearTimeout(timer);
+          noble.removeListener("stateChange", onStateChange);
+        };
 
-        noble.once("stateChange", (state) => {
+        const onStateChange = (state: string) => {
           if (state === "poweredOn") {
+            cleanup();
             resolve();
           }
-        });
+        };
+
+        const timer = setTimeout(() => {
+          cleanup();
+          reject(
+            new Error(
+              `Bluetooth adapter did not power on within ${TIMEOUT}ms (state: ${noble._state})`
+            )
+          );
+        }, TIMEOUT);
+
+        noble.on("stateChange", onStateChange);
       });
     }
+
     await noble.startScanningAsync([], true);
   }
 
   async stop() {
     clearTimeout(this.timer);
-    const noble = await loadNoble();
-    noble.removeAllListeners();
+    const noble = await this.loadNoble();
+
+    if (this.onDiscover) {
+      noble.removeListener("discover", this.onDiscover);
+      this.onDiscover = undefined;
+    }
 
     // Hack to force noble to stop scanning
     await noble.startScanningAsync([], true);
@@ -107,43 +136,55 @@ export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
 
   async run() {
     await this.start();
-    const noble = await loadNoble();
-    const data: ThermoBeacon[] = [];
+    const noble = await this.loadNoble();
+    const deviceCount = Object.keys(this.devices).length;
+    // Scanning allows duplicates, so keep only the latest reading per sensor
+    const readings = new Map<string, ThermoBeacon>();
 
-    return new Promise<ThermoBeacon[]>((resolve) => {
-      const stopAndResolve = async (data: ThermoBeacon[]) => {
-        await this.stop();
-        resolve(data);
+    return new Promise<ThermoBeacon[]>((resolve, reject) => {
+      let settled = false;
+
+      const stopAndResolve = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+
+        this.stop().then(() => resolve(Array.from(readings.values())), reject);
       };
 
-      noble.on("discover", (peripheral: Noble.Peripheral) => {
+      this.onDiscover = (peripheral) => {
         const { address, rssi } = peripheral;
         const { manufacturerData, serviceUuids } = peripheral.advertisement;
 
-        if (serviceUuids.includes(SERVICE_UUID)) {
-          const readings = this.parseSensorReadings(manufacturerData);
-          const macAddress = address || this.parseMacAddress(manufacturerData);
-
-          if (!readings) {
-            // continue scanning
-            return;
-          }
-
-          data.push({
-            type: "thermometer",
-            name: this.devices[macAddress],
-            mac_address: macAddress,
-            rssi,
-            ...readings,
-          });
-
-          if (data.length >= Object.keys(this.devices).length) {
-            stopAndResolve(data);
-          }
+        if (!serviceUuids.includes(SERVICE_UUID)) {
+          return;
         }
-      });
 
-      this.timer = setTimeout(() => stopAndResolve(data), TIMEOUT);
+        const sensorReadings = this.parseSensorReadings(manufacturerData);
+
+        if (!sensorReadings) {
+          // continue scanning
+          return;
+        }
+
+        const macAddress = address || this.parseMacAddress(manufacturerData);
+
+        readings.set(macAddress, {
+          type: "thermometer",
+          name: this.devices[macAddress],
+          mac_address: macAddress,
+          rssi,
+          ...sensorReadings,
+        });
+
+        if (readings.size >= deviceCount) {
+          stopAndResolve();
+        }
+      };
+
+      noble.on("discover", this.onDiscover);
+      this.timer = setTimeout(stopAndResolve, TIMEOUT);
     });
   }
 }
