@@ -10,6 +10,7 @@ import {
   forEachPlugin,
   getSelectedPlugins,
   getUnknownPluginSlugs,
+  instantiatePending,
 } from "./plugins.mts";
 
 class ConfiguredPlugin extends AbstractPlugin {
@@ -36,33 +37,99 @@ class UnconfiguredPlugin extends AbstractPlugin {
   }
 }
 
+let flakyAttempts = 0;
+
+class FlakyPlugin extends AbstractPlugin {
+  static readonly description = "Plugin whose constructor fails once";
+
+  constructor() {
+    super([]);
+
+    if (++flakyAttempts === 1) {
+      throw new Error("flaky constructor");
+    }
+  }
+
+  async run() {
+    return undefined;
+  }
+}
+
 describe("createPlugins", () => {
   test("reports a missing config once and leaves the plugin out", (t) => {
     const errorSpy = mock.method(console, "error", () => {});
     t.after(() => errorSpy.mock.restore());
 
-    const instances = createPlugins([
+    const plugins = createPlugins([
       ConfiguredPlugin,
       UnconfiguredPlugin,
     ] as unknown as PluginConstructor[]);
 
-    assert.equal(instances.length, 1);
-    assert.ok(instances[0] instanceof ConfiguredPlugin);
+    assert.equal(plugins.instances.length, 1);
+    assert.ok(plugins.instances[0] instanceof ConfiguredPlugin);
+    assert.deepEqual(plugins.pending, []);
     assert.equal(errorSpy.mock.callCount(), 1);
     assert.match(
       String(errorSpy.mock.calls[0]?.arguments[0]),
       /PLUGINS_TEST_MISSING_ENV is not set/
     );
+
+    instantiatePending(plugins);
+
+    assert.equal(plugins.instances.length, 1);
+    assert.equal(errorSpy.mock.callCount(), 1);
+  });
+
+  test("retries other constructor errors until the plugin is instantiated", (t) => {
+    const errorSpy = mock.method(console, "error", () => {});
+    t.after(() => errorSpy.mock.restore());
+    flakyAttempts = 0;
+
+    const plugins = createPlugins([
+      ConfiguredPlugin,
+      FlakyPlugin,
+    ] as unknown as PluginConstructor[]);
+
+    assert.equal(plugins.instances.length, 1);
+    assert.deepEqual(plugins.pending, [FlakyPlugin]);
+    assert.equal(errorSpy.mock.callCount(), 1);
+    assert.match(
+      String(errorSpy.mock.calls[0]?.arguments[0]),
+      /flaky constructor/
+    );
+
+    instantiatePending(plugins);
+
+    assert.equal(plugins.instances.length, 2);
+    assert.ok(plugins.instances[1] instanceof FlakyPlugin);
+    assert.deepEqual(plugins.pending, []);
+    assert.equal(errorSpy.mock.callCount(), 1);
   });
 
   test("throws when no plugin is selected", () => {
     assert.throws(() => createPlugins([]), /No plugins found/);
   });
+
+  test("throws when no selected plugin could be instantiated", (t) => {
+    const errorSpy = mock.method(console, "error", () => {});
+    t.after(() => errorSpy.mock.restore());
+    flakyAttempts = 0;
+
+    assert.throws(
+      () =>
+        createPlugins([
+          UnconfiguredPlugin,
+          FlakyPlugin,
+        ] as unknown as PluginConstructor[]),
+      /No plugin could be started/
+    );
+    assert.equal(errorSpy.mock.callCount(), 2);
+  });
 });
 
 describe("forEachPlugin", () => {
   test("passes the same instances on every call", async () => {
-    const instances = createPlugins([
+    const { instances } = createPlugins([
       ConfiguredPlugin,
     ] as unknown as PluginConstructor[]);
     const seen: AbstractPlugin[] = [];

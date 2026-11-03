@@ -14,6 +14,7 @@ import {
   createPlugins,
   forEachPlugin,
   getUnknownPluginSlugs,
+  instantiatePending,
 } from "./utils/plugins.mts";
 import type { AbstractPlugin } from "./shared/AbstractPlugin.mts";
 
@@ -27,7 +28,10 @@ async function main(): Promise<void> {
   async function collectAndSendData() {
     count++;
 
-    await forEachPlugin(plugins, async (plugin) => {
+    // Retry plugins whose constructor failed for a reason other than a missing config
+    instantiatePending(plugins);
+
+    await forEachPlugin(plugins.instances, async (plugin) => {
       const Plugin = plugin.constructor as typeof AbstractPlugin;
 
       if (count % Plugin.interval !== 0) {
@@ -55,7 +59,7 @@ async function main(): Promise<void> {
     isShuttingDown = true;
     clearTimeout(timeout);
 
-    await forEachPlugin(plugins, async (plugin) => plugin.stop());
+    await forEachPlugin(plugins.instances, async (plugin) => plugin.stop());
     await datadog.flush();
 
     logger.info("Shutting down...");
@@ -92,11 +96,15 @@ async function main(): Promise<void> {
   const plugins = createPlugins();
 
   if (args.values.setup) {
-    return await forEachPlugin(plugins, async (plugin) => plugin.setup());
+    return await forEachPlugin(plugins.instances, async (plugin) =>
+      plugin.setup()
+    );
   }
 
   if (args.values["clear-store"]) {
-    return await forEachPlugin(plugins, async (plugin) => plugin.clearStore());
+    return await forEachPlugin(plugins.instances, async (plugin) =>
+      plugin.clearStore()
+    );
   }
 
   datadog.assertCanSend();

@@ -1,8 +1,9 @@
 import { plugins as availablePlugins } from "../plugins/index.mts";
 import { args } from "./args.mts";
-import type {
-  AbstractPlugin,
-  PluginConstructor,
+import {
+  MissingConfigError,
+  type AbstractPlugin,
+  type PluginConstructor,
 } from "../shared/AbstractPlugin.mts";
 
 /**
@@ -35,30 +36,55 @@ export function getUnknownPluginSlugs(
   return slugs.filter((slug) => slug !== "all" && !known.has(slug));
 }
 
+export type Plugins = {
+  /** Instantiated plugins, reused for run, stop, setup and clear-store */
+  instances: AbstractPlugin[];
+  /** Plugins whose constructor threw an error other than a missing config */
+  pending: PluginConstructor[];
+};
+
 /**
- * Instantiate the selected plugins once. A plugin whose constructor throws
- * (e.g. missing configuration) is reported and left out.
+ * Instantiate the selected plugins once. Throws when no plugin is selected or
+ * when none of them could be instantiated, so the process doesn't keep running
+ * with nothing to do.
  */
 export function createPlugins(
   selectedPlugins: PluginConstructor[] = getSelectedPlugins()
-): AbstractPlugin[] {
+): Plugins {
   if (selectedPlugins.length === 0) {
     throw new Error(
       "No plugins found, run with --list-plugins to see available plugins"
     );
   }
 
-  const instances: AbstractPlugin[] = [];
+  const plugins: Plugins = { instances: [], pending: selectedPlugins };
 
-  for (const Plugin of selectedPlugins) {
-    try {
-      instances.push(new Plugin());
-    } catch (error) {
-      Plugin.logger.error(error as Error);
-    }
+  instantiatePending(plugins);
+
+  if (plugins.instances.length === 0) {
+    throw new Error("No plugin could be started, see the errors above");
   }
 
-  return instances;
+  return plugins;
+}
+
+/**
+ * Try to instantiate the pending plugins, reporting every constructor error.
+ * A missing config is not retried, because the environment doesn't change
+ * while the process runs. Any other error is retried on the next call.
+ */
+export function instantiatePending(plugins: Plugins): void {
+  plugins.pending = plugins.pending.filter((Plugin) => {
+    try {
+      plugins.instances.push(new Plugin());
+
+      return false;
+    } catch (error) {
+      Plugin.logger.error(error as Error);
+
+      return !(error instanceof MissingConfigError);
+    }
+  });
 }
 
 /**
