@@ -94,12 +94,16 @@ async function queryDatadog(
     signal: AbortSignal.timeout(DATADOG_TIMEOUT_MS),
   });
 
-  const body = (await response.json().catch(() => ({}))) as DatadogTimeseriesResponse;
   if (!response.ok) {
+    // An error body is optional detail: tolerate it being missing or invalid.
+    const body = (await response.json().catch(() => ({}))) as DatadogTimeseriesResponse;
     const detail = [body.errors].flat().filter(Boolean).join("; ");
     throw new Error(`Datadog API responded ${response.status}${detail ? `: ${detail}` : ""}`);
   }
-  return normalize(queries, body);
+  // A success body that can't be read (invalid JSON, timeout mid-body) is an error too: reading it
+  // as "no data" would blank the tiles and make alerts look healthy instead of keeping the last
+  // good data in the UI.
+  return normalize(queries, (await response.json()) as DatadogTimeseriesResponse);
 }
 
 /** Turns Datadog's columnar response (shared `times`, one `values` row per series) into Series. */

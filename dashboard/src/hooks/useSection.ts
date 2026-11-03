@@ -25,9 +25,16 @@ export function useSection(section: SectionId, range: RangeId): SectionState {
       setState((s) => ({ ...s, loading: true }));
       try {
         const response = await fetch(`/api/query?section=${section}&range=${range}`, { signal: current.signal });
-        const body = await response.json().catch(() => null);
-        if (!response.ok) throw new Error(body?.error ?? `HTTP ${response.status}`);
-        setState({ data: body as SectionResponse, loading: false });
+        if (!response.ok) {
+          // The error body is optional detail; fall back to the status.
+          const body = await response.json().catch(() => null);
+          throw new Error(body?.error ?? `HTTP ${response.status}`);
+        }
+        // A success body that fails to read (or is aborted mid-read) must not replace good data.
+        const data = (await response.json()) as SectionResponse;
+        // A newer load (range change) or cleanup may have cancelled this one while reading.
+        if (current.signal.aborted) return;
+        setState({ data, loading: false });
       } catch (error) {
         if (current.signal.aborted) return;
         setState((s) => ({ ...s, loading: false, error: error instanceof Error ? error.message : String(error) }));

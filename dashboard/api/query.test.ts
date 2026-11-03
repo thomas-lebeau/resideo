@@ -88,6 +88,22 @@ describe("handleQuery", () => {
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "Datadog API responded 403: Forbidden" });
   });
+
+  it("still reports an error status when the error body isn't JSON", async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () => new Response("<html>Bad gateway</html>", { status: 503 }));
+    const response = await handleQuery(get("section=health"), KEYS, { fetch: fetchSpy, now: NOW });
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "Datadog API responded 503" });
+  });
+
+  it("returns 502 instead of empty data when a successful response body can't be read", async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () => new Response("{ truncated", { status: 200 }));
+    const response = await handleQuery(get("section=health"), KEYS, { fetch: fetchSpy, now: NOW });
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toHaveProperty("error");
+  });
 });
 
 describe("normalize", () => {
