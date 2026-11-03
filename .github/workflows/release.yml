@@ -16,9 +16,12 @@ on:
 permissions:
   contents: write
 
+# Nothing is pushed until both builds pass: the builds use the new version
+# locally, and the `release` job commits the bump, tags it and pushes both at
+# once. If a build fails, `main` and the tags are left untouched.
 jobs:
   version_bump:
-    if: github.actor == 'thomas-lebeau'
+    if: github.actor == 'thomas-lebeau' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.version.outputs.tag }}
@@ -29,84 +32,66 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24.8.0"
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Configure Git
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Bump version
+      - name: Compute next version
         id: version
+        env:
+          VERSION_BUMP: ${{ github.event.inputs.version_bump }}
         run: |
           PREVIOUS_VERSION=$(node -p "require('./package.json').version")
-          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
+          npm version "$VERSION_BUMP" --no-git-tag-version
           NEW_VERSION=$(node -p "require('./package.json').version")
           echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Commit version bump
-        run: |
-          git add package.json package-lock.json
-          git commit -m "chore: release ${{ steps.version.outputs.tag }}"
-          git tag ${{ steps.version.outputs.tag }}
-          git push origin main
-          git push origin ${{ steps.version.outputs.tag }}
-
   build:
     needs: version_bump
     uses: ./.github/workflows/build.yml
     with:
-      ref: main
+      ref: ${{ github.sha }}
+      version: ${{ needs.version_bump.outputs.new_version }}
       upload: true
 
-  cleanup_on_failure:
+  release:
     needs: [version_bump, build]
-    if: ${{ always() && needs.version_bump.result == 'success' && needs.build.result == 'failure' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.sha }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.8.0"
 
       - name: Configure Git
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-      - name: Delete tag and revert commit
+      # Atomic, non-force push: if `main` moved since the workflow started, the
+      # push is rejected and nothing (neither the bump nor the tag) is published.
+      - name: Commit, tag and push version bump
+        env:
+          NEW_VERSION: ${{ needs.version_bump.outputs.new_version }}
+          TAG: ${{ needs.version_bump.outputs.tag }}
         run: |
-          echo "Build failed, reverting version bump..."
-          git push origin :refs/tags/${{ needs.version_bump.outputs.tag }}
-          git reset --hard HEAD~1
-          git push origin main --force
-
-  release:
-    needs: [version_bump, build]
-    if: ${{ success() }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
+          npm version "$NEW_VERSION" --no-git-tag-version
+          git add package.json package-lock.json
+          git commit -m "chore: release $TAG"
+          git tag "$TAG"
+          git push --atomic origin HEAD:refs/heads/main "refs/tags/$TAG"
 
       - name: Generate changelog
         id: changelog
@@ -124,7 +109,7 @@ jobs:
         uses: actions/download-artifact@v4
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: ${{ needs.version_bump.outputs.tag }}
           name: Release ${{ needs.version_bump.outputs.tag }}
