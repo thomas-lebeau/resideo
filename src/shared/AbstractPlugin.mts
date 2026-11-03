@@ -1,6 +1,5 @@
 import { Logger } from "../utils/Loggers.mts";
 import { Store } from "../utils/store.mts";
-import { toKebabCase } from "./toKebabCase.mts";
 
 type OnOff = 0 | 1;
 
@@ -56,9 +55,13 @@ export abstract class AbstractPlugin<
    */
   static readonly interval: number = 1;
 
-  static get slug(): string {
-    return toKebabCase(this.name);
-  }
+  /**
+   * Stable identifier of the plugin, in kebab-case.
+   * It is used by `--plugin`, as the Datadog `plugin` tag and as the store key,
+   * so every plugin must set it explicitly: unlike the class name, it doesn't
+   * change when the class is renamed or the bundle is minified.
+   */
+  static readonly slug: string;
 
   static get logger(): Logger {
     return new Logger(this.slug);
@@ -76,7 +79,11 @@ export abstract class AbstractPlugin<
    * Store for the plugin.
    * It can be used to store authentication tokens, etc. that are needed for the plugin to work.
    */
-  protected readonly store = new Store<V>(this.constructor.name);
+  protected readonly store = new Store<V>(
+    (this.constructor as typeof AbstractPlugin).slug,
+    // Stores used to be keyed by the class name: move them to the slug.
+    this.constructor.name
+  );
 
   /**
    * Logger for the plugin.

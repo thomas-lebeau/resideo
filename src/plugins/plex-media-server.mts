@@ -63,6 +63,7 @@ export class PlexMediaServer extends AbstractPlugin<
   Library | Sessions,
   typeof CONFIG
 > {
+  static readonly slug = "plex-media-server";
   static readonly description = "Plex Media Server library";
 
   constructor() {

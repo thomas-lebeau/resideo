@@ -10,6 +10,7 @@ type HomeMonitorData = {
 let instance: HomeMonitor | undefined;
 
 export class HomeMonitor extends AbstractPlugin<HomeMonitorData> {
+  public static readonly slug = "home-monitor";
   public static readonly description = "Self-monitoring of the home monitor";
 
   private start = Date.now();

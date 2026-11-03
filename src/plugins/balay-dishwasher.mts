@@ -32,6 +32,7 @@ export class BalayDishwasher extends AbstractPlugin<
   typeof CONFIG,
   Token
 > {
+  public static readonly slug = "balay-dishwasher";
   public static readonly description = "Balay dishwasher via Home Connect API";
 
   private readonly baseUrl = "https://api.home-connect.com";
