@@ -69,6 +69,7 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       ref: main
+      upload: true
 
   cleanup_on_failure:
     needs: [version_bump, build]

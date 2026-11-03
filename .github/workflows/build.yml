@@ -2,7 +2,7 @@ name: Build
 
 # Builds and smoke-tests the release archives for every supported platform.
 # Shared by `ci.yml` (on every push and pull request) and `release.yml`, so CI
-# builds exactly what a release ships.
+# builds exactly what a release ships. Only `release.yml` uploads the archives.
 
 on:
   workflow_call:
@@ -12,6 +12,11 @@ on:
         required: false
         type: string
         default: ""
+      upload:
+        description: "Upload the archives as workflow artifacts, for the release job to publish"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -54,6 +59,7 @@ jobs:
         run: bash scripts/smoke-test.sh raspberry-home-monitor-linux-x64.tar.gz
 
       - name: Upload artifacts
+        if: ${{ inputs.upload }}
         uses: actions/upload-artifact@v4
         with:
           name: raspberry-home-monitor-linux-x64
@@ -112,6 +118,7 @@ jobs:
             bash scripts/smoke-test.sh raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz
 
       - name: Upload artifacts
+        if: ${{ inputs.upload }}
         uses: actions/upload-artifact@v4
         with:
           name: raspberry-home-monitor-linux-${{ matrix.arch }}
