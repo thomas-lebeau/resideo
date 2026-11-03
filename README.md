@@ -226,7 +226,7 @@ raspberry-home-monitor --env ~/.path/to/.env
 | **ThermoBeacon**      | BLE temperature sensors   | Temperature, humidity, battery         |
 | **DHT22**             | GPIO temperature sensor   | Temperature, humidity                  |
 | **Balay Dishwasher**  | Home Connect appliances   | Program status, remaining time         |
-| **Fast SpeedTest**    | Internet speed monitoring | Download/upload speeds, latency        |
+| **Fast SpeedTest**    | Internet speed monitoring | Download speed                         |
 | **Huawei Router**     | Router statistics         | Connection status, bandwidth usage     |
 | **Transmission**      | BitTorrent client         | Active torrents, download/upload rates |
 
@@ -521,4 +521,4 @@ Release notes are published on [GitHub Releases](https://github.com/thomas-lebea
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) for details.

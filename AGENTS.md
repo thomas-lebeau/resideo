@@ -9,6 +9,7 @@
    - `logger.info()`: General informational messages about normal operations
    - `logger.warn()`: Warning messages for recoverable issues (always sent to Datadog)
    - `logger.error()`: Error objects only - sends full stack trace to Datadog
+   - `logger.prompt()`: Output for a person at the terminal, such as interactive `--setup` instructions. Always printed, unprefixed, and never sent to Datadog. Use it instead of `console`, which is forbidden by the `no-console` lint rule in `src/`.
 
 3. **Debugging Feedback Loop**: When debugging:
    - Add `logger.debug()` calls with relevant state/data

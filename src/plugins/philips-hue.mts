@@ -29,10 +29,12 @@ type LightResponse = Array<{
   on: {
     on: boolean;
   };
-  dimming: {
+  // Absent on lights without dimming (e.g. smart plugs)
+  dimming?: {
     brightness: number;
   };
-  color_temperature: {
+  // Absent on lights without colour temperature (e.g. colour-only bulbs)
+  color_temperature?: {
     // minimum: 50, maximum: 1000
     mirek: number;
   };
@@ -184,14 +186,23 @@ export class PhilipsHue extends AbstractPlugin<Light | Button, typeof CONFIG> {
 
       const reachable = connectivity?.status === "connected";
 
+      if (!reachable) {
+        return {
+          type: "light",
+          name: light.metadata.name,
+          state: STATE.Off,
+          brightness: 0,
+        } as const;
+      }
+
       return {
         type: "light",
         name: light.metadata.name,
-        state: reachable ? (light.on.on ? STATE.On : STATE.Off) : STATE.Off,
-        brightness: reachable ? light.dimming.brightness : 0,
-        ...(reachable
-          ? { color_temperature: light.color_temperature.mirek }
-          : undefined),
+        state: light.on.on ? STATE.On : STATE.Off,
+        ...(light.dimming && { brightness: light.dimming.brightness }),
+        ...(light.color_temperature && {
+          color_temperature: light.color_temperature.mirek,
+        }),
       } as const;
     });
   }
