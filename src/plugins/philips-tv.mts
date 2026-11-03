@@ -47,6 +47,7 @@ const STATE = {
 } as const;
 
 export class PhilipsTV extends AbstractPlugin<PhilipsTVDevice, typeof CONFIG> {
+  static readonly slug = "philips-tv";
   static readonly description = "Philips Android TV monitoring";
   private readonly baseUrl: string;
 

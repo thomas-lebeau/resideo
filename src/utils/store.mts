@@ -11,10 +11,39 @@ export class Store<
   U extends string = string
 > {
   private readonly key: U;
-  private readonly store: Conf<Record<U, T>> = store as Conf<Record<U, T>>;
+  private readonly legacyKey: string | undefined;
+  private readonly store: Conf<Record<string, T>>;
 
-  constructor(key: U) {
+  /**
+   * @param key Key the value is stored under.
+   * @param legacyKey Key the value used to be stored under. If the value is
+   * only found there, it is moved to `key`. If both exist, `key` wins and the
+   * legacy entry is left alone until `clear()`.
+   * @param conf Underlying store, overridable for tests.
+   */
+  constructor(key: U, legacyKey?: string, conf: Conf = store) {
     this.key = key;
+    this.legacyKey = legacyKey === key ? undefined : legacyKey;
+    this.store = conf as Conf<Record<string, T>>;
+
+    this.migrateLegacyValue();
+  }
+
+  /**
+   * Moves the value from `legacyKey` to `key`, unless there is no legacy value
+   * or `key` already holds one.
+   */
+  private migrateLegacyValue() {
+    if (
+      this.legacyKey === undefined ||
+      this.store.has(this.key) ||
+      !this.store.has(this.legacyKey)
+    ) {
+      return;
+    }
+
+    this.store.set(this.key, this.store.get(this.legacyKey));
+    this.store.delete(this.legacyKey);
   }
 
   get(): T | undefined {
@@ -22,10 +51,15 @@ export class Store<
   }
 
   set(value: T) {
-    store.set(this.key, value);
+    this.store.set(this.key, value);
   }
 
   clear() {
     this.store.delete(this.key);
+
+    // A leftover legacy value would otherwise be moved back on the next start.
+    if (this.legacyKey !== undefined) {
+      this.store.delete(this.legacyKey);
+    }
   }
 }

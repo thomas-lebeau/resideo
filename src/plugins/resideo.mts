@@ -44,6 +44,7 @@ export class Resideo extends AbstractPlugin<
   Thermometer | Thermostat,
   typeof CONFIG
 > {
+  static readonly slug = "resideo";
   static readonly description = "Resideo/Honeywell thermostat and sensors";
 
   private readonly baseUrl = "https://api.honeywellhome.com";

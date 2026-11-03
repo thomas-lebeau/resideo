@@ -33,6 +33,7 @@ type NobleModule = typeof Noble;
 type DiscoverListener = (peripheral: Noble.Peripheral) => void;
 
 export class Thermobeacon extends AbstractPlugin<ThermoBeacon, typeof CONFIG> {
+  public static readonly slug = "thermobeacon";
   public static readonly description =
     "Thermobeacon WS08 temperature and humidity sensors";
 

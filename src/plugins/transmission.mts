@@ -46,6 +46,7 @@ export class Transmission extends AbstractPlugin<
   TransmissionData,
   typeof CONFIG
 > {
+  public static readonly slug = "transmission";
   public static readonly description = "Transmission client";
   private sessionId: string | undefined;
 

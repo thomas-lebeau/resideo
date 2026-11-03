@@ -5,6 +5,8 @@ import datadog from "../utils/Datadog.mts";
 import { AbstractPlugin } from "./AbstractPlugin.mts";
 
 class PhilipsTV extends AbstractPlugin {
+  static readonly slug = "philips-tv";
+
   constructor() {
     super([]);
   }

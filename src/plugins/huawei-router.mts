@@ -46,6 +46,7 @@ const IP_WAN_LIST_PATTERN = /var IPWanList = new Array\(([\s\S]*?)\);/;
  * - HUAWEI_ROUTER_PASSWORD: Router admin password
  */
 export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
+  static readonly slug = "huawei-router";
   static readonly description = "Huawei router WAN connection monitor";
 
   private sessionCookie: string | null = null;
