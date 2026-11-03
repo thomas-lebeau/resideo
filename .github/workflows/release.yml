@@ -51,106 +51,16 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
 
-  build-linux-x64:
+  build:
     needs: version_bump
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.8.0"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build binary
-        env:
-          NEW_VERSION: ${{ needs.version_bump.outputs.new_version }}
-        run: |
-          npm version "$NEW_VERSION" --no-git-tag-version
-          npm run build
-
-      - name: Create release archive
-        run: |
-          mkdir -p release
-          cp bin/raspberry-home-monitor release/
-          cp scripts/raspberry-home-monitor.service release/
-          chmod +x release/raspberry-home-monitor
-          cp -r node_modules release/
-          cd release
-          tar -czf ../raspberry-home-monitor-linux-x64.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: raspberry-home-monitor-linux-x64
-          path: raspberry-home-monitor-linux-x64.tar.gz
-
-  build-linux-arm:
-    needs: version_bump
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - arch: armv7
-            platform: linux/arm/v7
-          - arch: arm64
-            platform: linux/arm64
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-
-      - name: Build for ${{ matrix.arch }}
-        env:
-          NEW_VERSION: ${{ needs.version_bump.outputs.new_version }}
-        run: |
-          docker run --rm -v $PWD:/app -w /app -e NEW_VERSION --platform ${{ matrix.platform }} node:18-buster bash -c "
-            sed -i 's|deb.debian.org/debian|archive.debian.org/debian|g' /etc/apt/sources.list &&
-            sed -i 's|security.debian.org|archive.debian.org/debian-security|g' /etc/apt/sources.list &&
-            sed -i '/stretch-updates/d' /etc/apt/sources.list &&
-            apt update &&
-            apt install -y bluetooth bluez libbluetooth-dev libudev-dev build-essential python3 make g++ git &&
-            git config --global --add safe.directory /app &&
-            npm ci --build-from-source &&
-            npm version \"\$NEW_VERSION\" --no-git-tag-version &&
-            npm run build
-          "
-      - name: Create release archive
-        run: |
-          mkdir -p release
-          cp bin/raspberry-home-monitor release/
-          cp scripts/raspberry-home-monitor.service release/
-          chmod +x release/raspberry-home-monitor
-          cp -r node_modules release/
-          cd release
-          tar -czf ../raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: raspberry-home-monitor-linux-${{ matrix.arch }}
-          path: raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ github.sha }}
+      version: ${{ needs.version_bump.outputs.new_version }}
+      upload: true
 
   release:
-    needs: [version_bump, build-linux-x64, build-linux-arm]
+    needs: [version_bump, build]
     runs-on: ubuntu-latest
 
     steps:
