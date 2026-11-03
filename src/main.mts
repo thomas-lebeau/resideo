@@ -10,7 +10,11 @@ import { help } from "./commands/help.mts";
 import { version } from "./commands/version.mts";
 import { update } from "./commands/update.mts";
 import { listPlugins } from "./commands/list-plugins.mts";
-import { forEachPlugin, getUnknownPluginSlugs } from "./utils/plugins.mts";
+import {
+  createPlugins,
+  forEachPlugin,
+  getUnknownPluginSlugs,
+} from "./utils/plugins.mts";
 import type { AbstractPlugin } from "./shared/AbstractPlugin.mts";
 
 const ONE_MINUTE = 60_000 as const;
@@ -23,7 +27,7 @@ async function main(): Promise<void> {
   async function collectAndSendData() {
     count++;
 
-    await forEachPlugin(async (plugin) => {
+    await forEachPlugin(plugins, async (plugin) => {
       const Plugin = plugin.constructor as typeof AbstractPlugin;
 
       if (count % Plugin.interval !== 0) {
@@ -51,7 +55,7 @@ async function main(): Promise<void> {
     isShuttingDown = true;
     clearTimeout(timeout);
 
-    await forEachPlugin(async (plugin) => plugin.stop());
+    await forEachPlugin(plugins, async (plugin) => plugin.stop());
     await datadog.flush();
 
     logger.info("Shutting down...");
@@ -83,12 +87,16 @@ async function main(): Promise<void> {
     );
   }
 
+  // Instantiate the plugins once, so state survives between runs and
+  // shutdown stops the running instances
+  const plugins = createPlugins();
+
   if (args.values.setup) {
-    return await forEachPlugin(async (plugin) => plugin.setup());
+    return await forEachPlugin(plugins, async (plugin) => plugin.setup());
   }
 
   if (args.values["clear-store"]) {
-    return await forEachPlugin(async (plugin) => plugin.clearStore());
+    return await forEachPlugin(plugins, async (plugin) => plugin.clearStore());
   }
 
   datadog.assertCanSend();

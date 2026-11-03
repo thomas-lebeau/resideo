@@ -1,15 +1,9 @@
 import { plugins as availablePlugins } from "../plugins/index.mts";
 import { args } from "./args.mts";
-import {
-  MissingConfigError,
-  type AbstractPlugin,
-  type PluginConstructor,
+import type {
+  AbstractPlugin,
+  PluginConstructor,
 } from "../shared/AbstractPlugin.mts";
-
-/**
- * Plugins whose configuration is missing. They are reported once, then skipped.
- */
-const unconfiguredPlugins = new Set<PluginConstructor>();
 
 /**
  * Plugins selected by `--plugin` (include, `all` by default), minus those
@@ -41,35 +35,45 @@ export function getUnknownPluginSlugs(
   return slugs.filter((slug) => slug !== "all" && !known.has(slug));
 }
 
-export async function forEachPlugin(
-  callback: (plugin: AbstractPlugin) => Promise<void>,
+/**
+ * Instantiate the selected plugins once. A plugin whose constructor throws
+ * (e.g. missing configuration) is reported and left out.
+ */
+export function createPlugins(
   selectedPlugins: PluginConstructor[] = getSelectedPlugins()
-): Promise<void> {
+): AbstractPlugin[] {
   if (selectedPlugins.length === 0) {
     throw new Error(
       "No plugins found, run with --list-plugins to see available plugins"
     );
   }
 
-  const promises: Promise<void>[] = [];
+  const instances: AbstractPlugin[] = [];
 
   for (const Plugin of selectedPlugins) {
-    if (unconfiguredPlugins.has(Plugin)) {
-      continue;
+    try {
+      instances.push(new Plugin());
+    } catch (error) {
+      Plugin.logger.error(error as Error);
     }
-
-    promises.push(
-      Promise.resolve()
-        .then(() => callback(new Plugin()))
-        .catch((error) => {
-          if (error instanceof MissingConfigError) {
-            unconfiguredPlugins.add(Plugin);
-          }
-
-          Plugin.logger.error(error);
-        })
-    );
   }
 
-  await Promise.all(promises);
+  return instances;
+}
+
+/**
+ * Run `callback` on every plugin instance concurrently. Errors are reported
+ * per plugin and don't stop the other plugins.
+ */
+export async function forEachPlugin(
+  plugins: AbstractPlugin[],
+  callback: (plugin: AbstractPlugin) => Promise<void>
+): Promise<void> {
+  await Promise.all(
+    plugins.map((plugin) =>
+      Promise.resolve()
+        .then(() => callback(plugin))
+        .catch((error) => plugin.logger.error(error))
+    )
+  );
 }

@@ -6,6 +6,7 @@ import {
   type PluginConstructor,
 } from "../shared/AbstractPlugin.mts";
 import {
+  createPlugins,
   forEachPlugin,
   getSelectedPlugins,
   getUnknownPluginSlugs,
@@ -35,24 +36,18 @@ class UnconfiguredPlugin extends AbstractPlugin {
   }
 }
 
-describe("forEachPlugin", () => {
-  test("reports a missing config once, then skips the plugin", async (t) => {
+describe("createPlugins", () => {
+  test("reports a missing config once and leaves the plugin out", (t) => {
     const errorSpy = mock.method(console, "error", () => {});
     t.after(() => errorSpy.mock.restore());
 
-    const plugins = [
+    const instances = createPlugins([
       ConfiguredPlugin,
       UnconfiguredPlugin,
-    ] as unknown as PluginConstructor[];
-    const ran: string[] = [];
+    ] as unknown as PluginConstructor[]);
 
-    for (let i = 0; i < 3; i++) {
-      await forEachPlugin(async (plugin) => {
-        ran.push(plugin.constructor.name);
-      }, plugins);
-    }
-
-    assert.deepEqual(ran, Array(3).fill("ConfiguredPlugin"));
+    assert.equal(instances.length, 1);
+    assert.ok(instances[0] instanceof ConfiguredPlugin);
     assert.equal(errorSpy.mock.callCount(), 1);
     assert.match(
       String(errorSpy.mock.calls[0]?.arguments[0]),
@@ -60,19 +55,48 @@ describe("forEachPlugin", () => {
     );
   });
 
-  test("keeps reporting runtime errors", async (t) => {
+  test("throws when no plugin is selected", () => {
+    assert.throws(() => createPlugins([]), /No plugins found/);
+  });
+});
+
+describe("forEachPlugin", () => {
+  test("passes the same instances on every call", async () => {
+    const instances = createPlugins([
+      ConfiguredPlugin,
+    ] as unknown as PluginConstructor[]);
+    const seen: AbstractPlugin[] = [];
+
+    for (let i = 0; i < 3; i++) {
+      await forEachPlugin(instances, async (plugin) => {
+        seen.push(plugin);
+      });
+    }
+
+    assert.equal(seen.length, 3);
+    assert.ok(seen.every((plugin) => plugin === instances[0]));
+  });
+
+  test("keeps reporting runtime errors without stopping other plugins", async (t) => {
     const errorSpy = mock.method(console, "error", () => {});
     t.after(() => errorSpy.mock.restore());
 
-    const plugins = [ConfiguredPlugin] as unknown as PluginConstructor[];
+    const failing = new ConfiguredPlugin();
+    const working = new ConfiguredPlugin();
+    const ran: AbstractPlugin[] = [];
 
     for (let i = 0; i < 2; i++) {
-      await forEachPlugin(async () => {
-        throw new Error("boom");
-      }, plugins);
+      await forEachPlugin([failing, working], async (plugin) => {
+        if (plugin === failing) {
+          throw new Error("boom");
+        }
+
+        ran.push(plugin);
+      });
     }
 
     assert.equal(errorSpy.mock.callCount(), 2);
+    assert.deepEqual(ran, [working, working]);
   });
 });
 
