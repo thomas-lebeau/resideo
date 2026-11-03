@@ -2,6 +2,9 @@
 Description=Raspberry Home Monitor - Home automation monitoring system
 After=network-online.target
 Wants=network-online.target
+# Stop restarting after 5 failures within 5 minutes
+StartLimitIntervalSec=5min
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -15,11 +18,18 @@ ExecStart=/usr/local/bin/raspberry-home-monitor
 # Restart configuration
 Restart=always
 RestartSec=10
-StartLimitInterval=5min
-StartLimitBurst=5
 
 # Security hardening
 PrivateTmp=true
+NoNewPrivileges=true
+ProtectKernelTunables=true
+# The whole file system is read-only, except for the plugin store
+ProtectSystem=strict
+ProtectHome=read-only
+# Plugin store (OAuth tokens), replace /home/pi with your user's home directory.
+# It is created by the first `raspberry-home-monitor --setup`: restart the
+# service after that, as it is only made writable if it exists at start.
+ReadWritePaths=-/home/pi/.config/raspberry-home-monitor-nodejs
 # Grant Bluetooth capabilities (required for BLE scanning)
 AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
