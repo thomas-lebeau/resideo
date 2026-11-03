@@ -21,7 +21,7 @@ test("the pinned dev Node version is consistent", async (t) => {
     );
   });
 
-  for (const workflow of ["test.yml", "release.yml"]) {
+  for (const workflow of ["ci.yml", "build.yml", "release.yml"]) {
     await t.test(`${workflow} sets up Node ${nvmrc}`, () => {
       const versions = [...read(`.github/workflows/${workflow}`).matchAll(/node-version:\s*"([^"]+)"/g)].map(
         ([, version]) => version,
