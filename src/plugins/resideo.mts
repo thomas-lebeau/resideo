@@ -22,27 +22,39 @@ const TOKEN_EXPIRY_MARGIN_MS = 60_000;
 type ResideoDeviceResponse = {
   name: string;
   changeableValues: {
-    mode: "Off" | "Heat";
+    mode: string;
     heatSetpoint: number;
     coolSetpoint?: number;
   };
   operationStatus: {
-    mode: "EquipmentOff" | "Heat";
+    mode: string;
   };
   outdoorTemperature: number;
   indoorTemperature: number;
   displayedOutdoorHumidity: number;
 };
 
-const MODE = {
+type OnOff = Thermostat["state"];
+
+/**
+ * Thermostat system mode (`changeableValues.mode`): off, or on in any mode
+ */
+const MODE: Record<string, OnOff> = {
   Off: 0,
   Heat: 1,
-} as const;
+  Cool: 1,
+  Auto: 1,
+  EmergencyHeat: 1,
+};
 
-const OPERATION_MODE = {
+/**
+ * What the equipment is currently doing (`operationStatus.mode`)
+ */
+const OPERATION_MODE: Record<string, OnOff> = {
   EquipmentOff: 0,
   Heat: 1,
-} as const;
+  Cool: 1,
+};
 
 const CONFIG = [
   "HW_API_KEY",
@@ -141,17 +153,41 @@ export class Resideo extends AbstractPlugin<
     return data;
   }
 
+  /**
+   * Maps a Resideo mode to on/off, reporting unknown modes as off
+   */
+  private toOnOff(
+    modes: Record<string, OnOff>,
+    mode: string,
+    field: string
+  ): OnOff {
+    if (Object.hasOwn(modes, mode)) {
+      return modes[mode];
+    }
+
+    this.logger.warn(`Unknown ${field} "${mode}", reporting it as off`, {
+      field,
+      mode,
+    });
+    return 0;
+  }
+
   private processThermostatData(data: ResideoDeviceResponse) {
     return [
       {
         type: "thermostat",
         name: data.name,
-        state: data.changeableValues.mode === "Heat" ? MODE.Heat : MODE.Off,
+        state: this.toOnOff(
+          MODE,
+          data.changeableValues.mode,
+          "changeableValues.mode"
+        ),
         target: data.changeableValues.heatSetpoint,
-        operation_mode:
-          data.operationStatus.mode === "Heat"
-            ? OPERATION_MODE.Heat
-            : OPERATION_MODE.EquipmentOff,
+        operation_mode: this.toOnOff(
+          OPERATION_MODE,
+          data.operationStatus.mode,
+          "operationStatus.mode"
+        ),
       },
       {
         type: "thermometer",

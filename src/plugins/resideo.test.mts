@@ -146,6 +146,67 @@ describe("Resideo", () => {
     assert.equal(getStoredToken(), undefined);
   });
 
+  for (const [mode, operationMode, state, operation_mode] of [
+    ["Off", "EquipmentOff", 0, 0],
+    ["Heat", "Heat", 1, 1],
+    ["Heat", "EquipmentOff", 1, 0],
+    ["Cool", "Cool", 1, 1],
+    ["Auto", "Heat", 1, 1],
+    ["EmergencyHeat", "Heat", 1, 1],
+  ] as const) {
+    test(`run reports mode ${mode} with operation ${operationMode} as state ${state}`, async () => {
+      const { plugin } = createPlugin();
+      const warn = mock.method(plugin.logger, "warn", () => {});
+      mockResideo(
+        tokenResponse("token-1", 1799),
+        Response.json({
+          ...DEVICE,
+          changeableValues: { ...DEVICE.changeableValues, mode },
+          operationStatus: { mode: operationMode },
+        })
+      );
+
+      const [thermostat] = await plugin.run();
+
+      assert.deepEqual(thermostat, {
+        type: "thermostat",
+        name: "Living room",
+        state,
+        target: 21,
+        operation_mode,
+      });
+      assert.equal(warn.mock.callCount(), 0);
+    });
+  }
+
+  test("run reports unknown modes as off and warns about them", async () => {
+    const { plugin } = createPlugin();
+    const warn = mock.method(plugin.logger, "warn", () => {});
+    mockResideo(
+      tokenResponse("token-1", 1799),
+      Response.json({
+        ...DEVICE,
+        changeableValues: { ...DEVICE.changeableValues, mode: "Dry" },
+        operationStatus: { mode: "Fan" },
+      })
+    );
+
+    const [thermostat] = await plugin.run();
+
+    assert.equal(thermostat.type === "thermostat" && thermostat.state, 0);
+    assert.equal(
+      thermostat.type === "thermostat" && thermostat.operation_mode,
+      0
+    );
+    assert.deepEqual(
+      warn.mock.calls.map((call) => call.arguments[0]),
+      [
+        'Unknown changeableValues.mode "Dry", reporting it as off',
+        'Unknown operationStatus.mode "Fan", reporting it as off',
+      ]
+    );
+  });
+
   test("run does not cache an access token without a valid expiry", async () => {
     const { plugin, getStoredToken } = createPlugin();
     mockResideo(tokenResponse("token-1", "soon"), Response.json(DEVICE));
