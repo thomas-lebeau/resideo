@@ -1,0 +1,86 @@
+name: Dashboard
+
+# Tests the web dashboard on every change to it, and deploys it to Vercel
+# (production) when it changes on main. Setup: see dashboard/README.md.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "dashboard/**"
+      - ".github/workflows/dashboard.yml"
+  pull_request:
+    paths:
+      - "dashboard/**"
+      - ".github/workflows/dashboard.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: dashboard
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: dashboard-test-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24.8.0"
+          cache: "npm"
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+  deploy:
+    needs: test
+    # Production only: pushes to main, or a manual run on main. PRs are tested, not deployed.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # Never cancel a production deploy half-way; queue the next one instead.
+    concurrency:
+      group: dashboard-deploy
+      cancel-in-progress: false
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24.8.0"
+          cache: "npm"
+          cache-dependency-path: dashboard/package-lock.json
+
+      # Installs the pinned Vercel CLI from devDependencies.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Pull Vercel project settings and production env
+        run: npm run vercel -- pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build
+        run: npm run vercel -- build --prod --token="$VERCEL_TOKEN"
+
+      # The production URL is printed in this step's log.
+      - name: Deploy
+        run: npm run vercel -- deploy --prebuilt --prod --token="$VERCEL_TOKEN"

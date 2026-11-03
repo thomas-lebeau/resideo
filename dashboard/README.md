@@ -26,12 +26,13 @@ cp .env.example .env
 ## How it works
 
 ```
-browser ──GET /api/query?section=climate&range=1h──▶ api/query.ts ──POST /api/v2/query/timeseries──▶ Datadog
+browser ──GET /api/query?section=climate&range=1h──▶ server/handler.ts ──POST /api/v2/query/timeseries──▶ Datadog
 ```
 
 - The Datadog API needs secret keys and doesn't allow browser (CORS) calls, so a small server-side
-  handler, [`api/query.ts`](api/query.ts), proxies the requests. It uses only Web-standard
-  `Request`/`Response`/`fetch`. In dev, a Vite plugin mounts it (see [`vite.config.ts`](vite.config.ts)).
+  handler, [`server/handler.ts`](server/handler.ts), proxies the requests. It uses only Web-standard
+  `Request`/`Response`/`fetch`. In dev, a Vite plugin mounts it (see [`vite.config.ts`](vite.config.ts));
+  on Vercel, [`api/query.ts`](api/query.ts) exposes it as a function.
 - The browser asks for a **section id and a range**, never raw queries. The queries live in
   [`src/queries.ts`](src/queries.ts), so a deployed handler can't be used to run arbitrary queries
   against the org.
@@ -55,15 +56,49 @@ browser ──GET /api/query?section=climate&range=1h──▶ api/query.ts ─�
 | `npm run build` | Typecheck and production build to `dist/` |
 | `npm run preview` | Serve `dist/` with the API handler |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | Handler tests (vitest) |
+| `npm test` | Handler and tile tests (vitest) |
+| `npm run vercel -- <command>` | The pinned Vercel CLI (`link`, `env`, `build`, `deploy`) |
 
-## Deploying (not done yet)
+## Deploying (Vercel)
 
-`handleQuery(request, env)` is host-agnostic. It only needs a thin adapter:
+The [`Dashboard` workflow](../.github/workflows/dashboard.yml) runs the typecheck and tests on every
+change to `dashboard/`. When `dashboard/` changes on `main`, or when the workflow is run manually,
+it deploys to Vercel production with the pinned Vercel CLI from `devDependencies`:
+`vercel pull` → `vercel build --prod` → `vercel deploy --prebuilt --prod`. Pull requests are tested
+but not deployed.
 
-- **Cloudflare Workers / Pages**: `export default { fetch: (req, env) => handleQuery(req, env) }`
-  for `/api/query`, with `dist/` as static assets and the keys as secrets.
-- **Vercel**: `api/query` function exporting `GET = (req) => handleQuery(req, process.env)`.
+On Vercel, every file in `api/` becomes a function, so `api/query.ts` only adapts the handler in
+`server/`. `vercel.json` turns off Vercel's own Git deployments so only the workflow deploys.
+`tsconfig.json` sets `rewriteRelativeImportExtensions`, because the function is compiled with it
+and Node can't resolve the `.ts` import extensions at runtime otherwise.
 
-**Put authentication in front of it** (Cloudflare Access, Vercel password protection) before
-deploying: the page exposes data about your home.
+### One-time setup
+
+1. **Create and link the project.** Run this from this folder, and keep the project's Root Directory
+   as `.`:
+
+   ```sh
+   npm run vercel -- login
+   npm run vercel -- link
+   ```
+
+2. **Set the Datadog env vars** for Production: `DD_API_KEY`, `DD_APP_KEY` (ideally an app key
+   scoped to `timeseries_query` only), `DD_SITE` and, optionally, `DD_QUERY_SCOPE`. Use the Vercel
+   dashboard (Settings → Environment Variables) or `npm run vercel -- env add <NAME> production`.
+
+3. **Add the GitHub secrets** the workflow uses. Create a token at
+   https://vercel.com/account/tokens; the IDs are in `.vercel/project.json`, written by
+   `vercel link`:
+
+   ```sh
+   gh secret set VERCEL_TOKEN
+   gh secret set VERCEL_ORG_ID      # "orgId"
+   gh secret set VERCEL_PROJECT_ID  # "projectId"
+   ```
+
+4. **Deploy:** push a change to `dashboard/` on `main`, or run `gh workflow run Dashboard`. The
+   production URL is printed in the Deploy step's log.
+
+> **Note:** the deployment has no access protection. Anyone with the URL can see the dashboard and
+> its data about your home. To restrict it later, add Vercel password protection (Pro plan) or an
+> auth check in front of the page and `/api/query`.

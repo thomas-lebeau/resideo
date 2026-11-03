@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { SECTIONS } from "../src/queries.ts";
 import type { SectionResponse } from "../src/queries.ts";
-import { handleQuery, normalize } from "./query.ts";
+import { handleQuery, normalize } from "./handler.ts";
 
 const NOW = Date.UTC(2026, 10, 3, 12, 0, 0);
 const KEYS = { DD_API_KEY: "api", DD_APP_KEY: "app" };
