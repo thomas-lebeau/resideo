@@ -26,14 +26,24 @@ export class Store<
     this.legacyKey = legacyKey === key ? undefined : legacyKey;
     this.store = conf as Conf<Record<string, T>>;
 
+    this.migrateLegacyValue();
+  }
+
+  /**
+   * Moves the value from `legacyKey` to `key`, unless there is no legacy value
+   * or `key` already holds one.
+   */
+  private migrateLegacyValue() {
     if (
-      this.legacyKey !== undefined &&
-      !this.store.has(key) &&
-      this.store.has(this.legacyKey)
+      this.legacyKey === undefined ||
+      this.store.has(this.key) ||
+      !this.store.has(this.legacyKey)
     ) {
-      this.store.set(key, this.store.get(this.legacyKey));
-      this.store.delete(this.legacyKey);
+      return;
     }
+
+    this.store.set(this.key, this.store.get(this.legacyKey));
+    this.store.delete(this.legacyKey);
   }
 
   get(): T | undefined {
