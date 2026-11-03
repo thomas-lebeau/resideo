@@ -10,13 +10,19 @@ import { handleQuery } from "./api/query.ts";
  * In production the same handler is mounted by the host (Cloudflare Worker / Vercel function).
  */
 function apiHandler(env: Env): Plugin {
-  const middleware = async (req: Connect.IncomingMessage, res: ServerResponse) => {
-    // Connect strips the mount path from req.url; originalUrl keeps the full path and query.
-    const url = new URL(req.originalUrl ?? req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
-    const response = await handleQuery(new Request(url, { method: req.method }), env);
-    res.statusCode = response.status;
-    response.headers.forEach((value, key) => res.setHeader(key, value));
-    res.end(await response.text());
+  const middleware = async (req: Connect.IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
+    // Connect doesn't await middleware: a rejection here would be unhandled and stop the server
+    // (e.g. `new Request` throws for methods like TRACE). Hand errors to Connect instead.
+    try {
+      // Connect strips the mount path from req.url; originalUrl keeps the full path and query.
+      const url = new URL(req.originalUrl ?? req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+      const response = await handleQuery(new Request(url, { method: req.method }), env);
+      res.statusCode = response.status;
+      response.headers.forEach((value, key) => res.setHeader(key, value));
+      res.end(await response.text());
+    } catch (error) {
+      next(error);
+    }
   };
   return {
     name: "api-handler",

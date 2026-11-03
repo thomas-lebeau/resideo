@@ -697,6 +697,11 @@ p.tone-critical {
   cursor: crosshair;
 }
 
+.chart__plot:focus-visible {
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
 .chart__plot svg {
   display: block;
   width: 100%;

@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import type { PointerEvent } from "react";
+import type { KeyboardEvent, PointerEvent } from "react";
 import type { Format } from "../format.ts";
 import { formatText, formatTime } from "../format.ts";
 import type { Point } from "../queries.ts";
@@ -19,9 +19,30 @@ interface Props {
 }
 
 /**
+ * Sample index after a key press on the chart (slider keys), or `null` for other keys.
+ * ←/↓ and →/↑ step one sample, PageDown/PageUp a tenth of the range, Home/End jump to the ends.
+ */
+export function nextSampleIndex(key: string, index: number, count: number): number | null {
+  const page = Math.max(1, Math.round(count / 10));
+  const delta: Record<string, number> = {
+    ArrowLeft: -1,
+    ArrowDown: -1,
+    ArrowRight: 1,
+    ArrowUp: 1,
+    PageDown: -page,
+    PageUp: page,
+    Home: -count,
+    End: count,
+  };
+  if (!(key in delta)) return null;
+  return Math.min(count - 1, Math.max(0, index + delta[key]));
+}
+
+/**
  * Single-series line chart with min/max and start/end labels and a crosshair tooltip on
- * hover/touch. Connects across empty buckets: some plugins report less often than the query
- * interval (e.g. the speed test runs every 10 minutes), so gaps are normal, not outages.
+ * hover/touch, or on keyboard focus (the plot is a slider over the samples). Connects across
+ * empty buckets: some plugins report less often than the query interval (e.g. the speed test
+ * runs every 10 minutes), so gaps are normal, not outages.
  */
 export function Chart({ points, format, label, step = false, withDate = false }: Props) {
   const gradientId = useId();
@@ -61,8 +82,21 @@ export function Chart({ points, format, label, step = false, withDate = false }:
     setHover(nearest);
   };
 
-  const hovered = hover === null ? null : defined[hover];
+  // Keyboard: focus shows the latest sample, slider keys move through the others.
+  const latest = defined.length - 1;
+  const current = hover === null ? latest : Math.min(hover, latest);
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const next = nextSampleIndex(event.key, current, defined.length);
+    if (next === null) return;
+    event.preventDefault();
+    setHover(next);
+  };
+
+  const hovered = hover === null ? null : defined[Math.min(hover, latest)];
   const hoverX = hovered ? (x(hovered[0]) / W) * 100 : 0;
+  const sampleText = ([t, v]: [number, number]) => `${formatText(v, format)} at ${formatTime(t, withDate)}`;
+  // One sample draws no line (a move command only), so mark it with a dot.
+  const single = !step && defined.length === 1 ? defined[0] : null;
 
   return (
     <figure className="chart">
@@ -72,11 +106,19 @@ export function Chart({ points, format, label, step = false, withDate = false }:
       </div>
       <div
         className="chart__plot"
-        role="img"
-        aria-label={`${label}, from ${formatText(values[0], format)} to ${formatText(last[1], format)}`}
+        role="slider"
+        tabIndex={0}
+        aria-label={`${label} history, ${defined.length} samples from ${formatText(values[0], format)} to ${formatText(last[1], format)}`}
+        aria-valuemin={0}
+        aria-valuemax={latest}
+        aria-valuenow={current}
+        aria-valuetext={sampleText(defined[current])}
         onPointerMove={onPointer}
         onPointerDown={onPointer}
         onPointerLeave={() => setHover(null)}
+        onFocus={() => setHover((h) => h ?? latest)}
+        onBlur={() => setHover(null)}
+        onKeyDown={onKeyDown}
       >
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
           <defs>
@@ -89,6 +131,7 @@ export function Chart({ points, format, label, step = false, withDate = false }:
           <path d={area} fill={`url(#${gradientId})`} />
           <path d={line} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
+        {single && <div className="chart__dot" style={{ left: `${(x(single[0]) / W) * 100}%`, top: `${(y(single[1]) / H) * 100}%` }} />}
         {hovered && (
           <>
             <div className="chart__crosshair" style={{ left: `${hoverX}%` }} />
