@@ -20,9 +20,22 @@ type BalayDishwasherData = {
 
 const CONFIG = ["BALAY_CLIENT_ID"] as const;
 
-const AUTHENTICATION_ERROR = new Error(
-  "Authentication error: Run `raspbberry-home-monitor --setup --plugin balay-dishwasher to authenticate"
-);
+// Refresh the access token this long before it expires.
+const TOKEN_REFRESH_MARGIN_MS = 60 * 1000;
+
+// Home Connect sends a KEEP-ALIVE event every 55 seconds, so a stream that has
+// been silent for this long is considered dead and gets re-initialized.
+const EVENT_STREAM_STALE_MS = 10 * 60 * 1000;
+
+class AuthenticationError extends Error {
+  override name = "AuthenticationError";
+
+  constructor() {
+    super(
+      "Authentication error: Run `raspberry-home-monitor --setup --plugin balay-dishwasher` to authenticate"
+    );
+  }
+}
 
 // hack to make this a singleton
 let instance: BalayDishwasher | undefined;
@@ -39,6 +52,7 @@ export class BalayDishwasher extends AbstractPlugin<
   private haId: string | undefined;
   private state: DishwasherState | undefined;
   private eventSource: EventSource | undefined;
+  private lastEventAt = 0;
 
   constructor() {
     if (instance) {
@@ -152,17 +166,17 @@ export class BalayDishwasher extends AbstractPlugin<
     let tokenData = this.store.get();
 
     if (!tokenData) {
-      throw AUTHENTICATION_ERROR;
+      throw new AuthenticationError();
     }
 
     // If token is expired or will expire soon, refresh it
-    if (tokenData.expires_at < Date.now()) {
+    if (tokenData.expires_at - TOKEN_REFRESH_MARGIN_MS < Date.now()) {
       try {
         tokenData = await this.refreshAccessToken(tokenData.refresh_token);
       } catch {
         // If refresh fails, delete old token and initiate device flow again
         this.store.clear();
-        throw AUTHENTICATION_ERROR;
+        throw new AuthenticationError();
       }
     }
 
@@ -170,13 +184,21 @@ export class BalayDishwasher extends AbstractPlugin<
   }
 
   private async handleError(response: Response): Promise<void> {
-    const { error } = (await response.json()) as HomeConnectGetErrorResponse;
+    const body = await response.text().catch(() => "");
+    let description = body;
+
+    try {
+      const { error } = JSON.parse(body) as HomeConnectGetErrorResponse;
+      description = error?.description ?? body;
+    } catch {
+      // Not a JSON body (e.g. an HTML error page): keep the raw text
+    }
 
     throw new Error(
       `Failed to ${response.url.replace(this.baseUrl, "")}: ${
         response.status
       } ${response.statusText}`,
-      { cause: new Error(error.description) }
+      { cause: new Error(description) }
     );
   }
 
@@ -262,8 +284,10 @@ export class BalayDishwasher extends AbstractPlugin<
     };
   }
 
-  private async startEventStream() {
-    this.eventSource = new EventSource(
+  private startEventStream() {
+    this.eventSource?.close();
+
+    const eventSource = new EventSource(
       `${this.baseUrl}/api/homeappliances/${this.haId}/events`,
       {
         fetch: async (input, init) =>
@@ -277,13 +301,60 @@ export class BalayDishwasher extends AbstractPlugin<
       }
     );
 
-    this.eventSource.addEventListener("STATUS", (event) => {
-      this.processEvent(JSON.parse(event.data) as HomeConnectEventData);
+    this.eventSource = eventSource;
+    this.lastEventAt = Date.now();
+
+    const touch = () => {
+      this.lastEventAt = Date.now();
+    };
+
+    eventSource.addEventListener("open", touch);
+    eventSource.addEventListener("KEEP-ALIVE", touch);
+    eventSource.addEventListener("STATUS", (event) => {
+      touch();
+      this.handleEventData(event.data);
+    });
+    eventSource.addEventListener("NOTIFY", (event) => {
+      touch();
+      this.handleEventData(event.data);
     });
 
-    this.eventSource.addEventListener("NOTIFY", (event) => {
-      this.processEvent(JSON.parse(event.data) as HomeConnectEventData);
-    });
+    eventSource.onerror = (event) => {
+      // Ignore late errors from a stream that has already been replaced
+      if (this.eventSource !== eventSource) return;
+
+      this.logger.warn("Event stream error, re-initializing on next run", {
+        code: event.code,
+        error: event.message,
+      });
+      this.resetEventStream();
+    };
+  }
+
+  /**
+   * Closes the event stream and drops the cached state, so the next run
+   * re-fetches the state and opens a new stream. Events received while
+   * disconnected would otherwise be missed and the state would go stale.
+   */
+  private resetEventStream() {
+    this.eventSource?.close();
+    this.eventSource = undefined;
+    this.state = undefined;
+  }
+
+  private handleEventData(data: string) {
+    let event: HomeConnectEventData;
+
+    try {
+      event = JSON.parse(data) as HomeConnectEventData;
+    } catch {
+      this.logger.warn("Ignoring malformed event data", { data });
+      return;
+    }
+
+    if (!Array.isArray(event?.items)) return;
+
+    this.processEvent(event);
   }
 
   private processEvent(event: HomeConnectEventData) {
@@ -314,12 +385,22 @@ export class BalayDishwasher extends AbstractPlugin<
     statusResponse: HomeConnectStatusResponse
   ): Pick<DishwasherState, "door_state" | "operation_state"> {
     const statuses = new Map(statusResponse.status.map((s) => [s.key, s]));
+    const doorState = statuses.get(STATUS.DOOR_STATE);
+    const operationState = statuses.get(STATUS.OPERATION_STATE);
+
+    if (!doorState || !operationState) {
+      const missing = [
+        !doorState && STATUS.DOOR_STATE,
+        !operationState && STATUS.OPERATION_STATE,
+      ].filter(Boolean);
+
+      throw new Error(`Missing ${missing.join(", ")} in appliance status`);
+    }
 
     return {
-      door_state: statuses.get(STATUS.DOOR_STATE)!
-        .value as (typeof DOOR_STATE)[keyof typeof DOOR_STATE],
-      operation_state: statuses.get(STATUS.OPERATION_STATE)!
-        .value as (typeof OPERATION_STATE)[keyof typeof OPERATION_STATE],
+      door_state: doorState.value as (typeof DOOR_STATE)[keyof typeof DOOR_STATE],
+      operation_state:
+        operationState.value as (typeof OPERATION_STATE)[keyof typeof OPERATION_STATE],
     };
   }
 
@@ -350,13 +431,18 @@ export class BalayDishwasher extends AbstractPlugin<
   }
 
   async stop() {
-    if (this.eventSource) {
-      this.eventSource.close();
-    }
+    this.resetEventStream();
   }
 
   async run(): Promise<BalayDishwasherData | undefined> {
-    if (!this.state || !this.haId) {
+    if (this.state && Date.now() - this.lastEventAt > EVENT_STREAM_STALE_MS) {
+      this.logger.warn("Event stream is stale, re-initializing", {
+        lastEventAt: new Date(this.lastEventAt).toISOString(),
+      });
+      this.resetEventStream();
+    }
+
+    if (!this.state || !this.haId || !this.eventSource) {
       await this.initializeState();
 
       this.startEventStream();
