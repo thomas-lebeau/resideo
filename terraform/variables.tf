@@ -10,10 +10,17 @@ variable "datadog_app_key" {
   sensitive   = true
 }
 
-variable "datadog_api_url" {
-  description = "Datadog API URL (EU: https://api.datadoghq.eu, US: https://api.datadoghq.com)"
+# Same value and default as the app's DD_SITE env var
+variable "datadog_site" {
+  description = "Datadog site, e.g. datadoghq.com (US1, default), datadoghq.eu (EU), us3.datadoghq.com"
   type        = string
-  default     = "https://api.datadoghq.eu"
+  default     = "datadoghq.com"
+}
+
+variable "datadog_api_url" {
+  description = "Datadog API URL override. Defaults to https://api.<datadog_site>"
+  type        = string
+  default     = null
 }
 
 # service name - MUST match package.json name

@@ -75,8 +75,3 @@ override.tf.json
 # CLI config files
 .terraformrc
 terraform.rc
-
-# Lock file (optional)
-# If you're sharing providers and versions via .terraform.lock.hcl, keep it.
-# Otherwise, ignore it for more flexible local testing.
-.terraform.lock.hcl
