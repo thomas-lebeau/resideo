@@ -12,7 +12,8 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import { createInterface } from "node:readline";
-import { Agent } from "undici";
+// undici's own fetch, so the Agent below is always compatible with it
+import { Agent, fetch } from "undici";
 
 // Secret key used for HMAC signature (from Philips API)
 const SECRET_KEY =
