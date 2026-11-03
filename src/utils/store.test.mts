@@ -59,4 +59,18 @@ describe("Store", () => {
     assert.equal(store.get(), undefined);
     assert.equal(conf.has("my-plugin"), false);
   });
+
+  test("clears the legacy value too, so it is not moved back", (t) => {
+    const conf = createConf(t);
+    conf.set("my-plugin", { token: "new" });
+    conf.set("MyPlugin", { token: "old" });
+
+    new Store<{ token: string }>("my-plugin", "MyPlugin", conf).clear();
+
+    assert.equal(conf.has("my-plugin"), false);
+    assert.equal(conf.has("MyPlugin"), false);
+
+    const store = new Store<{ token: string }>("my-plugin", "MyPlugin", conf);
+    assert.equal(store.get(), undefined);
+  });
 });
