@@ -4,33 +4,58 @@ import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
 type ResideoTokenResponse = {
   access_token: string;
   token_type: string;
-  expires_in: number;
+  // Lifetime in seconds. The API returns it as a string, e.g. "1799".
+  expires_in: string | number;
 };
+
+type Token = {
+  access_token: string;
+  expires_at: number;
+};
+
+/**
+ * Request a new token this long before the cached one expires, so a request
+ * never goes out with a token that expires on the way.
+ */
+const TOKEN_EXPIRY_MARGIN_MS = 60_000;
 
 type ResideoDeviceResponse = {
   name: string;
   changeableValues: {
-    mode: "Off" | "Heat";
+    mode: string;
     heatSetpoint: number;
     coolSetpoint?: number;
   };
   operationStatus: {
-    mode: "EquipmentOff" | "Heat";
+    mode: string;
   };
   outdoorTemperature: number;
   indoorTemperature: number;
+  indoorHumidity?: number;
   displayedOutdoorHumidity: number;
 };
 
-const MODE = {
+type OnOff = Thermostat["state"];
+
+/**
+ * Thermostat system mode (`changeableValues.mode`): off, or on in any mode
+ */
+const MODE: Record<string, OnOff> = {
   Off: 0,
   Heat: 1,
-} as const;
+  Cool: 1,
+  Auto: 1,
+  EmergencyHeat: 1,
+};
 
-const OPERATION_MODE = {
+/**
+ * What the equipment is currently doing (`operationStatus.mode`)
+ */
+const OPERATION_MODE: Record<string, OnOff> = {
   EquipmentOff: 0,
   Heat: 1,
-} as const;
+  Cool: 1,
+};
 
 const CONFIG = [
   "HW_API_KEY",
@@ -53,9 +78,20 @@ export class Resideo extends AbstractPlugin<
   }
 
   /**
-   * Gets OAuth access token from Resideo API
+   * Returns the cached OAuth access token, or requests a new one from the
+   * Resideo API when there is none or it is about to expire.
    */
   private async getAccessToken(): Promise<string> {
+    const { access_token, expires_at } = this.store.get() ?? {};
+
+    if (
+      typeof access_token === "string" &&
+      typeof expires_at === "number" &&
+      expires_at - TOKEN_EXPIRY_MARGIN_MS > Date.now()
+    ) {
+      return access_token;
+    }
+
     const basicAuth = Buffer.from(
       `${this.config.HW_API_KEY}:${this.config.HW_API_SECRET}`
     ).toString("base64");
@@ -74,6 +110,16 @@ export class Resideo extends AbstractPlugin<
     }
 
     const data = (await response.json()) as ResideoTokenResponse;
+    const expiresIn = Number(data.expires_in);
+
+    if (Number.isFinite(expiresIn)) {
+      const token: Token = {
+        access_token: data.access_token,
+        expires_at: Date.now() + expiresIn * 1000,
+      };
+      this.store.set(token);
+    }
+
     return data.access_token;
   }
 
@@ -95,6 +141,11 @@ export class Resideo extends AbstractPlugin<
       }
     );
 
+    if (response.status === 401) {
+      // The cached token was revoked or expired early: request a new one on the next run
+      this.store.clear();
+    }
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -103,22 +154,49 @@ export class Resideo extends AbstractPlugin<
     return data;
   }
 
+  /**
+   * Maps a Resideo mode to on/off, reporting unknown modes as off
+   */
+  private toOnOff(
+    modes: Record<string, OnOff>,
+    mode: string,
+    field: string
+  ): OnOff {
+    if (Object.hasOwn(modes, mode)) {
+      return modes[mode];
+    }
+
+    this.logger.warn(`Unknown ${field} "${mode}", reporting it as off`, {
+      field,
+      mode,
+    });
+    return 0;
+  }
+
   private processThermostatData(data: ResideoDeviceResponse) {
     return [
       {
         type: "thermostat",
         name: data.name,
-        state: data.changeableValues.mode === "Heat" ? MODE.Heat : MODE.Off,
+        state: this.toOnOff(
+          MODE,
+          data.changeableValues.mode,
+          "changeableValues.mode"
+        ),
         target: data.changeableValues.heatSetpoint,
-        operation_mode:
-          data.operationStatus.mode === "Heat"
-            ? OPERATION_MODE.Heat
-            : OPERATION_MODE.EquipmentOff,
+        operation_mode: this.toOnOff(
+          OPERATION_MODE,
+          data.operationStatus.mode,
+          "operationStatus.mode"
+        ),
       },
       {
         type: "thermometer",
         name: `${data.name} (indoor)`,
         temperature: data.indoorTemperature,
+        ...(data.indoorHumidity !== undefined && {
+          humidity: data.indoorHumidity,
+        }),
       },
       {
         type: "thermometer",
