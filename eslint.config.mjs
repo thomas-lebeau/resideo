@@ -1,9 +1,11 @@
-import { defineConfig } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 import tslint from "typescript-eslint";
 import eslint from "@eslint/js";
 import globals from "globals";
 
 export default defineConfig([
+  // Standalone Vite app with its own package.json and typecheck.
+  globalIgnores(["dashboard/"]),
   eslint.configs.recommended,
   tslint.configs.recommended,
   {
