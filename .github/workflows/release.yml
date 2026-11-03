@@ -132,7 +132,10 @@ jobs:
           body_path: changelog.md
           files: |
             raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz
+            raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz.sha256
             raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz
+            raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz.sha256
             raspberry-home-monitor-linux-arm64/raspberry-home-monitor-linux-arm64.tar.gz
+            raspberry-home-monitor-linux-arm64/raspberry-home-monitor-linux-arm64.tar.gz.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
