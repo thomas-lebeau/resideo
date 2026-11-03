@@ -146,6 +146,26 @@ describe("Resideo", () => {
     assert.equal(getStoredToken(), undefined);
   });
 
+  test("run reports indoor and outdoor temperature and humidity", async () => {
+    const { plugin } = createPlugin();
+    mockResideo(tokenResponse("token-1", 1799), Response.json(DEVICE));
+
+    const [, indoor, outdoor] = await plugin.run();
+
+    assert.deepEqual(indoor, {
+      type: "thermometer",
+      name: "Living room (indoor)",
+      temperature: 20.5,
+      humidity: 45,
+    });
+    assert.deepEqual(outdoor, {
+      type: "thermometer",
+      name: "Living room (outdoor)",
+      temperature: 8,
+      humidity: 80,
+    });
+  });
+
   for (const [mode, operationMode, state, operation_mode] of [
     ["Off", "EquipmentOff", 0, 0],
     ["Heat", "Heat", 1, 1],

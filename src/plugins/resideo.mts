@@ -31,6 +31,7 @@ type ResideoDeviceResponse = {
   };
   outdoorTemperature: number;
   indoorTemperature: number;
+  indoorHumidity?: number;
   displayedOutdoorHumidity: number;
 };
 
@@ -193,6 +194,9 @@ export class Resideo extends AbstractPlugin<
         type: "thermometer",
         name: `${data.name} (indoor)`,
         temperature: data.indoorTemperature,
+        ...(data.indoorHumidity !== undefined && {
+          humidity: data.indoorHumidity,
+        }),
       },
       {
         type: "thermometer",
