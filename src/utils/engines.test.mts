@@ -22,7 +22,8 @@ test("the pinned dev Node version is consistent", async (t) => {
     );
   });
 
-  for (const workflow of ["test.yml", "release.yml"]) {
+  // Release Please runs as a GitHub Action and does not execute project Node scripts.
+  for (const workflow of ["ci.yml", "build.yml"]) {
     await t.test(`${workflow} sets up Node ${nvmrc}`, () => {
       const versions = [
         ...read(`.github/workflows/${workflow}`).matchAll(
