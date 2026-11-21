@@ -27,11 +27,13 @@ curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/scripts/
 > https://github.com/thomas-lebeau/resideo/blob/main/scripts/install.sh
 
 The installer will:
+
 - Download and install the latest release binary to `/usr/local/bin`
 - Install systemd service file to `/etc/systemd/system/`
 
 **First-time installation:**
 After running the installer, you need to:
+
 1. Create your `.env` file with required configuration (see Configuration section below)
 2. Edit the service file to configure your user and .env path:
    ```bash
@@ -46,6 +48,7 @@ After running the installer, you need to:
 
 **Updates:**
 When updating an existing installation, the service file is preserved. Just restart the service to apply the update:
+
 ```bash
 sudo systemctl restart raspberry-home-monitor
 ```
@@ -95,6 +98,7 @@ Create a `.env` file with the following variables:
 A plugin only runs when all of its environment variables are set. If one is missing, the plugin is reported once and skipped.
 
 ### Resideo Plugin
+
 - `HW_API_KEY`: Your Resideo API key
 - `HW_API_SECRET`: Your Resideo API secret
 - `HW_DEVICE_ID`: Your thermostat device ID
@@ -102,10 +106,12 @@ A plugin only runs when all of its environment variables are set. If one is miss
 - `HW_USER_REF_ID`: Your user reference ID
 
 ### Philips Hue Plugin
+
 - `HUE_HOST`: IP address of your Hue bridge (e.g., `192.168.1.100`)
 - `HUE_USERNAME`: Your Hue API username/key
 
 ### Philips TV Plugin
+
 - `PHILIPS_TV_HOST`: IP address of your Philips Android TV (e.g., `192.168.1.101`)
 - `PHILIPS_TV_DEVICE_ID`: Device ID obtained during pairing
 - `PHILIPS_TV_AUTH_KEY`: Authentication key obtained during pairing
@@ -113,22 +119,27 @@ A plugin only runs when all of its environment variables are set. If one is miss
 To get these credentials, you need to pair with your TV first. See the "Philips TV Pairing" section below.
 
 ### Plex Media Center Plugin
+
 - `PLEX_HOST`: Your Plex server host
 - `PLEX_TOKEN`: Your Plex API token
 
 ### Speed Test Plugin
+
 - `FAST_SPEEDTEST_TOKEN`: Your Fast SpeedTest token
 
 ### Balay Dishwasher Plugin
+
 - `BALAY_CLIENT_ID`: Your Home Connect API client ID
 
 To get these credentials:
+
 1. Register as a developer at [Home Connect Developer Portal](https://developer.home-connect.com/)
 2. Create an application (the redirect URI is not required for device flow)
 3. Connect your Balay dishwasher to the Home Connect app on your phone
 4. Add the client ID to your `.env` file as `BALAY_CLIENT_ID`
 
 **Authentication**: The plugin uses OAuth 2.0 device flow authentication. Run `raspberry-home-monitor --setup --plugin balay-dishwasher` once; it will:
+
 - Display a URL and code for you to authorize the application
 - Wait for you to complete the authorization in your browser
 - Automatically save and manage the access tokens
@@ -137,9 +148,11 @@ To get these credentials:
 Tokens are stored in the plugin store, a JSON file in the OS config directory managed by [`conf`](https://github.com/sindresorhus/conf) (e.g. `~/.config/raspberry-home-monitor-nodejs/config.json` on Linux), and are refreshed automatically. You don't need to manually manage refresh tokens.
 
 ### ThermoBeacon Plugin
+
 - `THERMOBEACON_DEVICES`: JSON object mapping MAC addresses to device names
 
 Example configuration:
+
 ```json
 THERMOBEACON_DEVICES={"8e:bb:00:00:05:77":"Living Room","ab:cd:ef:12:34:56":"Bedroom"}
 ```
@@ -147,19 +160,23 @@ THERMOBEACON_DEVICES={"8e:bb:00:00:05:77":"Living Room","ab:cd:ef:12:34:56":"Bed
 The plugin will scan for ThermoBeacon WS08 temperature and humidity sensors via Bluetooth and report data only for devices configured in this environment variable.
 
 ### Huawei Router Plugin
+
 - `HUAWEI_ROUTER_HOST`: IP address of your Huawei router (e.g., `192.168.1.1`)
 - `HUAWEI_ROUTER_USERNAME`: Router admin username
 - `HUAWEI_ROUTER_PASSWORD`: Router admin password
 
 ### Transmission Plugin
+
 - `TRANSMISSION_HOST`: Transmission server host and port, without the protocol (e.g., `192.168.1.100:9091`)
 - `TRANSMISSION_USERNAME`: Transmission RPC username
 - `TRANSMISSION_PASSWORD`: Transmission RPC password
 
 ### DHT22 Plugin
+
 - `DHT22_SENSORS`: JSON object mapping GPIO pin numbers to sensor names
 
 Example configuration:
+
 ```json
 DHT22_SENSORS={"4":"Server Room","17":"Living Room"}
 ```
@@ -237,12 +254,14 @@ raspberry-home-monitor --env ~/.path/to/.env
 Development needs Node.js `^22.18.0 || >=23.6.0` (the `engines` field), so the `.mts` sources run with Node's built-in type stripping. The pinned version is in `.nvmrc` (and `volta` in `package.json`): run `nvm use` or let Volta pick it up. The release binary is different: `npm run build` bundles for Node 18, and the armv7/arm64 releases are built on Node 18.
 
 1. Clone the repository:
+
    ```bash
    git clone <repository-url>
    cd resideo
    ```
 
 2. Install dependencies:
+
    ```bash
    npm install
    ```
@@ -254,6 +273,7 @@ Development needs Node.js `^22.18.0 || >=23.6.0` (the `engines` field), so the `
    ```
 
 TypeScript files (.mts) run natively with Node.js type stripping - no compilation needed for local development
+
 ```bash
 npm run dev
 ```
@@ -287,14 +307,14 @@ export class MySmartDevice extends AbstractPlugin<Other, typeof CONFIG> {
     try {
       // Access configuration from this.config
       const { MY_DEVICE_API_KEY, MY_DEVICE_HOST } = this.config;
-      
+
       // Fetch data from your source
       const response = await fetch(`${MY_DEVICE_HOST}/api/status`, {
         headers: { "Authorization": `Bearer ${MY_DEVICE_API_KEY}` }
       });
-      
+
       const data = await response.json();
-      
+
       // Return data in the standardized format
       return {
         type: "my-device",
@@ -316,6 +336,7 @@ export class MySmartDevice extends AbstractPlugin<Other, typeof CONFIG> {
 The plugin system supports four predefined types with standardized schemas:
 
 **Thermometer** - For temperature/humidity sensors:
+
 ```typescript
 import { AbstractPlugin, type Thermometer } from "../shared/AbstractPlugin.mts";
 
@@ -333,6 +354,7 @@ export class MyThermometer extends AbstractPlugin<Thermometer> {
 ```
 
 **Thermostat** - For heating/cooling devices:
+
 ```typescript
 return {
   type: "thermostat",
@@ -344,6 +366,7 @@ return {
 ```
 
 **Light** - For smart lighting:
+
 ```typescript
 return {
   type: "light",
@@ -354,6 +377,7 @@ return {
 ```
 
 **Other** - For custom devices (flexible schema):
+
 ```typescript
 return {
   type: "custom-device",
@@ -484,6 +508,7 @@ Once registered in `src/plugins/index.mts`, your plugin is executed when the app
 **Solution**: The systemd service file already includes the necessary Bluetooth capabilities (`CAP_NET_RAW` and `CAP_NET_ADMIN`). If you're still experiencing issues:
 
 1. Make sure you're using the latest service file:
+
    ```bash
    curl -fsSL https://raw.githubusercontent.com/thomas-lebeau/resideo/main/scripts/raspberry-home-monitor.service -o /tmp/raspberry-home-monitor.service
    sudo cp /tmp/raspberry-home-monitor.service /etc/systemd/system/
@@ -500,7 +525,8 @@ Once registered in `src/plugins/index.mts`, your plugin is executed when the app
 
 **Problem**: OAuth plugins (e.g. Balay) fail with authentication errors
 
-**Solution**: 
+**Solution**:
+
 1. Remove stored tokens: `raspberry-home-monitor --clear-store --plugin balay-dishwasher`
 2. Run setup: `raspberry-home-monitor --setup --plugin balay-dishwasher`
 3. Follow the authentication prompts

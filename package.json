@@ -11,6 +11,8 @@
     "build:dev": "node scripts/build.mjs --dev",
     "dev": "node src/main.mts",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "DD_API_KEY=test node --import ./src/utils/Datadog.mts --test \"src/**/*.test.mts\""
   },
@@ -34,6 +36,7 @@
     "@types/semver": "^7.8.0",
     "esbuild": "^0.28.2",
     "eslint": "^9.39.1",
+    "prettier": "^3.9.10",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.1"
   },

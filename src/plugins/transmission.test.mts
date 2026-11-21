@@ -40,10 +40,10 @@ function mockTransmission(...responses: Response[]) {
 function sessionIds(fetchMock: ReturnType<typeof mockTransmission>) {
   return fetchMock.mock.calls.map(
     (call) =>
-      ((call.arguments as unknown as [string, RequestInit])[1].headers as Record<
-        string,
-        string | undefined
-      >)["X-Transmission-Session-Id"]
+      (
+        (call.arguments as unknown as [string, RequestInit])[1]
+          .headers as Record<string, string | undefined>
+      )["X-Transmission-Session-Id"]
   );
 }
 

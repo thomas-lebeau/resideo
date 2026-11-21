@@ -8,7 +8,7 @@ const store = new Conf({
 
 export class Store<
   T extends Record<string, string | number | boolean>,
-  U extends string = string
+  U extends string = string,
 > {
   private readonly key: U;
   private readonly store: Conf<Record<U, T>> = store as Conf<Record<U, T>>;

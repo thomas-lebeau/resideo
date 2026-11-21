@@ -49,7 +49,7 @@ export abstract class AbstractPlugin<
   V extends Record<string, string | number | boolean> = Record<
     string,
     string | number | boolean
-  >
+  >,
 > {
   /**
    * The interval in minutes at which the plugin should run

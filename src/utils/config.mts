@@ -38,6 +38,6 @@ function getBuildConstant(
   return typeof globalThis[name] !== "undefined"
     ? (globalThis[name] as string)
     : typeof fallback === "function"
-    ? fallback()
-    : fallback;
+      ? fallback()
+      : fallback;
 }

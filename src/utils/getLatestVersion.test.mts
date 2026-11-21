@@ -29,7 +29,8 @@ describe("getLatestVersion", () => {
     );
 
     await assert.rejects(getLatestVersion(), {
-      message: "Could not get the latest release from GitHub: HTTP 403 Forbidden",
+      message:
+        "Could not get the latest release from GitHub: HTTP 403 Forbidden",
     });
   });
 
