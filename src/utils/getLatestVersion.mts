@@ -1,5 +1,7 @@
 import semver from "semver";
 
+import { HTTP_TIMEOUT } from "../shared/timeout.mts";
+
 const LATEST_RELEASE_URL =
   "https://api.github.com/repos/thomas-lebeau/resideo/releases/latest";
 
@@ -17,6 +19,7 @@ type LatestVersionResponse = {
 export async function getLatestVersion(): Promise<string> {
   const response = await fetch(LATEST_RELEASE_URL, {
     headers: { Accept: "application/vnd.github+json" },
+    signal: AbortSignal.timeout(HTTP_TIMEOUT),
   });
 
   if (!response.ok) {

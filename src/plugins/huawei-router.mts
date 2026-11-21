@@ -1,4 +1,5 @@
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
+import { HTTP_TIMEOUT } from "../shared/timeout.mts";
 
 type RawWanConnection = {
   domain: string;
@@ -65,6 +66,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
       headers: {
         "Content-Length": "0",
       },
+      signal: AbortSignal.timeout(HTTP_TIMEOUT),
     });
 
     if (!response.ok) {
@@ -102,6 +104,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
       },
       body: formData.toString(),
       redirect: "manual", // Don't follow redirects automatically
+      signal: AbortSignal.timeout(HTTP_TIMEOUT),
     });
 
     // Extract session cookie
@@ -137,6 +140,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
           Cookie: this.sessionCookie || "",
           Referer: `${this.baseUrl}/CustomApp/mainpage.asp`,
         },
+        signal: AbortSignal.timeout(HTTP_TIMEOUT),
       }
     );
 

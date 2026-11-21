@@ -30,8 +30,6 @@ async function main(): Promise<void> {
         return;
       }
 
-      plugin.logger.info(`🔄 Running plugin ${Plugin.slug}...`);
-
       const data = await plugin.run();
 
       if (data) {

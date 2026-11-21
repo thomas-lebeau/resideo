@@ -45,6 +45,8 @@ type DatadogOptions = {
   maxBatchEntries?: number;
   /** Max uncompressed payload size per request, in bytes */
   maxBatchBytes?: number;
+  /** Max time per request before it is aborted and its logs are kept, in ms */
+  requestTimeout?: number;
 };
 
 /**
@@ -55,6 +57,8 @@ const MAX_BATCH_ENTRIES = 1000;
 const MAX_BATCH_BYTES = 5_000_000;
 // ~8h of logs at ~20 logs per minute
 const MAX_QUEUE_SIZE = 10_000;
+// Longer than plugins' HTTP_TIMEOUT: a full 5MB chunk can be slow to upload
+const REQUEST_TIMEOUT = 30_000;
 
 export class Datadog {
   private readonly ddtags = [
@@ -83,16 +87,19 @@ export class Datadog {
   private readonly maxQueueSize: number;
   private readonly maxBatchEntries: number;
   private readonly maxBatchBytes: number;
+  private readonly requestTimeout: number;
   private dropped = 0;
 
   constructor({
     maxQueueSize = MAX_QUEUE_SIZE,
     maxBatchEntries = MAX_BATCH_ENTRIES,
     maxBatchBytes = MAX_BATCH_BYTES,
+    requestTimeout = REQUEST_TIMEOUT,
   }: DatadogOptions = {}) {
     this.maxQueueSize = maxQueueSize;
     this.maxBatchEntries = maxBatchEntries;
     this.maxBatchBytes = maxBatchBytes;
+    this.requestTimeout = requestTimeout;
   }
 
   /**
@@ -247,9 +254,10 @@ export class Datadog {
             "DD-API-KEY": this.apiKey,
           },
           body,
+          signal: AbortSignal.timeout(this.requestTimeout),
         });
       } catch (error) {
-        // Network error: retry this chunk and the remaining ones on next flush
+        // Network error or timeout: retry this chunk and the remaining ones on next flush
         this.requeue(pending.slice(sent));
         logger.error(
           new Error("Failed to send data to Datadog", { cause: error })
