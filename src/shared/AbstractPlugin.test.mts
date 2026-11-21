@@ -1,6 +1,7 @@
-import { describe, mock, test } from "node:test";
+import { afterEach, describe, mock, test } from "node:test";
 import assert from "node:assert/strict";
 
+import datadog from "../utils/Datadog.mts";
 import { AbstractPlugin } from "./AbstractPlugin.mts";
 
 let release: () => void = () => {};
@@ -30,6 +31,16 @@ class FailingPlugin extends AbstractPlugin {
 
   async run(): Promise<undefined> {
     throw new Error("boom");
+  }
+}
+
+class PhilipsTV extends AbstractPlugin {
+  constructor() {
+    super([]);
+  }
+
+  async run() {
+    return undefined;
   }
 }
 
@@ -77,5 +88,22 @@ describe("AbstractPlugin.run", () => {
     await assert.rejects(new FailingPlugin().run(), /boom/);
 
     assert.equal(warnSpy.mock.callCount(), 0);
+  });
+});
+
+describe("AbstractPlugin.logger", () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  test("sends logs under the plugin slug, like the plugin data", () => {
+    mock.method(console, "warn", () => {});
+    const sendSpy = mock.method(datadog, "send", () => {});
+
+    new PhilipsTV().logger.warn("something went wrong");
+
+    assert.equal(sendSpy.mock.callCount(), 1);
+    assert.equal(sendSpy.mock.calls[0].arguments[0], "philips-tv");
+    assert.equal(sendSpy.mock.calls[0].arguments[0], PhilipsTV.slug);
   });
 });

@@ -1,4 +1,4 @@
-name: Test
+name: CI
 
 on:
   push:
@@ -7,6 +7,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -24,5 +28,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Run tests
         run: npm test
+
+  # Same build and smoke test as the release workflow, for every platform it
+  # ships, so a change that would break the release fails here first.
+  build:
+    uses: ./.github/workflows/build.yml
