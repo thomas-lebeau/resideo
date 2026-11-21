@@ -1,138 +1,68 @@
-name: Build and Release
+name: Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
-      version_bump:
-        description: "Version bump type"
-        required: true
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-        default: "patch"
+      tag_name:
+        description: "Existing draft release tag to recover after a failed release run (for example, v4.1.0)"
+        required: false
+        type: string
 
 permissions:
   contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
 
 jobs:
-  version_bump:
-    if: github.actor == 'thomas-lebeau'
+  release-please:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.tag_name == '' }}
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.version.outputs.tag }}
-      new_version: ${{ steps.version.outputs.new_version }}
-      previous_version: ${{ steps.version.outputs.previous_version }}
-
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Create or update release PR
+        id: release
+        uses: googleapis/release-please-action@v4
         with:
-          fetch-depth: 0
-          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.8.0"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Configure Git
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Bump version
-        id: version
-        run: |
-          PREVIOUS_VERSION=$(node -p "require('./package.json').version")
-          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Commit version bump
-        run: |
-          git add package.json package-lock.json
-          git commit -m "chore: release ${{ steps.version.outputs.tag }}"
-          git tag ${{ steps.version.outputs.tag }}
-          git push origin main
-          git push origin ${{ steps.version.outputs.tag }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
 
   build:
-    needs: version_bump
+    needs: release-please
+    if: ${{ always() && (needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')) }}
     uses: ./.github/workflows/build.yml
     with:
-      ref: main
+      ref: ${{ inputs.tag_name != '' && inputs.tag_name || needs.release-please.outputs.tag_name }}
       upload: true
 
-  cleanup_on_failure:
-    needs: [version_bump, build]
-    if: ${{ always() && needs.version_bump.result == 'success' && needs.build.result == 'failure' }}
+  publish-assets:
+    needs: [release-please, build]
+    if: ${{ always() && (needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')) && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
+      actions: read
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
-
-      - name: Configure Git
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Delete tag and revert commit
-        run: |
-          echo "Build failed, reverting version bump..."
-          git push origin :refs/tags/${{ needs.version_bump.outputs.tag }}
-          git reset --hard HEAD~1
-          git push origin main --force
-
-  release:
-    needs: [version_bump, build]
-    if: ${{ success() }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-
-      - name: Generate changelog
-        id: changelog
-        run: |
-          PREVIOUS_TAG="v${{ needs.version_bump.outputs.previous_version }}"
-          CURRENT_TAG="${{ needs.version_bump.outputs.tag }}"
-
-          git log $PREVIOUS_TAG..$CURRENT_TAG~1 --pretty=format:"- %s (%h)" --no-merges >> changelog.md
-          echo "" >> changelog.md
-          echo "[Full Changelog](https://github.com/thomas-lebeau/resideo/compare/$PREVIOUS_TAG...$CURRENT_TAG)" >> changelog.md
-
-          cat changelog.md
-
-      - name: Download artifacts
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.version_bump.outputs.tag }}
-          name: Release ${{ needs.version_bump.outputs.tag }}
-          fail_on_unmatched_files: true
-          body_path: changelog.md
-          files: |
-            raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz
-            raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz
-            raspberry-home-monitor-linux-arm64/raspberry-home-monitor-linux-arm64.tar.gz
+      - name: Attach release archives
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          TAG_NAME: ${{ needs.release-please.outputs.release_created == 'true' && needs.release-please.outputs.tag_name || inputs.tag_name }}
+        run: |
+          gh release upload "$TAG_NAME" raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz raspberry-home-monitor-linux-arm64/raspberry-home-monitor-linux-arm64.tar.gz --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          TAG_NAME: ${{ needs.release-please.outputs.release_created == 'true' && needs.release-please.outputs.tag_name || inputs.tag_name }}
+        run: gh release edit "$TAG_NAME" --draft=false --repo "$GITHUB_REPOSITORY"
