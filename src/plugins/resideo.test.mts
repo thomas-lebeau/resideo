@@ -67,7 +67,10 @@ function requests(fetchMock: ReturnType<typeof mockResideo>) {
     const [url, init] = call.arguments as unknown as [string, RequestInit];
     const headers = (init.headers ?? {}) as Record<string, string>;
 
-    return { path: new URL(url).pathname, authorization: headers.Authorization };
+    return {
+      path: new URL(url).pathname,
+      authorization: headers.Authorization,
+    };
   });
 }
 
@@ -95,9 +98,18 @@ describe("Resideo", () => {
       expires_at: now + 1799 * 1000,
     });
     assert.deepEqual(requests(fetchMock), [
-      { path: "/oauth2/accesstoken", authorization: "Basic YXBpLWtleTphcGktc2VjcmV0" },
-      { path: "/v2/devices/thermostats/device-id", authorization: "Bearer token-1" },
-      { path: "/v2/devices/thermostats/device-id", authorization: "Bearer token-1" },
+      {
+        path: "/oauth2/accesstoken",
+        authorization: "Basic YXBpLWtleTphcGktc2VjcmV0",
+      },
+      {
+        path: "/v2/devices/thermostats/device-id",
+        authorization: "Bearer token-1",
+      },
+      {
+        path: "/v2/devices/thermostats/device-id",
+        authorization: "Bearer token-1",
+      },
     ]);
   });
 
