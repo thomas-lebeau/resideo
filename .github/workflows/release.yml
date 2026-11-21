@@ -5,6 +5,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Existing draft release tag to recover after a failed release run (for example, v4.1.0)"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -31,15 +36,15 @@ jobs:
 
   build:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    if: ${{ needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '') }}
     uses: ./.github/workflows/build.yml
     with:
-      ref: ${{ needs.release-please.outputs.tag_name }}
+      ref: ${{ needs.release-please.outputs.release_created == 'true' && needs.release-please.outputs.tag_name || inputs.tag_name }}
       upload: true
 
   publish-assets:
     needs: [release-please, build]
-    if: ${{ needs.release-please.outputs.release_created == 'true' && needs.build.result == 'success' }}
+    if: ${{ always() && (needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')) && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -51,12 +56,12 @@ jobs:
       - name: Attach release archives
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+          TAG_NAME: ${{ needs.release-please.outputs.release_created == 'true' && needs.release-please.outputs.tag_name || inputs.tag_name }}
         run: |
           gh release upload "$TAG_NAME" raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz raspberry-home-monitor-linux-arm64/raspberry-home-monitor-linux-arm64.tar.gz --clobber --repo "$GITHUB_REPOSITORY"
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+          TAG_NAME: ${{ needs.release-please.outputs.release_created == 'true' && needs.release-please.outputs.tag_name || inputs.tag_name }}
         run: gh release edit "$TAG_NAME" --draft=false --repo "$GITHUB_REPOSITORY"
