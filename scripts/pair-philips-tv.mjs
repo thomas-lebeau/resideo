@@ -12,7 +12,8 @@
 
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { createInterface } from "node:readline";
-import { Agent } from "undici";
+// undici's own fetch, so the Agent below is always compatible with it
+import { Agent, fetch } from "undici";
 
 // Shared key used to sign the pairing grant request (Philips JointSpace API v6).
 // This is not a secret of this project: it is a public, well-known key that is
