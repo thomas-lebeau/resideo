@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { SECTIONS } from "../src/queries.ts";
 import type { SectionResponse } from "../src/queries.ts";
-import { handleQuery, normalize } from "./query.ts";
+import { handleQuery, normalize } from "./handler.ts";
 
 const NOW = Date.UTC(2026, 10, 3, 12, 0, 0);
 const KEYS = { DD_API_KEY: "api", DD_APP_KEY: "app" };
@@ -12,6 +12,16 @@ describe("handleQuery", () => {
     expect((await handleQuery(get("section=bogus"), {})).status).toBe(400);
     expect((await handleQuery(get("section=__proto__"), {})).status).toBe(400);
     expect((await handleQuery(get("section=climate&range=1y"), {})).status).toBe(400);
+  });
+
+  it("redirects non-canonical query strings without querying Datadog", async () => {
+    const fetchSpy = vi.fn<typeof fetch>();
+    for (const query of ["section=climate&range=1h&nonce=1", "range=1h&section=climate", "section=climate", "section=climate&section=climate&range=1h"]) {
+      const response = await handleQuery(get(query), KEYS, { fetch: fetchSpy, now: NOW });
+      expect(response.status, query).toBe(308);
+      expect(response.headers.get("Location"), query).toBe("/api/query?section=climate&range=1h");
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("rejects non-GET requests", async () => {
@@ -25,6 +35,7 @@ describe("handleQuery", () => {
     const body = (await response.json()) as SectionResponse;
 
     expect(fetchSpy).not.toHaveBeenCalled();
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body).toMatchObject({ section: "climate", range: "1h", mock: true, from: NOW - 3_600_000, to: NOW });
     const temperatures = body.series.filter((s) => s.queryId === "temperature");
     expect(temperatures.map((s) => s.group.name)).toEqual(["Living Room", "Bedroom", "Server Room"]);
@@ -75,6 +86,8 @@ describe("handleQuery", () => {
     expect(attributes.formulas).toHaveLength(SECTIONS.climate.queries.length);
 
     expect(body.mock).toBe(false);
+    // Real data is cached at the edge so the public endpoint can't fan out to Datadog.
+    expect(response.headers.get("Cache-Control")).toBe("public, s-maxage=60, stale-while-revalidate=60");
     expect(body.series).toEqual([
       { queryId: "temperature", group: { name: "Bedroom" }, points: [[1000, 20.5], [2000, null]], last: 20.5 },
       { queryId: "thermostat_target", group: {}, points: [[1000, 19], [2000, 19.5]], last: 19.5 },
@@ -83,15 +96,16 @@ describe("handleQuery", () => {
 
   it("returns 502 with Datadog's error message when the API fails", async () => {
     const fetchSpy = vi.fn<typeof fetch>(async () => Response.json({ errors: ["Forbidden"] }, { status: 403 }));
-    const response = await handleQuery(get("section=health"), KEYS, { fetch: fetchSpy, now: NOW });
+    const response = await handleQuery(get("section=health&range=1h"), KEYS, { fetch: fetchSpy, now: NOW });
 
     expect(response.status).toBe(502);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toEqual({ error: "Datadog API responded 403: Forbidden" });
   });
 
   it("still reports an error status when the error body isn't JSON", async () => {
     const fetchSpy = vi.fn<typeof fetch>(async () => new Response("<html>Bad gateway</html>", { status: 503 }));
-    const response = await handleQuery(get("section=health"), KEYS, { fetch: fetchSpy, now: NOW });
+    const response = await handleQuery(get("section=health&range=1h"), KEYS, { fetch: fetchSpy, now: NOW });
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "Datadog API responded 503" });
@@ -99,7 +113,7 @@ describe("handleQuery", () => {
 
   it("returns 502 instead of empty data when a successful response body can't be read", async () => {
     const fetchSpy = vi.fn<typeof fetch>(async () => new Response("{ truncated", { status: 200 }));
-    const response = await handleQuery(get("section=health"), KEYS, { fetch: fetchSpy, now: NOW });
+    const response = await handleQuery(get("section=health&range=1h"), KEYS, { fetch: fetchSpy, now: NOW });
 
     expect(response.status).toBe(502);
     expect(await response.json()).toHaveProperty("error");

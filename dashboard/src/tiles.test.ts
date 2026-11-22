@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockSeries } from "../api/mock.ts";
+import { mockSeries } from "../server/mock.ts";
 import type { SectionId, SectionResponse, Series } from "./queries.ts";
 import { SECTIONS } from "./queries.ts";
 import type { DashboardData } from "./tiles.ts";

@@ -80,3 +80,6 @@ terraform.rc
 # If you're sharing providers and versions via .terraform.lock.hcl, keep it.
 # Otherwise, ignore it for more flexible local testing.
 .terraform.lock.hcl
+
+# Vercel CLI project link and build output
+.vercel
