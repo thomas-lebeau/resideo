@@ -372,31 +372,6 @@ export class HuaweiRouter extends AbstractPlugin<
 
   private buildLanDevices(devices: RawLanDevice[], leases: RawDhcpLease[]): LanDevice[] {
     const normalize = (value: string) => value.trim().toLowerCase();
-
-    // The router can return the same inventory entry more than once, with
-    // partially populated fields in each copy. Collapse those entries before
-    // joining DHCP data so one physical device produces one telemetry event.
-    const uniqueDevices = new Map<string, RawLanDevice>();
-    for (const device of devices) {
-      const key =
-        this.normalizeMac(device.macAddress) ??
-        (device.ipAddress ? normalize(device.ipAddress) : undefined) ??
-        normalize(device.domain);
-      const existing = uniqueDevices.get(key);
-      if (!existing) {
-        uniqueDevices.set(key, { ...device });
-        continue;
-      }
-
-      for (const field of Object.keys(device) as (keyof RawLanDevice)[]) {
-        const incoming = device[field];
-        const current = existing[field];
-        if (incoming && incoming !== "0" && (!current || current === "0")) {
-          existing[field] = incoming;
-        }
-      }
-    }
-    devices = [...uniqueDevices.values()];
     const byMac = new Map(
       leases
         .filter((lease) => lease.macAddress)
@@ -443,7 +418,7 @@ export class HuaweiRouter extends AbstractPlugin<
         ...(device.portType ? { port_type: device.portType } : {}),
         ...(device.deviceType && device.deviceType !== "0" ? { device_type: device.deviceType } : {}),
         ...(device.userDevAlias ? { user_device_alias: device.userDevAlias } : {}),
-        ...(device.userSpecifiedDeviceType && device.userSpecifiedDeviceType !== "0" ? { user_specified_device_type: device.userSpecifiedDeviceType } : {}),
+        ...(device.userSpecifiedDeviceType ? { user_specified_device_type: device.userSpecifiedDeviceType } : {}),
         ...(device.ipv4Enabled ? { ipv4_enabled: device.ipv4Enabled } : {}),
         ...(device.ipv6Enabled ? { ipv6_enabled: device.ipv6Enabled } : {}),
         ...(leaseTime && (numericLeaseTime !== undefined ? numericLeaseTime > 0 : true)
