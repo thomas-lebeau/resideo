@@ -182,6 +182,34 @@ The normalized status is emitted for GPON. EPON has a different state vocabulary
 
 The captured response does not include an ONT ID. That value is intentionally not guessed or emitted; it needs a separately captured and verified response before implementation.
 
+## LAN Device Inventory and DHCP Leases
+
+### Connected-device inventory
+**Endpoint**: `POST /html/bbsp/common/GetLanUserDevInfo.asp`
+
+**Authentication**: Existing router session cookie and `x.X_HW_Token` form field.
+
+**Response**: JavaScript containing `USERDevice(...)` constructor calls. The captured signature is:
+
+```javascript
+USERDevice(Domain, IpAddr, MacAddr, Port, IpType, DevType, DevStatus, PortType,
+  Time, HostName, IPv4Enabled, IPv6Enabled, DeviceType, UserDevAlias,
+  UserSpecifiedDeviceType, LeaseTimeRemaining)
+```
+
+Router-provided status and type values are preserved rather than assigned undocumented meanings. The event name prefers the user alias, then hostname, DHCP name, IP address, MAC address, and router domain.
+
+### DHCP leases
+**Endpoint**: `POST /html/bbsp/common/GetLanUserDhcpInfo.asp`
+
+**Authentication**: Existing router session cookie and `x.X_HW_Token` form field.
+
+**Response**: JavaScript containing `DHCPInfo(domain, name, ip, mac, remainingTime, deviceType, interfaceType, addressSource)` constructor calls.
+
+Lease records are joined to the device inventory by case-insensitive MAC address, falling back to IP address. DHCP-only entries are retained. Numeric remaining lease times are emitted as numbers; other values remain strings. Either endpoint may fail independently without interrupting WAN or optical monitoring.
+
+Each discovered entry is emitted as a `lan_device` event with available IP, MAC, hostname, raw status/type, port, alias, and DHCP lease details. The router can return static/offline inventory entries as well as active DHCP leases, so consumers should use the raw `status` field rather than assuming every entry is online.
+
 ## Key Status Fields
 
 ### Connection Status Values
