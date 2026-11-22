@@ -432,7 +432,17 @@ export class HuaweiRouter extends AbstractPlugin<
 
     for (const lease of leases) {
       if (consumed.has(lease)) continue;
-      const name = lease.name || lease.ipAddress || lease.macAddress || lease.domain;
+      const numericRemainingTime = /^\d+$/.test(lease.remainingTime)
+        ? Number(lease.remainingTime)
+        : undefined;
+      if (numericRemainingTime === 0) continue;
+      const normalizedMac = this.normalizeMac(lease.macAddress);
+      const name =
+        (normalizedMac ? this.deviceNames.get(normalizedMac) : undefined) ||
+        lease.name ||
+        lease.ipAddress ||
+        lease.macAddress ||
+        lease.domain;
       if (!name) continue;
       const numericLeaseTime = lease.remainingTime && /^[0-9]+$/.test(lease.remainingTime) ? Number(lease.remainingTime) : undefined;
       result.push({
