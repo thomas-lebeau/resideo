@@ -212,7 +212,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
     // WAN statistics are keyed by the WAN domain with a ".Stats" suffix.
     // Match by domain rather than relying on the order of the two arrays.
     const statsMatch = jsCode.match(
-      /var WanEthIPStats = new Array\\(([\\s\\S]*?)\\);/
+      /var WanEthIPStats = new Array\(([\s\S]*?)\);/
     );
     if (statsMatch) {
       for (const argsString of this.parseConstructorCalls(
