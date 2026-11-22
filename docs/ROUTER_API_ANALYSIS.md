@@ -89,8 +89,8 @@ var IPWanList = new Array(
     Pri8021,             // "0"
     VenderClassID,       // ""
     ClientID,            // ""
-    ServiceList,         // "INTERNET" | "VOIP" | "TR069" | "IPTV"
-    ExServiceList,       // ""
+    ServiceList,         // "INTERNET" | "VOIP" | "TR069" | "IPTV" (argument 25)
+    ExServiceList,       // Overrides ServiceList when non-empty (argument 26)
     Tr069Flag,           // "0"
     MacId,               // "2"
     IPv4Enable,          // "1"
@@ -106,7 +106,7 @@ var IPWanList = new Array(
     StaticRouteInfo,     // ""
     VendorInfo,          // ""
     DHCPLeaseTimeRemaining, // "7367"
-    Uptime,              // "201494"
+    Uptime,              // "201494" (argument 42; argument 35 is MaxMTUSize)
     DNSOverrideAllowed,  // "0"
     X_HW_LowerLayers,    // hash string
     X_HW_IPoEName,       // ""
@@ -134,7 +134,7 @@ Contains traffic statistics:
 ```javascript
 var WanEthIPStats = new Array(
   new WaninfoStats(
-    domain,            // Same as WanIP domain
+    domain,            // WanIP domain with a ".Stats" suffix; join after removing suffix
     BytesSent,         // "791484635"
     BytesReceived,     // "1823521274"
     PacketsSent,       // "25164933"
