@@ -156,7 +156,7 @@ describe("HuaweiRouter", () => {
     assert.equal(plugin.cleanString(`"a\\x2cb\\x3ac"`), "a,b:c");
   });
 
-  test("parseOpticalInfo reads the original RX power and derives GPON registration", () => {
+  test("parseOpticalInfo reads the original RX power and normalizes GPON status", () => {
     const plugin = new HuaweiRouter() as unknown as Internals;
 
     assert.deepEqual(plugin.parseOpticalInfo(OPTICAL_INFO_PAGE), {
