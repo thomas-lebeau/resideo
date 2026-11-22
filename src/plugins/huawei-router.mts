@@ -15,6 +15,16 @@ type RawWanConnection = {
   bytesSent: number;
 };
 
+type PonStatus =
+  | "initializing"
+  | "standby"
+  | "discovering"
+  | "ranging"
+  | "operational"
+  | "recovering"
+  | "emergency_stop"
+  | "unknown";
+
 type WanConnection = {
   type: "wan_connection";
   name: string;
@@ -25,7 +35,17 @@ type WanConnection = {
   uptime?: number;
   bytes_received?: number;
   bytes_sent?: number;
+  optical_rx_power_dbm?: number;
+  pon_mode?: "gpon" | "epon";
+  pon_status?: PonStatus;
 };
+
+type OpticalInfo = Pick<
+  WanConnection,
+  | "optical_rx_power_dbm"
+  | "pon_mode"
+  | "pon_status"
+>;
 
 const CONFIG = [
   "HUAWEI_ROUTER_HOST",
@@ -47,9 +67,10 @@ const IP_WAN_LIST_PATTERN = /var IPWanList = new Array\(([\s\S]*?)\);/;
  * - HUAWEI_ROUTER_PASSWORD: Router admin password
  */
 export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
-  static readonly description = "Huawei router WAN connection monitor";
+  static readonly description = "Huawei router WAN and optical connection monitor";
 
   private sessionCookie: string | null = null;
+  private csrfToken: string | null = null;
   private readonly baseUrl: string;
 
   constructor() {
@@ -84,6 +105,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
    */
   private async login(): Promise<void> {
     const token = await this.getToken();
+    this.csrfToken = token;
 
     // Base64 encode the password (router expects this)
     const encodedPassword = Buffer.from(
@@ -169,6 +191,93 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
     }
 
     return jsCode;
+  }
+
+  /**
+   * Fetches optical and PON diagnostics from the router's main-page
+   * diagnostics endpoint. The response is JavaScript, not JSON.
+   */
+  private async getOpticalInfo(): Promise<OpticalInfo> {
+    if (!this.sessionCookie || !this.csrfToken) {
+      return {};
+    }
+
+    const response = await fetch(
+      `${this.baseUrl}/html/amp/common/getSmartDiagnoseResult.asp`,
+      {
+        method: "POST",
+        headers: {
+          Cookie: this.sessionCookie,
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          Referer: `${this.baseUrl}/CustomApp/mainpage.asp`,
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: new URLSearchParams({
+          "x.X_HW_Token": this.csrfToken,
+        }).toString(),
+        signal: AbortSignal.timeout(HTTP_TIMEOUT),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to get optical information: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return this.parseOpticalInfo(await response.text());
+  }
+
+  /**
+   * Reads a string-valued variable from the router's JavaScript response.
+   * This deliberately extracts the original declaration: the page's
+   * getResult() function later overwrites opticInfo with "ok" or "nok".
+   */
+  private readStringVariable(source: string, name: string): string | undefined {
+    const singleQuotedPattern = new RegExp(
+      "\\bvar\\s+" + name + "\\s*=\\s*'([^']*)'\\s*;",
+      "s"
+    );
+    const doubleQuotedPattern = new RegExp(
+      '\\bvar\\s+' + name + '\\s*=\\s*"([^"]*)"\\s*;',
+      "s"
+    );
+    const match =
+      source.match(singleQuotedPattern) ?? source.match(doubleQuotedPattern);
+    return match ? this.cleanString("'" + match[1] + "'") : undefined;
+  }
+
+  /**
+   * Parses the optical receive level and normalizes the GPON state exposed
+   * by the router.
+   */
+  private parseOpticalInfo(jsCode: string): OpticalInfo {
+    const opticInfo = this.readStringVariable(jsCode, "opticInfo");
+    const ponMode = this.readStringVariable(jsCode, "ontPonMode");
+    const gponStatus = this.readStringVariable(jsCode, "gponStatus");
+
+    const rxPower =
+      opticInfo && opticInfo !== "--" ? Number(opticInfo) : Number.NaN;
+    const mode = ponMode?.toLowerCase();
+    const gponStates = {
+      O1: "initializing",
+      O2: "standby",
+      O3: "discovering",
+      O4: "ranging",
+      O5: "operational",
+      O6: "recovering",
+      O7: "emergency_stop",
+    } as const;
+    const ponStatus =
+      mode === "gpon" && gponStatus
+        ? gponStates[gponStatus.toUpperCase() as keyof typeof gponStates] ?? "unknown"
+        : undefined;
+
+    return {
+      ...(Number.isFinite(rxPower) ? { optical_rx_power_dbm: rxPower } : {}),
+      ...(mode === "gpon" || mode === "epon" ? { pon_mode: mode } : {}),
+      ...(mode === "gpon" && gponStatus ? { pon_status: ponStatus ?? "unknown" } : {}),
+    };
   }
 
   /**
@@ -397,6 +506,17 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
     }
 
     const isUp = this.isConnectionUp(internetConnection);
+    let opticalInfo: OpticalInfo = {};
+
+    try {
+      opticalInfo = await this.getOpticalInfo();
+    } catch (error) {
+      // WAN status remains useful even if this firmware does not expose
+      // optical diagnostics or the diagnostics endpoint is temporarily down.
+      this.logger.debug("Failed to collect optical information", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     return {
       type: "wan_connection",
@@ -408,6 +528,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
       uptime: internetConnection.uptime,
       bytes_received: internetConnection.bytesReceived,
       bytes_sent: internetConnection.bytesSent,
+      ...opticalInfo,
     } satisfies WanConnection;
   }
 }

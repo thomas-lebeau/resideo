@@ -155,6 +155,33 @@ var WanEthIPStats = new Array(
 
 **Description**: Returns JavaScript code with WAN configuration functions and default values. Less useful for real-time status, more for configuration templates.
 
+## Optical / GPON Diagnostics
+
+### Main-page diagnostics
+**Endpoint**: `POST /html/amp/common/getSmartDiagnoseResult.asp`
+
+**Authentication**: Existing router session cookie and `x.X_HW_Token` form field.
+
+**Response**: JavaScript (not JSON). The captured response declares:
+
+```javascript
+var opticInfo = '\x2d20\x2e09'; // -20.09 dBm
+var ontPonMode = 'gpon';
+var gponStatus = 'O5';
+var eponStatus = '';
+```
+
+The page's `getResult()` function later overwrites `opticInfo` with `"ok"` or `"nok"`, so the original variable declaration must be parsed to retain the numeric RX power. GPON registration is considered successful when `ontPonMode` is `gpon` and `gponStatus` is `O5`; EPON uses `eponStatus === "ONLINE"`.
+
+The implementation exposes:
+- `optical_rx_power_dbm`: optical receive power in dBm, when a numeric reading is available.
+- `pon_mode`: lower-case PON mode (`gpon` or `epon`).
+- `pon_status`: normalized, human-readable GPON state. The raw Huawei O1–O7 codes map to `initializing`, `standby`, `discovering`, `ranging`, `operational`, `recovering`, and `emergency_stop`, following the ITU-T GPON ONU state definitions. Unrecognized codes map to `unknown`.
+
+The normalized status is emitted for GPON. EPON has a different state vocabulary, so no GPON mapping is applied to EPON. A separate `ont_registration_state` is unnecessary because `pon_status: "operational"` already represents the operational GPON state.
+
+The captured response does not include an ONT ID. That value is intentionally not guessed or emitted; it needs a separately captured and verified response before implementation.
+
 ## Key Status Fields
 
 ### Connection Status Values

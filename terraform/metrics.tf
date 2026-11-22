@@ -446,6 +446,37 @@ resource "datadog_logs_metric" "wan_connection" {
   }
 }
 
+# Huawei Router Optical Receive Power
+resource "datadog_logs_metric" "wan_optical_rx_power" {
+  name = "${local.name}.wan.optical_rx_power"
+  filter {
+    query = "service:${var.service_name} @type:wan_connection @optical_rx_power_dbm:*"
+  }
+  compute {
+    aggregation_type = "distribution"
+    path             = "@optical_rx_power_dbm"
+    include_percentiles = true
+  }
+
+  dynamic "group_by" {
+    for_each = local.common_group_by
+    content {
+      path     = group_by.value.path
+      tag_name = group_by.value.tag_name
+    }
+  }
+
+  group_by {
+    path     = "@pon_mode"
+    tag_name = "pon_mode"
+  }
+
+  group_by {
+    path     = "@pon_status"
+    tag_name = "pon_status"
+  }
+}
+
 # Balay Dishwasher Metrics
 resource "datadog_logs_metric" "dishwasher_state" {
   name = "${local.name}.dishwasher.state"
@@ -613,6 +644,12 @@ resource "datadog_metric_metadata" "rssi_metadata" {
   # using milliwatt as unit because datadog doesn't support decibel milliwatt
   unit        = "milliwatt"
   description = "Received Signal Strength Indicator (RSSI) for Bluetooth devices (in dBm)"
+}
+
+resource "datadog_metric_metadata" "wan_optical_rx_power_metadata" {
+  metric      = datadog_logs_metric.wan_optical_rx_power.name
+  type        = "gauge"
+  description = "Received optical fibre signal power in dBm"
 }
 
 resource "datadog_metric_metadata" "thermostat_target_temperature_metadata" {

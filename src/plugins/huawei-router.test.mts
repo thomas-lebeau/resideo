@@ -11,6 +11,7 @@ type Internals = {
   parseConstructorArgs(args: string): string[];
   parseConstructorCalls(source: string, constructorName: string): string[];
   cleanString(value: string): string;
+  parseOpticalInfo(source: string): Record<string, unknown>;
 };
 
 // Positional WanIP constructor arguments (see docs/ROUTER_API_ANALYSIS.md)
@@ -89,6 +90,16 @@ var WanEthIPStats = new Array(${[...stats, "null"].join(",\n")});
 </script>`;
 }
 
+const OPTICAL_INFO_PAGE = `var opticInfo = '-20.09';
+var ontPonMode = 'gpon';
+var gponStatus = 'O5';
+var eponStatus = '';
+function getResult() {
+  opticInfo = "ok";
+  return { opticInfo: opticInfo };
+}
+getResult();`;
+
 function mockRouter(...wanListResponses: Response[]) {
   return mock.method(globalThis, "fetch", async (input: string) => {
     const { pathname } = new URL(input);
@@ -103,6 +114,8 @@ function mockRouter(...wanListResponses: Response[]) {
         });
       case "/html/bbsp/common/wan_list.asp":
         return wanListResponses.shift() ?? new Response(null, { status: 500 });
+      case "/html/amp/common/getSmartDiagnoseResult.asp":
+        return new Response(OPTICAL_INFO_PAGE);
       default:
         throw new Error(`Unexpected request to ${pathname}`);
     }
@@ -143,6 +156,59 @@ describe("HuaweiRouter", () => {
     assert.equal(plugin.cleanString(`"a\\x2cb\\x3ac"`), "a,b:c");
   });
 
+  test("parseOpticalInfo reads the original RX power and normalizes GPON status", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+
+    assert.deepEqual(plugin.parseOpticalInfo(OPTICAL_INFO_PAGE), {
+      optical_rx_power_dbm: -20.09,
+      pon_mode: "gpon",
+      pon_status: "operational",
+    });
+  });
+
+  test("parseOpticalInfo normalizes all known GPON states", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+    const states = [
+      ["O1", "initializing"],
+      ["O2", "standby"],
+      ["O3", "discovering"],
+      ["O4", "ranging"],
+      ["O5", "operational"],
+      ["O6", "recovering"],
+      ["O7", "emergency_stop"],
+      ["O8", "unknown"],
+    ] as const;
+
+    for (const [raw, normalized] of states) {
+      assert.equal(
+        plugin.parseOpticalInfo(
+          `var ontPonMode = 'gpon'; var gponStatus = '${raw}';`
+        ).pon_status,
+        normalized
+      );
+    }
+  });
+
+  test("parseOpticalInfo does not apply GPON states to EPON", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+
+    assert.deepEqual(
+      plugin.parseOpticalInfo(
+        "var ontPonMode = 'epon'; var gponStatus = 'O5';"
+      ),
+      { pon_mode: "epon" }
+    );
+  });
+
+  test("parseOpticalInfo omits unavailable optical readings", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+
+    assert.deepEqual(
+      plugin.parseOpticalInfo("var opticInfo = '--'; var ontPonMode = '';"),
+      {}
+    );
+  });
+
   test("run reports the internet connection with traffic stats", async () => {
     const fetchMock = mockRouter(
       new Response(
@@ -178,6 +244,9 @@ describe("HuaweiRouter", () => {
         uptime: 12345,
         bytes_received: 1823521274,
         bytes_sent: 791484635,
+        optical_rx_power_dbm: -20.09,
+        pon_mode: "gpon",
+        pon_status: "operational",
       }
     );
 
@@ -193,6 +262,9 @@ describe("HuaweiRouter", () => {
       Cookie: "Cookie=session-id",
       Referer: "http://192.168.0.1/CustomApp/mainpage.asp",
     });
+    const opticalRequest = fetchMock.mock.calls[3].arguments[1] as RequestInit;
+    assert.equal(opticalRequest.method, "POST");
+    assert.equal(opticalRequest.body, "x.X_HW_Token=csrf-token");
   });
 
   test("run reports a down internet connection", async () => {
