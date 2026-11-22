@@ -177,67 +177,116 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
   private parseWanConnections(jsCode: string): RawWanConnection[] {
     const connections: RawWanConnection[] = [];
 
-    // Extract IPWanList array
     const ipWanMatch = jsCode.match(IP_WAN_LIST_PATTERN);
     if (!ipWanMatch) {
       return connections;
     }
 
-    // Extract individual WanIP constructor calls
-    const wanIpPattern = /new WanIP\(([\s\S]*?)\)(?=,\s*(?:new WanIP|null))/g;
-    let match;
+    for (const argsString of this.parseConstructorCalls(ipWanMatch[1], "WanIP")) {
+      const args = this.parseConstructorArgs(argsString);
 
-    while ((match = wanIpPattern.exec(ipWanMatch[1])) !== null) {
-      const args = this.parseConstructorArgs(match[1]);
-
-      if (args.length >= 20) {
-        // Extract data based on constructor parameter positions
-        // Based on the WanIP constructor signature from the HAR analysis
-        connections.push({
-          domain: this.cleanString(args[0]),
-          status: this.cleanString(args[4]),
-          lastConnErr: this.cleanString(args[5]),
-          name: this.cleanString(args[7]),
-          serviceList: this.cleanString(args[25]).toUpperCase(),
-          ipAddress: this.cleanString(args[14]),
-          gateway: this.cleanString(args[16]),
-          dnsServers: this.cleanString(args[19]).split(","),
-          uptime: parseInt(this.cleanString(args[35]) || "0", 10),
-          bytesReceived: 0, // Will be populated from stats if available
-          bytesSent: 0,
-        });
+      // Uptime is argument 42 in the WanIP signature. Earlier firmware
+      // parsers incorrectly read argument 35 (MaxMTUSize).
+      if (args.length <= 42) {
+        continue;
       }
+
+      const serviceList =
+        this.cleanString(args[26]) || this.cleanString(args[25]);
+
+      connections.push({
+        domain: this.cleanString(args[0]),
+        status: this.cleanString(args[4]),
+        lastConnErr: this.cleanString(args[5]),
+        name: this.cleanString(args[7]),
+        serviceList: serviceList.toUpperCase(),
+        ipAddress: this.cleanString(args[14]),
+        gateway: this.cleanString(args[16]),
+        dnsServers: this.cleanString(args[19]).split(","),
+        uptime: Number.parseInt(this.cleanString(args[42]), 10) || 0,
+        bytesReceived: 0,
+        bytesSent: 0,
+      });
     }
 
-    // Try to extract traffic statistics
+    // WAN statistics are keyed by the WAN domain with a ".Stats" suffix.
+    // Match by domain rather than relying on the order of the two arrays.
     const statsMatch = jsCode.match(
-      /var WanEthIPStats = new Array\(([\s\S]*?)\);/
+      /var WanEthIPStats = new Array\\(([\\s\\S]*?)\\);/
     );
     if (statsMatch) {
-      const statsPattern =
-        /new WaninfoStats\(([\s\S]*?)\)(?=,\s*(?:new WaninfoStats|null))/g;
-      let statsIndex = 0;
-
-      while (
-        (match = statsPattern.exec(statsMatch[1])) !== null &&
-        statsIndex < connections.length
-      ) {
-        const statsArgs = this.parseConstructorArgs(match[1]);
-        if (statsArgs.length >= 3 && connections[statsIndex]) {
-          connections[statsIndex].bytesSent = parseInt(
-            this.cleanString(statsArgs[1]) || "0",
-            10
-          );
-          connections[statsIndex].bytesReceived = parseInt(
-            this.cleanString(statsArgs[2]) || "0",
-            10
-          );
+      for (const argsString of this.parseConstructorCalls(
+        statsMatch[1],
+        "WaninfoStats"
+      )) {
+        const statsArgs = this.parseConstructorArgs(argsString);
+        if (statsArgs.length < 3) {
+          continue;
         }
-        statsIndex++;
+
+        const domain = this.cleanString(statsArgs[0]).replace(/\\.Stats$/, "");
+        const connection = connections.find((item) => item.domain === domain);
+        if (!connection) {
+          continue;
+        }
+
+        connection.bytesSent =
+          Number.parseInt(this.cleanString(statsArgs[1]), 10) || 0;
+        connection.bytesReceived =
+          Number.parseInt(this.cleanString(statsArgs[2]), 10) || 0;
       }
     }
 
     return connections;
+  }
+
+  /**
+   * Extracts the argument text from each call to a named JavaScript
+   * constructor, respecting nested parentheses and quoted strings.
+   */
+  private parseConstructorCalls(source: string, constructorName: string): string[] {
+    const calls: string[] = [];
+    const pattern = new RegExp(`new\\s+${constructorName}\\s*\\(`, "g");
+    let match: RegExpExecArray | null;
+
+    while ((match = pattern.exec(source)) !== null) {
+      const start = pattern.lastIndex;
+      let depth = 1;
+      let inString = false;
+      let stringChar = "";
+      let escaped = false;
+
+      for (let i = start; i < source.length; i++) {
+        const char = source[i];
+
+        if (inString) {
+          if (escaped) {
+            escaped = false;
+          } else if (char === "\\\\") {
+            escaped = true;
+          } else if (char === stringChar) {
+            inString = false;
+          }
+          continue;
+        }
+
+        if (char === '"' || char === "'") {
+          inString = true;
+          stringChar = char;
+        } else if (char === "(") {
+          depth++;
+        } else if (char === ")") {
+          depth--;
+          if (depth === 0) {
+            calls.push(source.slice(start, i));
+            pattern.lastIndex = i + 1;
+            break;
+          }
+        }
+      }
+    }
+
+    return calls;
   }
 
   /**
@@ -248,29 +297,35 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
     let current = "";
     let inString = false;
     let stringChar = "";
+    let escaped = false;
     let depth = 0;
 
     for (let i = 0; i < argsStr.length; i++) {
       const char = argsStr[i];
 
-      if (!inString) {
-        if (char === '"' || char === "'") {
-          inString = true;
-          stringChar = char;
-          current += char;
-        } else if (char === "," && depth === 0) {
-          args.push(current.trim());
-          current = "";
-        } else {
-          current += char;
-          if (char === "(") depth++;
-          if (char === ")") depth--;
-        }
-      } else {
+      if (inString) {
         current += char;
-        if (char === stringChar && argsStr[i - 1] !== "\\") {
+        if (escaped) {
+          escaped = false;
+        } else if (char === "\\\\") {
+          escaped = true;
+        } else if (char === stringChar) {
           inString = false;
         }
+        continue;
+      }
+
+      if (char === '"' || char === "'") {
+        inString = true;
+        stringChar = char;
+        current += char;
+      } else if (char === "," && depth === 0) {
+        args.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+        if (char === "(" || char === "[" || char === "{") depth++;
+        if (char === ")" || char === "]" || char === "}") depth--;
       }
     }
 
