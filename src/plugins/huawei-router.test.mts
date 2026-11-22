@@ -90,7 +90,7 @@ var WanEthIPStats = new Array(${[...stats, "null"].join(",\n")});
 </script>`;
 }
 
-const OPTICAL_INFO_PAGE = String.raw\`var opticInfo = '\\x2d20\\x2e09';
+const OPTICAL_INFO_PAGE = `var opticInfo = '-20.09';
 var ontPonMode = 'gpon';
 var gponStatus = 'O5';
 var eponStatus = '';
@@ -98,7 +98,7 @@ function getResult() {
   opticInfo = "ok";
   return { opticInfo: opticInfo };
 }
-getResult();\`;
+getResult();`;
 
 function mockRouter(...wanListResponses: Response[]) {
   return mock.method(globalThis, "fetch", async (input: string) => {
