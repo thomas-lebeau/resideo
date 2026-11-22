@@ -22,6 +22,8 @@ const WAN_IP = {
   GATEWAY: 16,
   DNS: 19,
   SERVICE_LIST: 25,
+  EX_SERVICE_LIST: 26,
+  UPTIME: 42,
 } as const;
 
 /**
@@ -60,7 +62,9 @@ const INTERNET_UP = wanIp({
   [WAN_IP.IP_ADDRESS]: "5.154.8.114",
   [WAN_IP.GATEWAY]: "5.154.8.1",
   [WAN_IP.DNS]: "78.136.107.50,84.232.73.171",
-  [WAN_IP.SERVICE_LIST]: "INTERNET",
+  [WAN_IP.SERVICE_LIST]: "TR069",
+  [WAN_IP.EX_SERVICE_LIST]: "INTERNET",
+  [WAN_IP.UPTIME]: "12345",
 });
 
 const INTERNET_DOWN = wanIp({
@@ -128,8 +132,8 @@ describe("HuaweiRouter", () => {
         wanListPage(
           [VOIP, INTERNET_UP],
           [
-            wanStats("voip", "1", "2"),
-            wanStats("internet", "791484635", "1823521274"),
+            wanStats("InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANIPConnection.1.Stats", "791484635", "1823521274"),
+            wanStats("InternetGatewayDevice.WANDevice.1.WANConnectionDevice.3.WANIPConnection.1.Stats", "1", "2"),
           ]
         )
       )
@@ -138,7 +142,7 @@ describe("HuaweiRouter", () => {
     const data = await new HuaweiRouter().run();
 
     assert.deepEqual(
-      { ...data, uptime: undefined },
+      data,
       {
         type: "wan_connection",
         name: "2_INTERNET_R_VID_10",
@@ -146,7 +150,7 @@ describe("HuaweiRouter", () => {
         ip_address: "5.154.8.114",
         gateway: "5.154.8.1",
         dns_servers: ["78.136.107.50", "84.232.73.171"],
-        uptime: undefined,
+        uptime: 12345,
         bytes_received: 1823521274,
         bytes_sent: 791484635,
       }
