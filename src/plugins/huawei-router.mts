@@ -47,6 +47,41 @@ type OpticalInfo = Pick<
   | "pon_status"
 >;
 
+type LanDevice = {
+  type: "lan_device";
+  name: string;
+  ip_address?: string;
+  mac_address?: string;
+  hostname?: string;
+  status?: string;
+  port?: string;
+  ip_type?: string;
+  dev_type?: string;
+  port_type?: string;
+  device_type?: string;
+  user_device_alias?: string;
+  user_specified_device_type?: string;
+  ipv4_enabled?: string;
+  ipv6_enabled?: string;
+  lease_time_remaining?: number | string;
+  dhcp_address_source?: string;
+  dhcp_interface_type?: string;
+};
+
+type RawLanDevice = {
+  domain: string; ipAddress: string; macAddress: string; port: string;
+  ipType: string; devType: string; devStatus: string; portType: string;
+  hostName: string; ipv4Enabled: string; ipv6Enabled: string;
+  deviceType: string; userDevAlias: string; userSpecifiedDeviceType: string;
+  leaseTimeRemaining: string;
+};
+
+type RawDhcpLease = {
+  domain: string; name: string; ipAddress: string; macAddress: string;
+  remainingTime: string; deviceType: string; interfaceType: string;
+  addressSource: string;
+};
+
 const CONFIG = [
   "HUAWEI_ROUTER_HOST",
   "HUAWEI_ROUTER_USERNAME",
@@ -66,8 +101,8 @@ const IP_WAN_LIST_PATTERN = /var IPWanList = new Array\(([\s\S]*?)\);/;
  * - HUAWEI_ROUTER_USERNAME: Router admin username
  * - HUAWEI_ROUTER_PASSWORD: Router admin password
  */
-export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
-  static readonly description = "Huawei router WAN and optical connection monitor";
+export class HuaweiRouter extends AbstractPlugin<WanConnection | LanDevice, typeof CONFIG> {
+  static readonly description = "Huawei router WAN, optical, and LAN monitor";
 
   private sessionCookie: string | null = null;
   private csrfToken: string | null = null;
@@ -226,6 +261,124 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
     }
 
     return this.parseOpticalInfo(await response.text());
+  }
+
+
+  private async getLanEndpoint(path: string): Promise<string> {
+    if (!this.sessionCookie || !this.csrfToken) {
+      throw new Error("Router session is not available");
+    }
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        Cookie: this.sessionCookie,
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        Referer: `${this.baseUrl}/CustomApp/mainpage.asp`,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: new URLSearchParams({ "x.X_HW_Token": this.csrfToken }).toString(),
+      signal: AbortSignal.timeout(HTTP_TIMEOUT),
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to get LAN data from ${path}: ${response.status} ${response.statusText}`);
+    }
+    return response.text();
+  }
+
+  private parseLanDevices(jsCode: string): RawLanDevice[] {
+    return this.parseConstructorCalls(jsCode, "USERDevice")
+      .map((call) => this.parseConstructorArgs(call))
+      .filter((args) => args.length >= 16)
+      .map((args) => ({
+        domain: this.cleanString(args[0]),
+        ipAddress: this.cleanString(args[1]),
+        macAddress: this.cleanString(args[2]),
+        port: this.cleanString(args[3]),
+        ipType: this.cleanString(args[4]),
+        devType: this.cleanString(args[5]),
+        devStatus: this.cleanString(args[6]),
+        portType: this.cleanString(args[7]),
+        hostName: this.cleanString(args[9]),
+        ipv4Enabled: this.cleanString(args[10]),
+        ipv6Enabled: this.cleanString(args[11]),
+        deviceType: this.cleanString(args[12]),
+        userDevAlias: this.cleanString(args[13]),
+        userSpecifiedDeviceType: this.cleanString(args[14]),
+        leaseTimeRemaining: this.cleanString(args[15]),
+      }));
+  }
+
+  private parseDhcpLeases(jsCode: string): RawDhcpLease[] {
+    return this.parseConstructorCalls(jsCode, "DHCPInfo")
+      .map((call) => this.parseConstructorArgs(call))
+      .filter((args) => args.length >= 8)
+      .map((args) => ({
+        domain: this.cleanString(args[0]),
+        name: this.cleanString(args[1]),
+        ipAddress: this.cleanString(args[2]),
+        macAddress: this.cleanString(args[3]),
+        remainingTime: this.cleanString(args[4]),
+        deviceType: this.cleanString(args[5]),
+        interfaceType: this.cleanString(args[6]),
+        addressSource: this.cleanString(args[7]),
+      }));
+  }
+
+  private buildLanDevices(devices: RawLanDevice[], leases: RawDhcpLease[]): LanDevice[] {
+    const normalize = (value: string) => value.trim().toLowerCase();
+    const byMac = new Map(leases.filter((lease) => lease.macAddress).map((lease) => [normalize(lease.macAddress), lease]));
+    const byIp = new Map(leases.filter((lease) => lease.ipAddress).map((lease) => [normalize(lease.ipAddress), lease]));
+    const consumed = new Set<RawDhcpLease>();
+    const result: LanDevice[] = [];
+
+    for (const device of devices) {
+      const lease =
+        (device.macAddress && byMac.get(normalize(device.macAddress))) ||
+        (device.ipAddress && byIp.get(normalize(device.ipAddress)));
+      if (lease) consumed.add(lease);
+      const name = device.userDevAlias || device.hostName || lease?.name || device.ipAddress || device.macAddress || device.domain;
+      if (!name) continue;
+      const leaseTime = lease?.remainingTime || device.leaseTimeRemaining;
+      const numericLeaseTime = leaseTime && /^\\d+$/.test(leaseTime) ? Number(leaseTime) : undefined;
+      result.push({
+        type: "lan_device",
+        name,
+        ...(device.ipAddress ? { ip_address: device.ipAddress } : {}),
+        ...(device.macAddress ? { mac_address: device.macAddress } : {}),
+        ...(device.hostName ? { hostname: device.hostName } : {}),
+        ...(device.devStatus ? { status: device.devStatus } : {}),
+        ...(device.port ? { port: device.port } : {}),
+        ...(device.ipType ? { ip_type: device.ipType } : {}),
+        ...(device.devType ? { dev_type: device.devType } : {}),
+        ...(device.portType ? { port_type: device.portType } : {}),
+        ...(device.deviceType ? { device_type: device.deviceType } : {}),
+        ...(device.userDevAlias ? { user_device_alias: device.userDevAlias } : {}),
+        ...(device.userSpecifiedDeviceType ? { user_specified_device_type: device.userSpecifiedDeviceType } : {}),
+        ...(device.ipv4Enabled ? { ipv4_enabled: device.ipv4Enabled } : {}),
+        ...(device.ipv6Enabled ? { ipv6_enabled: device.ipv6Enabled } : {}),
+        ...(numericLeaseTime !== undefined ? { lease_time_remaining: numericLeaseTime } : leaseTime ? { lease_time_remaining: leaseTime } : {}),
+        ...(lease?.addressSource ? { dhcp_address_source: lease.addressSource } : {}),
+        ...(lease?.interfaceType ? { dhcp_interface_type: lease.interfaceType } : {}),
+      });
+    }
+
+    for (const lease of leases) {
+      if (consumed.has(lease)) continue;
+      const name = lease.name || lease.ipAddress || lease.macAddress || lease.domain;
+      if (!name) continue;
+      const numericLeaseTime = lease.remainingTime && /^\\d+$/.test(lease.remainingTime) ? Number(lease.remainingTime) : undefined;
+      result.push({
+        type: "lan_device",
+        name,
+        ...(lease.ipAddress ? { ip_address: lease.ipAddress } : {}),
+        ...(lease.macAddress ? { mac_address: lease.macAddress } : {}),
+        ...(lease.name ? { hostname: lease.name } : {}),
+        ...(numericLeaseTime !== undefined ? { lease_time_remaining: numericLeaseTime } : lease.remainingTime ? { lease_time_remaining: lease.remainingTime } : {}),
+        ...(lease.addressSource ? { dhcp_address_source: lease.addressSource } : {}),
+        ...(lease.interfaceType ? { dhcp_interface_type: lease.interfaceType } : {}),
+      });
+    }
+    return result;
   }
 
   /**
@@ -518,7 +671,25 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
       });
     }
 
-    return {
+    const [deviceResponse, leaseResponse] = await Promise.allSettled([
+      this.getLanEndpoint("/html/bbsp/common/GetLanUserDevInfo.asp"),
+      this.getLanEndpoint("/html/bbsp/common/GetLanUserDhcpInfo.asp"),
+    ]);
+    const rawDevices = deviceResponse.status === "fulfilled" ? this.parseLanDevices(deviceResponse.value) : [];
+    const rawLeases = leaseResponse.status === "fulfilled" ? this.parseDhcpLeases(leaseResponse.value) : [];
+
+    if (deviceResponse.status === "rejected") {
+      this.logger.debug("Failed to collect LAN device inventory", {
+        error: deviceResponse.reason instanceof Error ? deviceResponse.reason.message : String(deviceResponse.reason),
+      });
+    }
+    if (leaseResponse.status === "rejected") {
+      this.logger.debug("Failed to collect DHCP lease information", {
+        error: leaseResponse.reason instanceof Error ? leaseResponse.reason.message : String(leaseResponse.reason),
+      });
+    }
+
+    const wanConnection = {
       type: "wan_connection",
       name: internetConnection.name,
       state: isUp ? 1 : 0,
@@ -530,5 +701,6 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
       bytes_sent: internetConnection.bytesSent,
       ...opticalInfo,
     } satisfies WanConnection;
+    return [wanConnection, ...this.buildLanDevices(rawDevices, rawLeases)];
   }
 }
