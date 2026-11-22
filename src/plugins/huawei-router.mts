@@ -250,9 +250,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
   ): string[] {
     const calls: string[] = [];
     const pattern = new RegExp(`new\\s+${constructorName}\\s*\\(`, "g");
-    let match: RegExpExecArray | null;
-
-    while ((match = pattern.exec(source)) !== null) {
+    while (pattern.exec(source) !== null) {
       const start = pattern.lastIndex;
       let depth = 1;
       let inString = false;
