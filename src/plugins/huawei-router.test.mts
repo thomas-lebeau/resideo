@@ -12,6 +12,9 @@ type Internals = {
   parseConstructorCalls(source: string, constructorName: string): string[];
   cleanString(value: string): string;
   parseOpticalInfo(source: string): Record<string, unknown>;
+  parseLanDevices(source: string): Array<Record<string, string>>;
+  parseDhcpLeases(source: string): Array<Record<string, string>>;
+  buildLanDevices(devices: Array<Record<string, string>>, leases: Array<Record<string, string>>): Array<Record<string, unknown>>;
 };
 
 // Positional WanIP constructor arguments (see docs/ROUTER_API_ANALYSIS.md)
@@ -116,6 +119,10 @@ function mockRouter(...wanListResponses: Response[]) {
         return wanListResponses.shift() ?? new Response(null, { status: 500 });
       case "/html/amp/common/getSmartDiagnoseResult.asp":
         return new Response(OPTICAL_INFO_PAGE);
+      case "/html/bbsp/common/GetLanUserDevInfo.asp":
+        return new Response('new USERDevice("dev.1","192.168.1.20","aa:bb:cc:dd:ee:ff","LAN1","IPv4","PC","Online","Ethernet","0","desktop","1","1","Computer","Workstation","","3600")');
+      case "/html/bbsp/common/GetLanUserDhcpInfo.asp":
+        return new Response('new DHCPInfo("lease.1","desktop","192.168.1.20","aa:bb:cc:dd:ee:ff","1800","PC","LAN","DHCP")');
       default:
         throw new Error(`Unexpected request to ${pathname}`);
     }
@@ -209,6 +216,63 @@ describe("HuaweiRouter", () => {
     );
   });
 
+  test("parses and joins LAN inventory and DHCP leases", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+    const devices = plugin.parseLanDevices('new USERDevice("domain","192.168.1.20","AA:BB:CC:DD:EE:FF","LAN1","IPv4","PC","Online","Ethernet","0","desktop","1","1","Computer","","","3600")');
+    const leases = plugin.parseDhcpLeases('new DHCPInfo("lease","desktop","192.168.1.20","aa:bb:cc:dd:ee:ff","1800","PC","LAN","DHCP")');
+    assert.equal(devices.length, 1);
+    assert.equal(leases.length, 1);
+    const merged = plugin.buildLanDevices(devices, leases);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].lease_time_remaining, 1800);
+    assert.equal(merged[0].status, "Online");
+  });
+
+  test("omits uninformative device type and zero lease time", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+    const devices = plugin.parseLanDevices('new USERDevice("domain","192.168.1.22","22:33:44:55:66:77","LAN1","IPv4","PC","Online","Ethernet","0","unknown","1","1","0","","","0")');
+    const merged = plugin.buildLanDevices(devices, []);
+    assert.equal(merged.length, 1);
+    assert.equal("device_type" in merged[0], false);
+    assert.equal("lease_time_remaining" in merged[0], false);
+  });
+
+  test("omits offline devices", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+    const devices = plugin.parseLanDevices('new USERDevice("domain","192.168.1.22","22:33:44:55:66:77","LAN1","IPv4","PC","Offline","Ethernet","0","unknown","1","1","Computer","","","900")');
+    assert.deepEqual(plugin.buildLanDevices(devices, []), []);
+  });
+
+  test("uses hostname by default and a configured friendly name override", () => {
+    process.env.HUAWEI_ROUTER_DEVICE_NAMES = '{"00:50:56:aa:bb:cc":"virtual-machine"}';
+    try {
+      const plugin = new HuaweiRouter() as unknown as Internals;
+      const devices = plugin.parseLanDevices('new USERDevice("domain","192.168.1.23","00:50:56:aa:bb:cc","LAN1","IPv4","PC","Online","Ethernet","0","my-host","1","1","Computer","","","3600")');
+      const merged = plugin.buildLanDevices(devices, []);
+      assert.equal(merged[0].name, "virtual-machine");
+      assert.equal(merged[0].hostname, "my-host");
+      assert.equal(merged[0].manufacturer, "VMware, Inc.");
+    } finally {
+      delete process.env.HUAWEI_ROUTER_DEVICE_NAMES;
+    }
+  });
+
+  test("does not infer manufacturer from locally administered MAC addresses", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+    const devices = plugin.parseLanDevices('new USERDevice("domain","192.168.1.24","02:50:56:aa:bb:cc","LAN1","IPv4","PC","Online","Ethernet","0","private-mac","1","1","Computer","","","3600")');
+    const merged = plugin.buildLanDevices(devices, []);
+    assert.equal("manufacturer" in merged[0], false);
+  });
+
+  test("retains DHCP-only leases", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+    const leases = plugin.parseDhcpLeases('new DHCPInfo("lease","phone","192.168.1.21","11:22:33:44:55:66","900","Phone","LAN","DHCP")');
+    const merged = plugin.buildLanDevices([], leases);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].type, "lan_device");
+    assert.equal(merged[0].lease_time_remaining, 900);
+  });
+
   test("run reports the internet connection with traffic stats", async () => {
     const fetchMock = mockRouter(
       new Response(
@@ -232,8 +296,7 @@ describe("HuaweiRouter", () => {
 
     const data = await new HuaweiRouter().run();
 
-    assert.deepEqual(
-      data,
+    assert.deepEqual(data, [
       {
         type: "wan_connection",
         name: "2_INTERNET_R_VID_10",
@@ -247,8 +310,28 @@ describe("HuaweiRouter", () => {
         optical_rx_power_dbm: -20.09,
         pon_mode: "gpon",
         pon_status: "operational",
-      }
-    );
+      },
+      {
+        type: "lan_device",
+        name: "Workstation",
+        ip_address: "192.168.1.20",
+        mac_address: "aa:bb:cc:dd:ee:ff",
+        hostname: "desktop",
+        status: "Online",
+        port: "LAN1",
+        ip_type: "IPv4",
+        dev_type: "PC",
+        port_type: "Ethernet",
+        device_type: "Computer",
+        user_device_alias: "Workstation",
+        ipv4_enabled: "1",
+        ipv6_enabled: "1",
+        lease_time_remaining: 1800,
+        dhcp_address_source: "DHCP",
+        dhcp_interface_type: "LAN",
+        dhcp_device_type: "PC",
+      },
+    ]);
 
     // Logs in, then sends the session cookie
     const [, login, wanList] = fetchMock.mock.calls.map(
@@ -265,6 +348,13 @@ describe("HuaweiRouter", () => {
     const opticalRequest = fetchMock.mock.calls[3].arguments[1] as RequestInit;
     assert.equal(opticalRequest.method, "POST");
     assert.equal(opticalRequest.body, "x.X_HW_Token=csrf-token");
+    const lanRequests = fetchMock.mock.calls.slice(4);
+    assert.equal(lanRequests.length, 2);
+    for (const call of lanRequests) {
+      const request = call.arguments[1] as RequestInit;
+      assert.equal(request.method, "POST");
+      assert.equal(request.body, "x.X_HW_Token=csrf-token");
+    }
   });
 
   test("run reports a down internet connection", async () => {
@@ -272,9 +362,12 @@ describe("HuaweiRouter", () => {
 
     const data = await new HuaweiRouter().run();
 
-    assert.equal(data?.state, 0);
-    assert.equal(data?.ip_address, "0.0.0.0");
-    assert.deepEqual(data?.dns_servers, []);
+    const wan = Array.isArray(data)
+      ? data.find((event) => event.type === "wan_connection")
+      : data;
+    assert.equal(wan?.state, 0);
+    assert.equal(wan?.ip_address, "0.0.0.0");
+    assert.deepEqual(wan?.dns_servers, []);
   });
 
   test("run returns undefined without an internet connection", async () => {
@@ -291,7 +384,10 @@ describe("HuaweiRouter", () => {
 
     const data = await new HuaweiRouter().run();
 
-    assert.equal(data?.state, 1);
+    const wan = Array.isArray(data)
+      ? data.find((event) => event.type === "wan_connection")
+      : data;
+    assert.equal(wan?.state, 1);
     assert.equal(
       fetchMock.mock.calls.filter((call) =>
         String(call.arguments[0]).endsWith("/login.cgi")
@@ -308,7 +404,10 @@ describe("HuaweiRouter", () => {
 
     const data = await new HuaweiRouter().run();
 
-    assert.equal(data?.state, 1);
+    const wan = Array.isArray(data)
+      ? data.find((event) => event.type === "wan_connection")
+      : data;
+    assert.equal(wan?.state, 1);
     assert.equal(
       fetchMock.mock.calls.filter((call) =>
         String(call.arguments[0]).endsWith("/login.cgi")

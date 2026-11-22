@@ -182,6 +182,34 @@ The normalized status is emitted for GPON. EPON has a different state vocabulary
 
 The captured response does not include an ONT ID. That value is intentionally not guessed or emitted; it needs a separately captured and verified response before implementation.
 
+## LAN Device Inventory and DHCP Leases
+
+### Connected-device inventory
+**Endpoint**: `POST /html/bbsp/common/GetLanUserDevInfo.asp`
+
+**Authentication**: Existing router session cookie and `x.X_HW_Token` form field.
+
+**Response**: JavaScript containing `USERDevice(...)` constructor calls. The captured signature is:
+
+```javascript
+USERDevice(Domain, IpAddr, MacAddr, Port, IpType, DevType, DevStatus, PortType,
+  Time, HostName, IPv4Enabled, IPv6Enabled, DeviceType, UserDevAlias,
+  UserSpecifiedDeviceType, LeaseTimeRemaining)
+```
+
+Router-provided status and type values are preserved rather than assigned undocumented meanings. The uninformative `DeviceType` sentinel value `"0"` is omitted. Only online inventory entries are emitted; offline router history is ignored. The event `name` uses the hostname (or DHCP name / IP / MAC fallback), overridden by an optional `HUAWEI_ROUTER_DEVICE_NAMES` JSON mapping keyed by MAC address. The router user alias remains available separately as `user_device_alias`. A `manufacturer` field is looked up from the embedded IEEE MA-L/MA-M/MA-S registry using the longest matching prefix. Locally administered and multicast MAC addresses are not assigned a manufacturer because their prefix is not a reliable hardware identifier.
+
+### DHCP leases
+**Endpoint**: `POST /html/bbsp/common/GetLanUserDhcpInfo.asp`
+
+**Authentication**: Existing router session cookie and `x.X_HW_Token` form field.
+
+**Response**: JavaScript containing `DHCPInfo(domain, name, ip, mac, remainingTime, deviceType, interfaceType, addressSource)` constructor calls.
+
+Lease records are joined to the device inventory by case-insensitive MAC address, falling back to IP address. DHCP-only entries are retained. Positive numeric remaining lease times are emitted as numbers; zero (no remaining lease) is omitted, and other non-numeric values remain strings. Either endpoint may fail independently without interrupting WAN or optical monitoring.
+
+Each online device is emitted as a `lan_device` event with available IP, MAC, hostname, manufacturer, raw status/type, port, alias, and DHCP lease details. DHCP-only entries with an active lease are retained. Offline inventory records and expired numeric leases are omitted. The friendly-name mapping is optional; for example `HUAWEI_ROUTER_DEVICE_NAMES={"04:99:b9:xx:xx:xx":"homepod-kitchen"}`.
+
 ## Key Status Fields
 
 ### Connection Status Values
