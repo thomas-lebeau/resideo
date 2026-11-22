@@ -176,7 +176,7 @@ The page's `getResult()` function later overwrites `opticInfo` with `"ok"` or `"
 The implementation exposes:
 - `optical_rx_power_dbm`: optical receive power in dBm, when a numeric reading is available.
 - `pon_mode`: lower-case PON mode (`gpon` or `epon`).
-- `pon_status`: normalized, human-readable GPON state. The raw Huawei O1–O7 codes map to `initializing`, `synchronizing`, `ranging`, `activating`, `operational`, `interrupted`, and `emergency_stop`. Unrecognized codes map to `unknown`.
+- `pon_status`: normalized, human-readable GPON state. The raw Huawei O1–O7 codes map to `initializing`, `standby`, `discovering`, `ranging`, `operational`, `recovering`, and `emergency_stop`, following the ITU-T GPON ONU state definitions. Unrecognized codes map to `unknown`.
 
 The normalized status is emitted for GPON. EPON has a different state vocabulary, so no GPON mapping is applied to EPON. A separate `ont_registration_state` is unnecessary because `pon_status: "operational"` already represents the operational GPON state.
 
