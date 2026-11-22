@@ -25,9 +25,6 @@ const AUTHENTICATION_ERROR = new Error(
   "Authentication error: Run `raspbberry-home-monitor --setup --plugin balay-dishwasher to authenticate"
 );
 
-// hack to make this a singleton
-let instance: BalayDishwasher | undefined;
-
 export class BalayDishwasher extends AbstractPlugin<
   BalayDishwasherData,
   typeof CONFIG,
@@ -42,14 +39,7 @@ export class BalayDishwasher extends AbstractPlugin<
   private eventSource: EventSource | undefined;
 
   constructor() {
-    if (instance) {
-      return instance;
-    }
-
     super(CONFIG);
-
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    instance = this;
   }
 
   /**

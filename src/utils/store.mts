@@ -11,14 +11,13 @@ export class Store<
   U extends string = string
 > {
   private readonly key: U;
-  private readonly store: Conf<Record<U, T>> = store as Conf<Record<U, T>>;
 
   constructor(key: U) {
     this.key = key;
   }
 
   get(): T | undefined {
-    return this.store.get(this.key);
+    return store.get(this.key) as T | undefined;
   }
 
   set(value: T) {
@@ -26,6 +25,6 @@ export class Store<
   }
 
   clear() {
-    this.store.delete(this.key);
+    store.delete(this.key);
   }
 }

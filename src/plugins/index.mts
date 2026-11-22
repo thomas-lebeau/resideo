@@ -12,7 +12,7 @@ import { Transmission } from "./transmission.mts";
 import { HomeMonitor } from "./home-monitor.mts";
 
 export const plugins: PluginConstructor[] = [
-  BalayDishwasher as unknown as PluginConstructor, // yeah, I know!
+  BalayDishwasher,
   DHT22,
   FastSpeedTest,
   HomeMonitor,
