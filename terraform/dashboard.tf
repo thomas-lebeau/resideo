@@ -267,6 +267,30 @@ resource "datadog_dashboard" "home_monitoring_dashboard" {
       }
 
       widget {
+        timeseries_definition {
+          title       = "Optical Receive Power"
+          title_size  = "16"
+          title_align = "left"
+          show_legend = true
+
+          request {
+            q = "avg:${datadog_logs_metric.wan_optical_rx_power.name}{*} by {pon_status}"
+            display_type = "line"
+            style {
+              palette    = "cool"
+              line_type  = "solid"
+              line_width = "normal"
+            }
+          }
+
+          yaxis {
+            label = "Optical power (dBm)"
+            scale = "linear"
+          }
+        }
+      }
+
+      widget {
         query_value_definition {
           title       = "Current Internet Speed"
           title_size  = "16"
