@@ -226,12 +226,17 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
    * getResult() function later overwrites opticInfo with "ok" or "nok".
    */
   private readStringVariable(source: string, name: string): string | undefined {
-    const pattern = new RegExp(
-      "\\\\bvar\\\\s+" + name + "\\\\s*=\\\\s*(['\\"])(.*?)\\\\1\\\\s*;",
+    const singleQuotedPattern = new RegExp(
+      "\\bvar\\s+" + name + "\\s*=\\s*'([^']*)'\\s*;",
       "s"
     );
-    const match = source.match(pattern);
-    return match ? this.cleanString(match[1] + match[2] + match[1]) : undefined;
+    const doubleQuotedPattern = new RegExp(
+      '\\bvar\\s+' + name + '\\s*=\\s*"([^"]*)"\\s*;',
+      "s"
+    );
+    const match =
+      source.match(singleQuotedPattern) ?? source.match(doubleQuotedPattern);
+    return match ? this.cleanString("'" + match[1] + "'") : undefined;
   }
 
   /**
