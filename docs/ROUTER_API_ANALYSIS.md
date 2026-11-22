@@ -155,6 +155,32 @@ var WanEthIPStats = new Array(
 
 **Description**: Returns JavaScript code with WAN configuration functions and default values. Less useful for real-time status, more for configuration templates.
 
+## Optical / GPON Diagnostics
+
+### Main-page diagnostics
+**Endpoint**: `POST /html/amp/common/getSmartDiagnoseResult.asp`
+
+**Authentication**: Existing router session cookie and `x.X_HW_Token` form field.
+
+**Response**: JavaScript (not JSON). The captured response declares:
+
+```javascript
+var opticInfo = '\x2d20\x2e09'; // -20.09 dBm
+var ontPonMode = 'gpon';
+var gponStatus = 'O5';
+var eponStatus = '';
+```
+
+The page's `getResult()` function later overwrites `opticInfo` with `"ok"` or `"nok"`, so the original variable declaration must be parsed to retain the numeric RX power. GPON registration is considered successful when `ontPonMode` is `gpon` and `gponStatus` is `O5`; EPON uses `eponStatus === "ONLINE"`.
+
+The implementation exposes:
+- `optical_rx_power_dbm`: optical receive power in dBm, when a numeric reading is available.
+- `pon_mode`: lower-case PON mode (for example, `gpon`).
+- `gpon_status`: raw GPON state (for example, `O5`).
+- `ont_registration_state`: derived `registered` / `not_registered` state when the PON mode and corresponding status are present.
+
+The captured response does not include an ONT ID. That value is intentionally not guessed or emitted; it needs a separately captured and verified response before implementation.
+
 ## Key Status Fields
 
 ### Connection Status Values
