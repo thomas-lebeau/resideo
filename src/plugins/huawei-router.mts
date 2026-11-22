@@ -17,11 +17,11 @@ type RawWanConnection = {
 
 type PonStatus =
   | "initializing"
-  | "synchronizing"
+  | "standby"
+  | "discovering"
   | "ranging"
-  | "activating"
   | "operational"
-  | "interrupted"
+  | "recovering"
   | "emergency_stop"
   | "unknown";
 
@@ -261,11 +261,11 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
     const mode = ponMode?.toLowerCase();
     const gponStates = {
       O1: "initializing",
-      O2: "synchronizing",
-      O3: "ranging",
-      O4: "activating",
+      O2: "standby",
+      O3: "discovering",
+      O4: "ranging",
       O5: "operational",
-      O6: "interrupted",
+      O6: "recovering",
       O7: "emergency_stop",
     } as const;
     const ponStatus =
