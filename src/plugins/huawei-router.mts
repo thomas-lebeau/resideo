@@ -248,8 +248,8 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
   }
 
   /**
-   * Parses the optical receive level and derives registration state from
-   * the PON mode/status values exposed by the router.
+   * Parses the optical receive level and normalizes the GPON state exposed
+   * by the router.
    */
   private parseOpticalInfo(jsCode: string): OpticalInfo {
     const opticInfo = this.readStringVariable(jsCode, "opticInfo");
