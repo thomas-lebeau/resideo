@@ -9,6 +9,7 @@ const { HuaweiRouter } = await import("./huawei-router.mts");
 
 type Internals = {
   parseConstructorArgs(args: string): string[];
+  parseConstructorCalls(source: string, constructorName: string): string[];
   cleanString(value: string): string;
 };
 
@@ -115,6 +116,18 @@ describe("HuaweiRouter", () => {
     assert.deepEqual(
       plugin.parseConstructorArgs(`"a,b", 'c', fn(1, 2), "say \\"hi\\"", 3`),
       [`"a,b"`, `'c'`, `fn(1, 2)`, `"say \\"hi\\""`, `3`]
+    );
+  });
+
+  test("parseConstructorCalls handles nested parentheses and quoted delimiters", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+
+    assert.deepEqual(
+      plugin.parseConstructorCalls(
+        `new WanIP("a,b", fn(1, 2), "c)"), new WanIP("d")`,
+        "WanIP"
+      ),
+      [`"a,b", fn(1, 2), "c)"`, `"d"`]
     );
   });
 
