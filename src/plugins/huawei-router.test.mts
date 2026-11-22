@@ -123,9 +123,7 @@ describe("HuaweiRouter", () => {
     );
   });
 
-  test(
-    "parseConstructorCalls handles nested parentheses and quoted delimiters",
-    () => {
+  test("parseConstructorCalls handles nested parentheses and quoted delimiters", () => {
     const plugin = new HuaweiRouter() as unknown as Internals;
 
     assert.deepEqual(
@@ -135,8 +133,7 @@ describe("HuaweiRouter", () => {
       ),
       [`"a,b", fn(1, 2), "c)"`, `"d"`]
     );
-    }
-  );
+  });
 
   test("cleanString strips quotes and decodes hex escapes", () => {
     const plugin = new HuaweiRouter() as unknown as Internals;
