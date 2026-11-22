@@ -363,7 +363,8 @@ describe("HuaweiRouter", () => {
 
     const data = await new HuaweiRouter().run();
 
-    assert.equal(data?.state, 1);
+    const wan = Array.isArray(data) ? data[0] : data;
+    assert.equal(wan?.state, 1);
     assert.equal(
       fetchMock.mock.calls.filter((call) =>
         String(call.arguments[0]).endsWith("/login.cgi")
