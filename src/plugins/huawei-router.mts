@@ -362,12 +362,14 @@ export class HuaweiRouter extends AbstractPlugin<
         ...(device.ipType ? { ip_type: device.ipType } : {}),
         ...(device.devType ? { dev_type: device.devType } : {}),
         ...(device.portType ? { port_type: device.portType } : {}),
-        ...(device.deviceType ? { device_type: device.deviceType } : {}),
+        ...(device.deviceType && device.deviceType !== "0" ? { device_type: device.deviceType } : {}),
         ...(device.userDevAlias ? { user_device_alias: device.userDevAlias } : {}),
         ...(device.userSpecifiedDeviceType ? { user_specified_device_type: device.userSpecifiedDeviceType } : {}),
         ...(device.ipv4Enabled ? { ipv4_enabled: device.ipv4Enabled } : {}),
         ...(device.ipv6Enabled ? { ipv6_enabled: device.ipv6Enabled } : {}),
-        ...(numericLeaseTime !== undefined ? { lease_time_remaining: numericLeaseTime } : leaseTime ? { lease_time_remaining: leaseTime } : {}),
+        ...(leaseTime && (numericLeaseTime !== undefined ? numericLeaseTime > 0 : true)
+          ? { lease_time_remaining: numericLeaseTime ?? leaseTime }
+          : {}),
         ...(lease?.addressSource ? { dhcp_address_source: lease.addressSource } : {}),
         ...(lease?.interfaceType ? { dhcp_interface_type: lease.interfaceType } : {}),
         ...(lease?.deviceType ? { dhcp_device_type: lease.deviceType } : {}),
@@ -385,7 +387,9 @@ export class HuaweiRouter extends AbstractPlugin<
         ...(lease.ipAddress ? { ip_address: lease.ipAddress } : {}),
         ...(lease.macAddress ? { mac_address: lease.macAddress } : {}),
         ...(lease.name ? { hostname: lease.name } : {}),
-        ...(numericLeaseTime !== undefined ? { lease_time_remaining: numericLeaseTime } : lease.remainingTime ? { lease_time_remaining: lease.remainingTime } : {}),
+        ...(lease.remainingTime && (numericLeaseTime !== undefined ? numericLeaseTime > 0 : true)
+          ? { lease_time_remaining: numericLeaseTime ?? lease.remainingTime }
+          : {}),
         ...(lease.addressSource ? { dhcp_address_source: lease.addressSource } : {}),
         ...(lease.interfaceType ? { dhcp_interface_type: lease.interfaceType } : {}),
         ...(lease.deviceType ? { dhcp_device_type: lease.deviceType } : {}),
