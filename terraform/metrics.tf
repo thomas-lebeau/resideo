@@ -649,7 +649,6 @@ resource "datadog_metric_metadata" "rssi_metadata" {
 resource "datadog_metric_metadata" "wan_optical_rx_power_metadata" {
   metric      = datadog_logs_metric.wan_optical_rx_power.name
   type        = "gauge"
-  unit        = "milliwatt"
   description = "Received optical fibre signal power in dBm"
 }
 
