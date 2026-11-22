@@ -368,7 +368,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection | LanDevice, type
       if (consumed.has(lease)) continue;
       const name = lease.name || lease.ipAddress || lease.macAddress || lease.domain;
       if (!name) continue;
-      const numericLeaseTime = leaseTime && /^[0-9]+$/.test(leaseTime) ? Number(leaseTime) : undefined;
+      const numericLeaseTime = lease.remainingTime && /^[0-9]+$/.test(lease.remainingTime) ? Number(lease.remainingTime) : undefined;
       result.push({
         type: "lan_device",
         name,
