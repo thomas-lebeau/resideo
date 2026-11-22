@@ -326,7 +326,9 @@ describe("HuaweiRouter", () => {
 
     const data = await new HuaweiRouter().run();
 
-    const wan = Array.isArray(data) ? data[0] : data;
+    const wan = Array.isArray(data)
+      ? data.find((event) => event.type === "wan_connection")
+      : data;
     assert.equal(wan?.state, 0);
     assert.equal(wan?.ip_address, "0.0.0.0");
     assert.deepEqual(wan?.dns_servers, []);
@@ -346,7 +348,9 @@ describe("HuaweiRouter", () => {
 
     const data = await new HuaweiRouter().run();
 
-    const wan = Array.isArray(data) ? data[0] : data;
+    const wan = Array.isArray(data)
+      ? data.find((event) => event.type === "wan_connection")
+      : data;
     assert.equal(wan?.state, 1);
     assert.equal(
       fetchMock.mock.calls.filter((call) =>
@@ -364,7 +368,9 @@ describe("HuaweiRouter", () => {
 
     const data = await new HuaweiRouter().run();
 
-    const wan = Array.isArray(data) ? data[0] : data;
+    const wan = Array.isArray(data)
+      ? data.find((event) => event.type === "wan_connection")
+      : data;
     assert.equal(wan?.state, 1);
     assert.equal(
       fetchMock.mock.calls.filter((call) =>
