@@ -275,7 +275,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
 
     return {
       ...(Number.isFinite(rxPower) ? { optical_rx_power_dbm: rxPower } : {}),
-      ...(ponMode ? { pon_mode: ponMode.toLowerCase() } : {}),
+      ...(mode === "gpon" || mode === "epon" ? { pon_mode: mode } : {}),
       ...(mode === "gpon" && gponStatus ? { pon_status: ponStatus ?? "unknown" } : {}),
     };
   }
