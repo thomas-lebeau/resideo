@@ -197,7 +197,7 @@ USERDevice(Domain, IpAddr, MacAddr, Port, IpType, DevType, DevStatus, PortType,
   UserSpecifiedDeviceType, LeaseTimeRemaining)
 ```
 
-Router-provided status and type values are preserved rather than assigned undocumented meanings. The uninformative `DeviceType` sentinel value `"0"` is omitted. The event name prefers the user alias, then hostname, DHCP name, IP address, MAC address, and router domain.
+Router-provided status and type values are preserved rather than assigned undocumented meanings. The uninformative `DeviceType` sentinel value `"0"` is omitted. Only online inventory entries are emitted; offline router history is ignored. The event `name` uses the hostname (or DHCP name / IP / MAC fallback), overridden by an optional `HUAWEI_ROUTER_DEVICE_NAMES` JSON mapping keyed by MAC address. The router user alias remains available separately as `user_device_alias`. A `manufacturer` field is looked up from the embedded IEEE MA-L/MA-M/MA-S registry using the longest matching prefix. Locally administered and multicast MAC addresses are not assigned a manufacturer because their prefix is not a reliable hardware identifier.
 
 ### DHCP leases
 **Endpoint**: `POST /html/bbsp/common/GetLanUserDhcpInfo.asp`
@@ -208,7 +208,7 @@ Router-provided status and type values are preserved rather than assigned undocu
 
 Lease records are joined to the device inventory by case-insensitive MAC address, falling back to IP address. DHCP-only entries are retained. Positive numeric remaining lease times are emitted as numbers; zero (no remaining lease) is omitted, and other non-numeric values remain strings. Either endpoint may fail independently without interrupting WAN or optical monitoring.
 
-Each discovered entry is emitted as a `lan_device` event with available IP, MAC, hostname, raw status/type, port, alias, and DHCP lease details. The router can return static/offline inventory entries as well as active DHCP leases, so consumers should use the raw `status` field rather than assuming every entry is online.
+Each online device is emitted as a `lan_device` event with available IP, MAC, hostname, manufacturer, raw status/type, port, alias, and DHCP lease details. DHCP-only entries with an active lease are retained. Offline inventory records and expired numeric leases are omitted. The friendly-name mapping is optional; for example `HUAWEI_ROUTER_DEVICE_NAMES={"04:99:b9:xx:xx:xx":"homepod-kitchen"}`.
 
 ## Key Status Fields
 
