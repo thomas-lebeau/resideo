@@ -13,6 +13,7 @@ export class FastSpeedTest extends AbstractPlugin<
   SpeedTestData,
   typeof CONFIG
 > {
+  static readonly slug = "fast-speed-test";
   static readonly description = "Internet speed using Fast Speedtest API";
   static readonly interval = 10;
 

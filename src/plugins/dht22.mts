@@ -12,6 +12,7 @@ const SENSOR_TYPE = 22;
 type SensorReader = Pick<typeof Sensor.promises, "read">;
 
 export class DHT22 extends AbstractPlugin<Thermometer, typeof CONFIG> {
+  public static readonly slug = "dht22";
   public static readonly description = "DHT22 temperature and humidity sensor";
 
   private readonly sensors: Record<string, string>;

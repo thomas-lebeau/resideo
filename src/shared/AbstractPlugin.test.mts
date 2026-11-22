@@ -35,6 +35,8 @@ class FailingPlugin extends AbstractPlugin {
 }
 
 class PhilipsTV extends AbstractPlugin {
+  static readonly slug = "philips-tv";
+
   constructor() {
     super([]);
   }

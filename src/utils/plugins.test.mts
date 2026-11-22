@@ -12,6 +12,7 @@ import {
 } from "./plugins.mts";
 
 class ConfiguredPlugin extends AbstractPlugin {
+  static readonly slug = "configured-plugin";
   static readonly description = "Configured plugin";
 
   constructor() {
@@ -24,6 +25,7 @@ class ConfiguredPlugin extends AbstractPlugin {
 }
 
 class UnconfiguredPlugin extends AbstractPlugin {
+  static readonly slug = "unconfigured-plugin";
   static readonly description = "Unconfigured plugin";
 
   constructor() {
