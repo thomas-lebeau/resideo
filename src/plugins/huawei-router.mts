@@ -224,7 +224,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
           continue;
         }
 
-        const domain = this.cleanString(statsArgs[0]).replace(/\\.Stats$/, "");
+        const domain = this.cleanString(statsArgs[0]).replace(/\.Stats$/, "");
         const connection = connections.find((item) => item.domain === domain);
         if (!connection) {
           continue;
@@ -262,7 +262,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
         if (inString) {
           if (escaped) {
             escaped = false;
-          } else if (char === "\\\\") {
+          } else if (char === "\\") {
             escaped = true;
           } else if (char === stringChar) {
             inString = false;
@@ -307,7 +307,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
         current += char;
         if (escaped) {
           escaped = false;
-        } else if (char === "\\\\") {
+        } else if (char === "\\") {
           escaped = true;
         } else if (char === stringChar) {
           inString = false;
