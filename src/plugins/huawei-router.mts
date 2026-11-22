@@ -391,7 +391,7 @@ export class HuaweiRouter extends AbstractPlugin<
       for (const field of Object.keys(device) as (keyof RawLanDevice)[]) {
         const incoming = device[field];
         const current = existing[field];
-        if (incoming && (!current || (current === "0" && incoming !== "0"))) {
+        if (incoming && incoming !== "0" && (!current || current === "0")) {
           existing[field] = incoming;
         }
       }
@@ -443,7 +443,7 @@ export class HuaweiRouter extends AbstractPlugin<
         ...(device.portType ? { port_type: device.portType } : {}),
         ...(device.deviceType && device.deviceType !== "0" ? { device_type: device.deviceType } : {}),
         ...(device.userDevAlias ? { user_device_alias: device.userDevAlias } : {}),
-        ...(device.userSpecifiedDeviceType ? { user_specified_device_type: device.userSpecifiedDeviceType } : {}),
+        ...(device.userSpecifiedDeviceType && device.userSpecifiedDeviceType !== "0" ? { user_specified_device_type: device.userSpecifiedDeviceType } : {}),
         ...(device.ipv4Enabled ? { ipv4_enabled: device.ipv4Enabled } : {}),
         ...(device.ipv6Enabled ? { ipv6_enabled: device.ipv6Enabled } : {}),
         ...(leaseTime && (numericLeaseTime !== undefined ? numericLeaseTime > 0 : true)
