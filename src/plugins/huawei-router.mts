@@ -15,6 +15,16 @@ type RawWanConnection = {
   bytesSent: number;
 };
 
+type PonStatus =
+  | "initializing"
+  | "synchronizing"
+  | "ranging"
+  | "activating"
+  | "operational"
+  | "interrupted"
+  | "emergency_stop"
+  | "unknown";
+
 type WanConnection = {
   type: "wan_connection";
   name: string;
@@ -26,17 +36,15 @@ type WanConnection = {
   bytes_received?: number;
   bytes_sent?: number;
   optical_rx_power_dbm?: number;
-  pon_mode?: string;
-  gpon_status?: string;
-  ont_registration_state?: "registered" | "not_registered";
+  pon_mode?: "gpon" | "epon";
+  pon_status?: PonStatus;
 };
 
 type OpticalInfo = Pick<
   WanConnection,
   | "optical_rx_power_dbm"
   | "pon_mode"
-  | "gpon_status"
-  | "ont_registration_state"
+  | "pon_status"
 >;
 
 const CONFIG = [
@@ -247,30 +255,28 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
     const opticInfo = this.readStringVariable(jsCode, "opticInfo");
     const ponMode = this.readStringVariable(jsCode, "ontPonMode");
     const gponStatus = this.readStringVariable(jsCode, "gponStatus");
-    const eponStatus = this.readStringVariable(jsCode, "eponStatus");
 
     const rxPower =
       opticInfo && opticInfo !== "--" ? Number(opticInfo) : Number.NaN;
-    const mode = ponMode?.toUpperCase();
-    let registered: boolean | undefined;
-
-    if (mode === "GPON" && gponStatus) {
-      registered = gponStatus.toUpperCase() === "O5";
-    } else if (mode === "EPON" && eponStatus) {
-      registered = eponStatus.toUpperCase() === "ONLINE";
-    }
+    const mode = ponMode?.toLowerCase();
+    const gponStates = {
+      O1: "initializing",
+      O2: "synchronizing",
+      O3: "ranging",
+      O4: "activating",
+      O5: "operational",
+      O6: "interrupted",
+      O7: "emergency_stop",
+    } as const;
+    const ponStatus =
+      mode === "gpon" && gponStatus
+        ? gponStates[gponStatus.toUpperCase() as keyof typeof gponStates] ?? "unknown"
+        : undefined;
 
     return {
       ...(Number.isFinite(rxPower) ? { optical_rx_power_dbm: rxPower } : {}),
       ...(ponMode ? { pon_mode: ponMode.toLowerCase() } : {}),
-      ...(gponStatus ? { gpon_status: gponStatus } : {}),
-      ...(registered === undefined
-        ? {}
-        : {
-            ont_registration_state: registered
-              ? "registered"
-              : "not_registered",
-          }),
+      ...(mode === "gpon" && gponStatus ? { pon_status: ponStatus ?? "unknown" } : {}),
     };
   }
 
