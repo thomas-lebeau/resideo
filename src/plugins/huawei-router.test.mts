@@ -162,8 +162,7 @@ describe("HuaweiRouter", () => {
     assert.deepEqual(plugin.parseOpticalInfo(OPTICAL_INFO_PAGE), {
       optical_rx_power_dbm: -20.09,
       pon_mode: "gpon",
-      gpon_status: "O5",
-      ont_registration_state: "registered",
+      pon_status: "operational",
     });
   });
 
@@ -213,8 +212,7 @@ describe("HuaweiRouter", () => {
         bytes_sent: 791484635,
         optical_rx_power_dbm: -20.09,
         pon_mode: "gpon",
-        gpon_status: "O5",
-        ont_registration_state: "registered",
+        pon_status: "operational",
       }
     );
 
