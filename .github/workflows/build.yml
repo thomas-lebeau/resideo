@@ -54,6 +54,8 @@ jobs:
           cp -r node_modules release/
           cd release
           tar -czf ../raspberry-home-monitor-linux-x64.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
+          cd ..
+          sha256sum raspberry-home-monitor-linux-x64.tar.gz > raspberry-home-monitor-linux-x64.tar.gz.sha256
 
       - name: Smoke test release archive
         run: bash scripts/smoke-test.sh raspberry-home-monitor-linux-x64.tar.gz
@@ -63,7 +65,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: raspberry-home-monitor-linux-x64
-          path: raspberry-home-monitor-linux-x64.tar.gz
+          path: |
+            raspberry-home-monitor-linux-x64.tar.gz
+            raspberry-home-monitor-linux-x64.tar.gz.sha256
 
   build-linux-arm:
     runs-on: ubuntu-latest
@@ -109,6 +113,8 @@ jobs:
           cp -r node_modules release/
           cd release
           tar -czf ../raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz raspberry-home-monitor raspberry-home-monitor.service node_modules
+          cd ..
+          sha256sum raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz > raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz.sha256
 
       - name: Smoke test release archive
         # Same image and platform as the build, so the archive runs on the
@@ -122,4 +128,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: raspberry-home-monitor-linux-${{ matrix.arch }}
-          path: raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz
+          path: |
+            raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz
+            raspberry-home-monitor-linux-${{ matrix.arch }}.tar.gz.sha256

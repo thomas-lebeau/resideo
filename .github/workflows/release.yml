@@ -59,7 +59,14 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           TAG_NAME: ${{ needs.release-please.outputs.release_created == 'true' && needs.release-please.outputs.tag_name || inputs.tag_name }}
         run: |
-          gh release upload "$TAG_NAME" raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz raspberry-home-monitor-linux-arm64/raspberry-home-monitor-linux-arm64.tar.gz --clobber --repo "$GITHUB_REPOSITORY"
+          gh release upload "$TAG_NAME" \
+            raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz \
+            raspberry-home-monitor-linux-x64/raspberry-home-monitor-linux-x64.tar.gz.sha256 \
+            raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz \
+            raspberry-home-monitor-linux-armv7/raspberry-home-monitor-linux-armv7.tar.gz.sha256 \
+            raspberry-home-monitor-linux-arm64/raspberry-home-monitor-linux-arm64.tar.gz \
+            raspberry-home-monitor-linux-arm64/raspberry-home-monitor-linux-arm64.tar.gz.sha256 \
+            --clobber --repo "$GITHUB_REPOSITORY"
 
       - name: Publish release
         env:
