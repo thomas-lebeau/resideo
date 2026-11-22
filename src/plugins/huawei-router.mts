@@ -1,5 +1,6 @@
 import { AbstractPlugin } from "../shared/AbstractPlugin.mts";
 import { HTTP_TIMEOUT } from "../shared/timeout.mts";
+import ouiData from "oui-data" with { type: "json" };
 
 type RawWanConnection = {
   domain: string;
@@ -53,6 +54,7 @@ type LanDevice = {
   ip_address?: string;
   mac_address?: string;
   hostname?: string;
+  manufacturer?: string;
   status?: string;
   port?: string;
   ip_type?: string;
@@ -111,10 +113,34 @@ export class HuaweiRouter extends AbstractPlugin<
   private sessionCookie: string | null = null;
   private csrfToken: string | null = null;
   private readonly baseUrl: string;
+  private readonly deviceNames: Map<string, string>;
 
   constructor() {
     super(CONFIG);
     this.baseUrl = `http://${this.config.HUAWEI_ROUTER_HOST}`;
+    this.deviceNames = new Map();
+    const configuredNames = process.env.HUAWEI_ROUTER_DEVICE_NAMES;
+    if (configuredNames) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(configuredNames);
+      } catch {
+        throw new Error("HUAWEI_ROUTER_DEVICE_NAMES must be a JSON object mapping MAC addresses to friendly names");
+      }
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("HUAWEI_ROUTER_DEVICE_NAMES must be a JSON object mapping MAC addresses to friendly names");
+      }
+      for (const [mac, name] of Object.entries(parsed)) {
+        if (typeof name !== "string" || !name.trim()) {
+          throw new Error(`Invalid friendly name for MAC address ${mac}`);
+        }
+        const normalizedMac = this.normalizeMac(mac);
+        if (!normalizedMac) {
+          throw new Error(`Invalid MAC address in HUAWEI_ROUTER_DEVICE_NAMES: ${mac}`);
+        }
+        this.deviceNames.set(normalizedMac, name.trim());
+      }
+    }
   }
 
   /**
@@ -327,6 +353,23 @@ export class HuaweiRouter extends AbstractPlugin<
       }));
   }
 
+  private normalizeMac(macAddress: string): string | undefined {
+    const normalized = macAddress.replace(/[:-]/g, "").toUpperCase();
+    return /^[0-9A-F]{12}$/.test(normalized) ? normalized : undefined;
+  }
+
+  private getManufacturer(macAddress: string): string | undefined {
+    const mac = this.normalizeMac(macAddress);
+    if (!mac) return undefined;
+    const firstOctet = Number.parseInt(mac.slice(0, 2), 16);
+    // Multicast and locally administered addresses cannot reliably identify a vendor.
+    if ((firstOctet & 0x03) !== 0) return undefined;
+    const registry = ouiData as Record<string, string>;
+    return registry[mac.slice(0, 9)] ??
+      registry[mac.slice(0, 7)] ??
+      registry[mac.slice(0, 6)];
+  }
+
   private buildLanDevices(devices: RawLanDevice[], leases: RawDhcpLease[]): LanDevice[] {
     const normalize = (value: string) => value.trim().toLowerCase();
     const byMac = new Map(
@@ -343,11 +386,19 @@ export class HuaweiRouter extends AbstractPlugin<
     const result: LanDevice[] = [];
 
     for (const device of devices) {
+      if (device.devStatus.toLowerCase() !== "online") continue;
       const lease =
         (device.macAddress ? byMac.get(normalize(device.macAddress)) : undefined) ??
         (device.ipAddress ? byIp.get(normalize(device.ipAddress)) : undefined);
       if (lease) consumed.add(lease);
-      const name = device.userDevAlias || device.hostName || lease?.name || device.ipAddress || device.macAddress || device.domain;
+      const normalizedMac = this.normalizeMac(device.macAddress);
+      const name =
+        (normalizedMac ? this.deviceNames.get(normalizedMac) : undefined) ||
+        device.hostName ||
+        lease?.name ||
+        device.ipAddress ||
+        device.macAddress ||
+        device.domain;
       if (!name) continue;
       const leaseTime = lease?.remainingTime || device.leaseTimeRemaining;
       const numericLeaseTime = leaseTime && /^[0-9]+$/.test(leaseTime) ? Number(leaseTime) : undefined;
@@ -357,6 +408,9 @@ export class HuaweiRouter extends AbstractPlugin<
         ...(device.ipAddress ? { ip_address: device.ipAddress } : {}),
         ...(device.macAddress ? { mac_address: device.macAddress } : {}),
         ...(device.hostName ? { hostname: device.hostName } : {}),
+        ...(device.macAddress && this.getManufacturer(device.macAddress)
+          ? { manufacturer: this.getManufacturer(device.macAddress) }
+          : {}),
         ...(device.devStatus ? { status: device.devStatus } : {}),
         ...(device.port ? { port: device.port } : {}),
         ...(device.ipType ? { ip_type: device.ipType } : {}),
@@ -387,6 +441,9 @@ export class HuaweiRouter extends AbstractPlugin<
         ...(lease.ipAddress ? { ip_address: lease.ipAddress } : {}),
         ...(lease.macAddress ? { mac_address: lease.macAddress } : {}),
         ...(lease.name ? { hostname: lease.name } : {}),
+        ...(lease.macAddress && this.getManufacturer(lease.macAddress)
+          ? { manufacturer: this.getManufacturer(lease.macAddress) }
+          : {}),
         ...(lease.remainingTime && (numericLeaseTime !== undefined ? numericLeaseTime > 0 : true)
           ? { lease_time_remaining: numericLeaseTime ?? lease.remainingTime }
           : {}),
