@@ -197,7 +197,7 @@ USERDevice(Domain, IpAddr, MacAddr, Port, IpType, DevType, DevStatus, PortType,
   UserSpecifiedDeviceType, LeaseTimeRemaining)
 ```
 
-Router-provided status and type values are preserved rather than assigned undocumented meanings. The event name prefers the user alias, then hostname, DHCP name, IP address, MAC address, and router domain.
+Router-provided status and type values are preserved rather than assigned undocumented meanings. The uninformative `DeviceType` sentinel value `"0"` is omitted. The event name prefers the user alias, then hostname, DHCP name, IP address, MAC address, and router domain.
 
 ### DHCP leases
 **Endpoint**: `POST /html/bbsp/common/GetLanUserDhcpInfo.asp`
@@ -206,7 +206,7 @@ Router-provided status and type values are preserved rather than assigned undocu
 
 **Response**: JavaScript containing `DHCPInfo(domain, name, ip, mac, remainingTime, deviceType, interfaceType, addressSource)` constructor calls.
 
-Lease records are joined to the device inventory by case-insensitive MAC address, falling back to IP address. DHCP-only entries are retained. Numeric remaining lease times are emitted as numbers; other values remain strings. Either endpoint may fail independently without interrupting WAN or optical monitoring.
+Lease records are joined to the device inventory by case-insensitive MAC address, falling back to IP address. DHCP-only entries are retained. Positive numeric remaining lease times are emitted as numbers; zero (no remaining lease) is omitted, and other non-numeric values remain strings. Either endpoint may fail independently without interrupting WAN or optical monitoring.
 
 Each discovered entry is emitted as a `lan_device` event with available IP, MAC, hostname, raw status/type, port, alias, and DHCP lease details. The router can return static/offline inventory entries as well as active DHCP leases, so consumers should use the raw `status` field rather than assuming every entry is online.
 
