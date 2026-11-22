@@ -228,6 +228,19 @@ describe("HuaweiRouter", () => {
     assert.equal(merged[0].status, "Online");
   });
 
+  test("deduplicates inventory entries by MAC and merges populated fields", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+    const first = plugin.parseLanDevices('new USERDevice("domain.1","192.168.1.25","aa:bb:cc:dd:ee:ff","LAN1","IPv4","PC","Online","Ethernet","0","kitchen","1","1","Computer","","","3600")');
+    const duplicate = plugin.parseLanDevices('new USERDevice("domain.1","192.168.1.25","AA:BB:CC:DD:EE:FF","LAN1","IPv4","PC","Online","Ethernet","0","","1","1","0","","0","3600")');
+
+    const merged = plugin.buildLanDevices([...first, ...duplicate], []);
+
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].hostname, "kitchen");
+    assert.equal(merged[0].device_type, "Computer");
+    assert.equal("user_specified_device_type" in merged[0], false);
+  });
+
   test("omits uninformative device type and zero lease time", () => {
     const plugin = new HuaweiRouter() as unknown as Internals;
     const devices = plugin.parseLanDevices('new USERDevice("domain","192.168.1.22","22:33:44:55:66:77","LAN1","IPv4","PC","Online","Ethernet","0","unknown","1","1","0","","","0")');
