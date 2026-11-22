@@ -228,6 +228,15 @@ describe("HuaweiRouter", () => {
     assert.equal(merged[0].status, "Online");
   });
 
+  test("omits uninformative device type and zero lease time", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+    const devices = plugin.parseLanDevices('new USERDevice("domain","192.168.1.22","22:33:44:55:66:77","LAN1","IPv4","PC","Offline","Ethernet","0","unknown","1","1","0","","","0")');
+    const merged = plugin.buildLanDevices(devices, []);
+    assert.equal(merged.length, 1);
+    assert.equal("device_type" in merged[0], false);
+    assert.equal("lease_time_remaining" in merged[0], false);
+  });
+
   test("retains DHCP-only leases", () => {
     const plugin = new HuaweiRouter() as unknown as Internals;
     const leases = plugin.parseDhcpLeases('new DHCPInfo("lease","phone","192.168.1.21","11:22:33:44:55:66","900","Phone","LAN","DHCP")');
