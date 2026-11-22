@@ -195,13 +195,13 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
     }
 
     const response = await fetch(
-      \`\${this.baseUrl}/html/amp/common/getSmartDiagnoseResult.asp\`,
+      `${this.baseUrl}/html/amp/common/getSmartDiagnoseResult.asp`,
       {
         method: "POST",
         headers: {
           Cookie: this.sessionCookie,
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-          Referer: \`\${this.baseUrl}/CustomApp/mainpage.asp\`,
+          Referer: `${this.baseUrl}/CustomApp/mainpage.asp`,
           "X-Requested-With": "XMLHttpRequest",
         },
         body: new URLSearchParams({
@@ -213,7 +213,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
 
     if (!response.ok) {
       throw new Error(
-        \`Failed to get optical information: \${response.status} \${response.statusText}\`
+        `Failed to get optical information: ${response.status} ${response.statusText}`
       );
     }
 
