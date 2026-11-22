@@ -293,6 +293,7 @@ describe("HuaweiRouter", () => {
         lease_time_remaining: 1800,
         dhcp_address_source: "DHCP",
         dhcp_interface_type: "LAN",
+        dhcp_device_type: "PC",
       },
     ]);
 
