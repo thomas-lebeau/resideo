@@ -102,7 +102,10 @@ const IP_WAN_LIST_PATTERN = /var IPWanList = new Array\(([\s\S]*?)\);/;
  * - HUAWEI_ROUTER_USERNAME: Router admin username
  * - HUAWEI_ROUTER_PASSWORD: Router admin password
  */
-export class HuaweiRouter extends AbstractPlugin<WanConnection | LanDevice, typeof CONFIG> {
+export class HuaweiRouter extends AbstractPlugin<
+  WanConnection | LanDevice,
+  typeof CONFIG
+> {
   static readonly description = "Huawei router WAN, optical, and LAN monitor";
 
   private sessionCookie: string | null = null;
@@ -264,7 +267,6 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection | LanDevice, type
     return this.parseOpticalInfo(await response.text());
   }
 
-
   private async getLanEndpoint(path: string): Promise<string> {
     if (!this.sessionCookie || !this.csrfToken) {
       throw new Error("Router session is not available");
@@ -327,15 +329,23 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection | LanDevice, type
 
   private buildLanDevices(devices: RawLanDevice[], leases: RawDhcpLease[]): LanDevice[] {
     const normalize = (value: string) => value.trim().toLowerCase();
-    const byMac = new Map(leases.filter((lease) => lease.macAddress).map((lease) => [normalize(lease.macAddress), lease]));
-    const byIp = new Map(leases.filter((lease) => lease.ipAddress).map((lease) => [normalize(lease.ipAddress), lease]));
+    const byMac = new Map(
+      leases
+        .filter((lease) => lease.macAddress)
+        .map((lease): [string, RawDhcpLease] => [normalize(lease.macAddress), lease])
+    );
+    const byIp = new Map(
+      leases
+        .filter((lease) => lease.ipAddress)
+        .map((lease): [string, RawDhcpLease] => [normalize(lease.ipAddress), lease])
+    );
     const consumed = new Set<RawDhcpLease>();
     const result: LanDevice[] = [];
 
     for (const device of devices) {
       const lease =
-        (device.macAddress && byMac.get(normalize(device.macAddress))) ||
-        (device.ipAddress && byIp.get(normalize(device.ipAddress)));
+        (device.macAddress ? byMac.get(normalize(device.macAddress)) : undefined) ??
+        (device.ipAddress ? byIp.get(normalize(device.ipAddress)) : undefined);
       if (lease) consumed.add(lease);
       const name = device.userDevAlias || device.hostName || lease?.name || device.ipAddress || device.macAddress || device.domain;
       if (!name) continue;
@@ -678,17 +688,29 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection | LanDevice, type
       this.getLanEndpoint("/html/bbsp/common/GetLanUserDevInfo.asp"),
       this.getLanEndpoint("/html/bbsp/common/GetLanUserDhcpInfo.asp"),
     ]);
-    const rawDevices = deviceResponse.status === "fulfilled" ? this.parseLanDevices(deviceResponse.value) : [];
-    const rawLeases = leaseResponse.status === "fulfilled" ? this.parseDhcpLeases(leaseResponse.value) : [];
+    const rawDevices =
+      deviceResponse.status === "fulfilled"
+        ? this.parseLanDevices(deviceResponse.value)
+        : [];
+    const rawLeases =
+      leaseResponse.status === "fulfilled"
+        ? this.parseDhcpLeases(leaseResponse.value)
+        : [];
 
     if (deviceResponse.status === "rejected") {
       this.logger.debug("Failed to collect LAN device inventory", {
-        error: deviceResponse.reason instanceof Error ? deviceResponse.reason.message : String(deviceResponse.reason),
+        error:
+          deviceResponse.reason instanceof Error
+            ? deviceResponse.reason.message
+            : String(deviceResponse.reason),
       });
     }
     if (leaseResponse.status === "rejected") {
       this.logger.debug("Failed to collect DHCP lease information", {
-        error: leaseResponse.reason instanceof Error ? leaseResponse.reason.message : String(leaseResponse.reason),
+        error:
+          leaseResponse.reason instanceof Error
+            ? leaseResponse.reason.message
+            : String(leaseResponse.reason),
       });
     }
 
