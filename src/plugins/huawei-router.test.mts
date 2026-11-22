@@ -170,11 +170,11 @@ describe("HuaweiRouter", () => {
     const plugin = new HuaweiRouter() as unknown as Internals;
     const states = [
       ["O1", "initializing"],
-      ["O2", "synchronizing"],
-      ["O3", "ranging"],
-      ["O4", "activating"],
+      ["O2", "standby"],
+      ["O3", "discovering"],
+      ["O4", "ranging"],
       ["O5", "operational"],
-      ["O6", "interrupted"],
+      ["O6", "recovering"],
       ["O7", "emergency_stop"],
       ["O8", "unknown"],
     ] as const;
