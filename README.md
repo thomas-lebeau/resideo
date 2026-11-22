@@ -33,7 +33,7 @@ The installer will:
 **First-time installation:**
 After running the installer, you need to:
 1. Create your `.env` file with required configuration (see Configuration section below)
-2. Edit the service file to configure your user and .env path:
+2. Edit the service file to configure your user, .env path and the plugin store path (`ReadWritePaths=`, in your user's home directory):
    ```bash
    sudo nano /etc/systemd/system/raspberry-home-monitor.service
    ```

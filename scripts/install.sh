@@ -196,6 +196,7 @@ if [ "$IS_ROOT" = true ]; then
         echo "Please edit the service file to configure:"
         echo "  1. User to run the service as"
         echo "  2. Path to your .env file"
+        echo "  3. Plugin store path (ReadWritePaths), in that user's home directory"
         echo ""
         echo -e "  ${GREEN}sudo nano $SERVICE_FILE${NC}"
         echo ""
