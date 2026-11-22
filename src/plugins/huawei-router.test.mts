@@ -166,6 +166,40 @@ describe("HuaweiRouter", () => {
     });
   });
 
+  test("parseOpticalInfo normalizes all known GPON states", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+    const states = [
+      ["O1", "initializing"],
+      ["O2", "synchronizing"],
+      ["O3", "ranging"],
+      ["O4", "activating"],
+      ["O5", "operational"],
+      ["O6", "interrupted"],
+      ["O7", "emergency_stop"],
+      ["O8", "unknown"],
+    ] as const;
+
+    for (const [raw, normalized] of states) {
+      assert.equal(
+        plugin.parseOpticalInfo(
+          `var ontPonMode = 'gpon'; var gponStatus = '${raw}';`
+        ).pon_status,
+        normalized
+      );
+    }
+  });
+
+  test("parseOpticalInfo does not apply GPON states to EPON", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+
+    assert.deepEqual(
+      plugin.parseOpticalInfo(
+        "var ontPonMode = 'epon'; var gponStatus = 'O5';"
+      ),
+      { pon_mode: "epon" }
+    );
+  });
+
   test("parseOpticalInfo omits unavailable optical readings", () => {
     const plugin = new HuaweiRouter() as unknown as Internals;
 
