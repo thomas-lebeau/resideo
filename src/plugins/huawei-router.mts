@@ -372,6 +372,31 @@ export class HuaweiRouter extends AbstractPlugin<
 
   private buildLanDevices(devices: RawLanDevice[], leases: RawDhcpLease[]): LanDevice[] {
     const normalize = (value: string) => value.trim().toLowerCase();
+
+    // The router can return the same inventory entry more than once, with
+    // partially populated fields in each copy. Collapse those entries before
+    // joining DHCP data so one physical device produces one telemetry event.
+    const uniqueDevices = new Map<string, RawLanDevice>();
+    for (const device of devices) {
+      const key =
+        this.normalizeMac(device.macAddress) ??
+        (device.ipAddress ? normalize(device.ipAddress) : undefined) ??
+        normalize(device.domain);
+      const existing = uniqueDevices.get(key);
+      if (!existing) {
+        uniqueDevices.set(key, { ...device });
+        continue;
+      }
+
+      for (const field of Object.keys(device) as (keyof RawLanDevice)[]) {
+        const incoming = device[field];
+        const current = existing[field];
+        if (incoming && (!current || (current === "0" && incoming !== "0"))) {
+          existing[field] = incoming;
+        }
+      }
+    }
+    devices = [...uniqueDevices.values()];
     const byMac = new Map(
       leases
         .filter((lease) => lease.macAddress)
