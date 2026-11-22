@@ -66,6 +66,7 @@ type LanDevice = {
   lease_time_remaining?: number | string;
   dhcp_address_source?: string;
   dhcp_interface_type?: string;
+  dhcp_device_type?: string;
 };
 
 type RawLanDevice = {
@@ -339,7 +340,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection | LanDevice, type
       const name = device.userDevAlias || device.hostName || lease?.name || device.ipAddress || device.macAddress || device.domain;
       if (!name) continue;
       const leaseTime = lease?.remainingTime || device.leaseTimeRemaining;
-      const numericLeaseTime = leaseTime && /^\\d+$/.test(leaseTime) ? Number(leaseTime) : undefined;
+      const numericLeaseTime = leaseTime && /^[0-9]+$/.test(leaseTime) ? Number(leaseTime) : undefined;
       result.push({
         type: "lan_device",
         name,
@@ -359,6 +360,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection | LanDevice, type
         ...(numericLeaseTime !== undefined ? { lease_time_remaining: numericLeaseTime } : leaseTime ? { lease_time_remaining: leaseTime } : {}),
         ...(lease?.addressSource ? { dhcp_address_source: lease.addressSource } : {}),
         ...(lease?.interfaceType ? { dhcp_interface_type: lease.interfaceType } : {}),
+        ...(lease?.deviceType ? { dhcp_device_type: lease.deviceType } : {}),
       });
     }
 
@@ -366,7 +368,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection | LanDevice, type
       if (consumed.has(lease)) continue;
       const name = lease.name || lease.ipAddress || lease.macAddress || lease.domain;
       if (!name) continue;
-      const numericLeaseTime = lease.remainingTime && /^\\d+$/.test(lease.remainingTime) ? Number(lease.remainingTime) : undefined;
+      const numericLeaseTime = leaseTime && /^[0-9]+$/.test(leaseTime) ? Number(leaseTime) : undefined;
       result.push({
         type: "lan_device",
         name,
@@ -376,6 +378,7 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection | LanDevice, type
         ...(numericLeaseTime !== undefined ? { lease_time_remaining: numericLeaseTime } : lease.remainingTime ? { lease_time_remaining: lease.remainingTime } : {}),
         ...(lease.addressSource ? { dhcp_address_source: lease.addressSource } : {}),
         ...(lease.interfaceType ? { dhcp_interface_type: lease.interfaceType } : {}),
+        ...(lease.deviceType ? { dhcp_device_type: lease.deviceType } : {}),
       });
     }
     return result;
