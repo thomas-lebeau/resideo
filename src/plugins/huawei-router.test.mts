@@ -228,13 +228,32 @@ describe("HuaweiRouter", () => {
     assert.equal(merged[0].status, "Online");
   });
 
-  test("omits uninformative device type and zero lease time", () => {
+  test("omits offline devices, uninformative device type, and zero lease time", () => {
     const plugin = new HuaweiRouter() as unknown as Internals;
     const devices = plugin.parseLanDevices('new USERDevice("domain","192.168.1.22","22:33:44:55:66:77","LAN1","IPv4","PC","Offline","Ethernet","0","unknown","1","1","0","","","0")');
     const merged = plugin.buildLanDevices(devices, []);
-    assert.equal(merged.length, 1);
-    assert.equal("device_type" in merged[0], false);
-    assert.equal("lease_time_remaining" in merged[0], false);
+    assert.equal(merged.length, 0);
+  });
+
+  test("uses hostname by default and a configured friendly name override", () => {
+    process.env.HUAWEI_ROUTER_DEVICE_NAMES = '{"00:50:56:aa:bb:cc":"virtual-machine"}';
+    try {
+      const plugin = new HuaweiRouter() as unknown as Internals;
+      const devices = plugin.parseLanDevices('new USERDevice("domain","192.168.1.23","00:50:56:aa:bb:cc","LAN1","IPv4","PC","Online","Ethernet","0","my-host","1","1","Computer","","","3600")');
+      const merged = plugin.buildLanDevices(devices, []);
+      assert.equal(merged[0].name, "virtual-machine");
+      assert.equal(merged[0].hostname, "my-host");
+      assert.equal(merged[0].manufacturer, "VMware, Inc.");
+    } finally {
+      delete process.env.HUAWEI_ROUTER_DEVICE_NAMES;
+    }
+  });
+
+  test("does not infer manufacturer from locally administered MAC addresses", () => {
+    const plugin = new HuaweiRouter() as unknown as Internals;
+    const devices = plugin.parseLanDevices('new USERDevice("domain","192.168.1.24","02:50:56:aa:bb:cc","LAN1","IPv4","PC","Online","Ethernet","0","private-mac","1","1","Computer","","","3600")');
+    const merged = plugin.buildLanDevices(devices, []);
+    assert.equal("manufacturer" in merged[0], false);
   });
 
   test("retains DHCP-only leases", () => {
