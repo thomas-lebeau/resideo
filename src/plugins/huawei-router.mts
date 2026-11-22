@@ -244,7 +244,10 @@ export class HuaweiRouter extends AbstractPlugin<WanConnection, typeof CONFIG> {
    * Extracts the argument text from each call to a named JavaScript
    * constructor, respecting nested parentheses and quoted strings.
    */
-  private parseConstructorCalls(source: string, constructorName: string): string[] {
+  private parseConstructorCalls(
+    source: string,
+    constructorName: string
+  ): string[] {
     const calls: string[] = [];
     const pattern = new RegExp(`new\\s+${constructorName}\\s*\\(`, "g");
     let match: RegExpExecArray | null;
