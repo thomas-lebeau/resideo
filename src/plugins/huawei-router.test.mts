@@ -38,7 +38,7 @@ function escape(value: string) {
 }
 
 function wanIp(fields: Partial<Record<number, string>>) {
-  const args = Array.from({ length: 57 }, (_, i) => `"${escape(fields[i] ?? "")}"`);
+  const args = Array.from({ length: 56 }, (_, i) => `"${escape(fields[i] ?? "")}"`);
   return `new WanIP(${args.join(",")})`;
 }
 
