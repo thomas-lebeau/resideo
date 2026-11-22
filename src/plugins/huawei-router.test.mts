@@ -38,12 +38,16 @@ function escape(value: string) {
 }
 
 function wanIp(fields: Partial<Record<number, string>>) {
-  const args = Array.from({ length: 56 }, (_, i) => `"${escape(fields[i] ?? "")}"`);
+  const args = Array.from(
+    { length: 56 },
+    (_, i) => `"${escape(fields[i] ?? "")}"`
+  );
   return `new WanIP(${args.join(",")})`;
 }
 
 function wanStats(domain: string, bytesSent: string, bytesReceived: string) {
-  return `new WaninfoStats("${escape(domain)}","${bytesSent}","${bytesReceived}","0","0","0","0","0","0","0","0")`;
+  return `new WaninfoStats("${escape(domain)}","${bytesSent}","${bytesReceived}",` +
+    `"0","0","0","0","0","0","0","0")`;
 }
 
 const VOIP = wanIp({
@@ -119,7 +123,9 @@ describe("HuaweiRouter", () => {
     );
   });
 
-  test("parseConstructorCalls handles nested parentheses and quoted delimiters", () => {
+  test(
+    "parseConstructorCalls handles nested parentheses and quoted delimiters",
+    () => {
     const plugin = new HuaweiRouter() as unknown as Internals;
 
     assert.deepEqual(
@@ -129,7 +135,8 @@ describe("HuaweiRouter", () => {
       ),
       [`"a,b", fn(1, 2), "c)"`, `"d"`]
     );
-  });
+    }
+  );
 
   test("cleanString strips quotes and decodes hex escapes", () => {
     const plugin = new HuaweiRouter() as unknown as Internals;
@@ -145,8 +152,16 @@ describe("HuaweiRouter", () => {
         wanListPage(
           [VOIP, INTERNET_UP],
           [
-            wanStats("InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANIPConnection.1.Stats", "791484635", "1823521274"),
-            wanStats("InternetGatewayDevice.WANDevice.1.WANConnectionDevice.3.WANIPConnection.1.Stats", "1", "2"),
+            wanStats(
+              "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.2.WANIPConnection.1.Stats",
+              "791484635",
+              "1823521274"
+            ),
+            wanStats(
+              "InternetGatewayDevice.WANDevice.1.WANConnectionDevice.3.WANIPConnection.1.Stats",
+              "1",
+              "2"
+            ),
           ]
         )
       )
