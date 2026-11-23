@@ -6,39 +6,69 @@ This Terraform configuration creates log-based metrics in Datadog from the logs 
 
 1. **Terraform installed** (>= 1.0)
 2. **Datadog API and App keys**
-   - Get these from [Datadog Organization Settings](https://app.datadoghq.eu/organization-settings/api-keys)
+   - Get these from Organization Settings > API Keys / Application Keys on your Datadog site (e.g. [app.datadoghq.com](https://app.datadoghq.com/organization-settings/api-keys) for US1, [app.datadoghq.eu](https://app.datadoghq.eu/organization-settings/api-keys) for EU)
 3. **Your home monitoring system running** and sending logs to Datadog
 
 ## Metrics Created
 
-This configuration creates the following metrics from your logs:
+All metrics are prefixed with `raspberry_home_monitor.` and tagged with `name`, `type`, `env`, `host` and `plugin`.
 
 ### Environmental Metrics
-- `raspberry_home_monitor.temperature` - Temperature readings from thermometers 
-- `raspberry_home_monitor.humidity` - Humidity readings from thermometers
-
+- `raspberry_home_monitor.temperature` - Temperature readings from sensors
+- `raspberry_home_monitor.humidity` - Humidity readings from sensors
 
 ### Thermostat Metrics
-- `raspberry_home_monitor.thermostat.state` - Thermostat on/off state
-- `raspberry_home_monitor.thermostat.target_temperature` - Target temperature settings
-- `raspberry_home_monitor.thermostat.operation_mode` - Current oeration mode
+- `raspberry_home_monitor.thermostat.state` - Thermostat state (0=off, 1=auto)
+- `raspberry_home_monitor.thermostat.target_temperature` - Target temperature
+- `raspberry_home_monitor.thermostat.operation_mode` - Operation mode (0=off, 1=heat)
 
 ### Device Health Metrics
 - `raspberry_home_monitor.battery_level` - Battery levels from ThermoBeacon sensors and Philips Hue buttons
-- `raspberry_home_monitor.internet_speed` - Internet speed test results
+- `raspberry_home_monitor.rssi` - Bluetooth signal strength (dBm)
+- `raspberry_home_monitor.internet.speed` - Internet speed test results
 
 ### Philips Hue Metrics
-- `raspberry_home_monitor.light.state` - Light on/off states
-- `raspberry_home_monitor.light.brightness` - Light brightness levels
+- `raspberry_home_monitor.light.state` - Light state (0=off, 1=on)
+- `raspberry_home_monitor.light.brightness` - Light brightness level
+- `raspberry_home_monitor.light.color_temperature` - Light color temperature (mirek)
 - `raspberry_home_monitor.button.events` - Button press events from Hue buttons
 
 ### Plex Media Center Metrics
-- `raspberry_home_monitor.plex_movies` - Movie library counts
-- `raspberry_home_monitor.plex_shows` - TV show library counts  
-- `raspberry_home_monitor.plex_episodes` - Episode counts
+- `raspberry_home_monitor.plex.movies` - Movie library counts
+- `raspberry_home_monitor.plex.shows` - TV show library counts
+- `raspberry_home_monitor.plex.episodes` - Episode counts
+
+### Transmission Metrics
+- `raspberry_home_monitor.transmission.torrent_count` - Total number of torrents
+- `raspberry_home_monitor.transmission.active_torrent_count` - Active torrents
+- `raspberry_home_monitor.transmission.paused_torrent_count` - Paused torrents
+- `raspberry_home_monitor.transmission.download_speed` - Current download speed
+- `raspberry_home_monitor.transmission.upload_speed` - Current upload speed
+- `raspberry_home_monitor.transmission.total_downloaded` - Cumulative bytes downloaded
+- `raspberry_home_monitor.transmission.total_uploaded` - Cumulative bytes uploaded
+- `raspberry_home_monitor.transmission.total_files_added` - Torrent files added
+- `raspberry_home_monitor.transmission.total_session_count` - Sessions started
+- `raspberry_home_monitor.transmission.total_seconds_active` - Cumulative active time
+
+### Huawei Router (WAN Connection) Metrics
+- `raspberry_home_monitor.wan.state` - WAN connection state (0=down, 1=up)
+- `raspberry_home_monitor.wan.uptime` - WAN connection uptime
+- `raspberry_home_monitor.wan.bytes_received` - Bytes received on the WAN connection
+- `raspberry_home_monitor.wan.bytes_sent` - Bytes sent on the WAN connection
+
+### Dishwasher Metrics
+- `raspberry_home_monitor.dishwasher.state` - Dishwasher state (0=off/inactive, 1=on/running)
+- `raspberry_home_monitor.dishwasher.door_state` - Door state (0=closed, 1=open)
+
+### Philips TV Metrics
+- `raspberry_home_monitor.tv.state` - TV state (0=off, 1=on)
+- `raspberry_home_monitor.tv.volume` - Volume level
+- `raspberry_home_monitor.tv.muted` - Muted state
 
 ### System Health
-- `raspberry_home_monitor.errors` - Error rate by plugin
+- `raspberry_home_monitor.home_monitor.uptime` - Home monitoring system uptime
+- `raspberry_home_monitor.error.rate` - Error count by plugin
+- `raspberry_home_monitor.event.count` - Event count
 
 ## Setup Instructions
 
@@ -51,18 +81,22 @@ This configuration creates the following metrics from your logs:
    ```bash
    cp terraform.tfvars.example terraform.tfvars
    ```
-   
+
    Edit `terraform.tfvars` with your actual Datadog credentials:
    ```hcl
    datadog_api_key = "your-actual-api-key"
-   datadog_app_key = "your-actual-app-key" 
-   datadog_api_url = "https://api.datadoghq.eu"  # or .com for US
+   datadog_app_key = "your-actual-app-key"
+   datadog_site    = "datadoghq.com"  # same as the app's DD_SITE, e.g. datadoghq.eu for EU
    ```
+
+   `datadog_site` defaults to `datadoghq.com`, like the app's `DD_SITE`. The provider talks to `https://api.<datadog_site>`; set `datadog_api_url` only if you need a different API URL.
 
 3. **Initialize Terraform:**
    ```bash
    terraform init
    ```
+
+   Provider versions are pinned by `.terraform.lock.hcl`, which is committed. Run `terraform init -upgrade` to update them, and commit the updated lock file.
 
 4. **Review the plan:**
    ```bash
@@ -79,7 +113,7 @@ This configuration creates the following metrics from your logs:
 After applying the Terraform configuration, you can:
 
 1. **View metrics in Datadog:**
-   - Go to [Metrics Explorer](https://app.datadoghq.eu/metric/explorer)
+   - Open the Metrics Explorer on your Datadog site (e.g. [app.datadoghq.com/metric/explorer](https://app.datadoghq.com/metric/explorer))
    - Search for metrics starting with `raspberry_home_monitor.`
 
 2. **Create dashboards:**
@@ -98,5 +132,5 @@ To remove all metrics:
 terraform destroy
 ```
 
-> [!WARNING] 
+> [!WARNING]
 > This will delete all the metrics and their historical data!
